@@ -1,5 +1,5 @@
-﻿using MovieTheater.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using MovieTheater.Domain.Entities;
 
 namespace MovieTheater.Domain
 {
@@ -25,6 +25,7 @@ namespace MovieTheater.Domain
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<ScoreHistory> ScoreHistory { get; set; }
+        public DbSet<OtpStorage> otps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -119,7 +120,7 @@ namespace MovieTheater.Domain
                 .HasForeignKey(sh => sh.RelatedBookingId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Promotions: standalone, no relationships
+            // Promotions, Otp: standalone, no relationships with other entities
         }
     }
 }

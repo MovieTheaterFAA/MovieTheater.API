@@ -1,4 +1,8 @@
-﻿using System.Text;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Services;
 using MovieTheater.Application.Services.Commons;
@@ -7,12 +11,8 @@ using MovieTheater.Infrastructure;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Infrastructure.Repositories;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using MovieTheater.Application.Interfaces;
 using Resend;
+using System.Text;
 
 namespace BlindTreasure.API.Architecture;
 
@@ -87,10 +87,10 @@ public static class IocContainer
             .Build();
 
 
-        // 2. Lấy connection string tên "DefaultConnection"
+        // Lấy connection string từ "DefaultConnection"
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-        // 3. Đăng ký DbContext với Npgsql
+        // Đăng ký DbContext với Npgsql
         services.AddDbContext<MovieTheaterDbContext>(options =>
             options.UseNpgsql(connectionString,
                 sql => sql.MigrationsAssembly(typeof(MovieTheaterDbContext).Assembly.FullName)
@@ -104,13 +104,13 @@ public static class IocContainer
     {
         // Inject những service vào DI container
 
-        //services.AddScoped<IAuthService, AuthService>();
         //services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ILoggerService, LoggerService>();
         services.AddScoped<ICurrentTime, CurrentTime>();
         services.AddScoped<IClaimsService, ClaimsService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        //services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IBlobService, BlobService>();
 
         services.AddHttpContextAccessor();

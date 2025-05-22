@@ -28,6 +28,11 @@ namespace MovieTheater.Application.Services
             _loggerService = loggerService;
         }
 
+        /// <summary>
+        ///     Register a new user.
+        /// </summary>
+        /// <param name="registrationDto"></param>
+        /// <returns></returns>
         public async Task<UserDto?> RegisterUserAsync(UserRegistrationDto registrationDto)
         {
             _loggerService.Info($"[RegisterUserAsync] Start registration for {registrationDto.Email}");
@@ -35,7 +40,7 @@ namespace MovieTheater.Application.Services
             if (await UserExistsAsync(registrationDto.Email))
             {
                 _loggerService.Warn($"[RegisterUserAsync] Email {registrationDto.Email} already registered.");
-                throw ErrorHelper.Conflict("Email đã được sử dụng.");
+                throw ErrorHelper.Conflict("Email have been used.");
             }
 
             var hashedPassword = new PasswordHasher().HashPassword(registrationDto.Password);
@@ -57,26 +62,139 @@ namespace MovieTheater.Application.Services
 
             _loggerService.Success($"[RegisterUserAsync] User {user.Email} created successfully.");
 
-            await GenerateAndSendOtpAsync(user, OtpPurpose.Register, "register-otp");
+            await GenerateAndSendOtpAsync(user, OtpPurpose.Register);
 
             _loggerService.Info($"[RegisterUserAsync] OTP sent to {user.Email} for verification.");
 
             return ToUserDto(user);
         }
 
-        public Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginDto, IConfiguration configuration)
+        /// <summary>
+        ///     Login a user and return JWT access and refresh token.
+        /// </summary>
+        /// <param name="loginDto"></param>
+        /// <param name="configuration"></param>
+        /// <returns></returns>
+        public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginDto, IConfiguration configuration)
         {
-            throw new NotImplementedException();
+            _loggerService.Info($"[LoginAsync] Login attempt for {loginDto.Email}");
+
+            // Get user from DB
+            var user = await GetUserByEmailAsync(loginDto.Email!);
+            if (user == null)
+                throw ErrorHelper.NotFound("Account does not exist.");
+
+            if (!new PasswordHasher().VerifyPassword(loginDto.Password!, user.Password))
+                throw ErrorHelper.Unauthorized("Password is incorrect.");
+
+            if (user.UserStatus != UserStatus.Active)
+                throw ErrorHelper.Forbidden("Account have not verified yet.");
+
+            _loggerService.Success($"[LoginAsync] User {loginDto.Email} authenticated successfully.");
+
+            // Generate JWT token and refresh token
+            var accessToken = JwtUtils.GenerateJwtToken(
+                user.Id,
+                user.Email,
+                user.Role.ToString(),
+                configuration,
+                TimeSpan.FromMinutes(30)
+            );
+
+            var refreshToken = Guid.NewGuid().ToString();
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Info($"[LoginAsync] Tokens generated and user cache updated for {user.Email}");
+
+            return new LoginResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                User = ToUserDto(user)
+            };
         }
 
-        public Task<bool> LogoutAsync(Guid userId)
+        /// <summary>
+        ///     Logout a user by removing their refresh token from the database.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        public async Task<bool> LogoutAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            _loggerService.Info($"[LogoutAsync] Logout process initiated for user ID: {userId}");
+
+            var user = await GetUserById(userId);
+            if (user == null)
+                throw ErrorHelper.NotFound("Account does not exist.");
+
+            if (user.IsDeleted || user.UserStatus == UserStatus.Banned || user.UserStatus == UserStatus.Deleted)
+                throw ErrorHelper.Forbidden("Account has been disabled or banned.");
+
+            // Đã logout rồi thì không cần xóa token nữa
+            if (string.IsNullOrEmpty(user.RefreshToken))
+                throw ErrorHelper.BadRequest("User previously logged out.");
+
+            // Xóa token trong DB
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Info($"[LogoutAsync] Logout successful for user ID: {userId}.");
+            return true;
         }
 
-        public Task<LoginResponseDto?> RefreshTokenAsync(TokenRefreshRequestDto refreshTokenDto, IConfiguration configuration)
+        /// <summary>
+        ///     Refresh the access token using the refresh token. 🐧
+        /// </summary>
+        /// <param name="refreshTokenDto"></param>
+        /// <param name="configuration"></param>
+        /// <returns></returns>
+        public async Task<LoginResponseDto?> RefreshTokenAsync(TokenRefreshRequestDto refreshTokenDto, IConfiguration configuration)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(refreshTokenDto.RefreshToken))
+                throw ErrorHelper.BadRequest("Missing tokens");
+
+            var user = await GetUserByRefreshToken(refreshTokenDto.RefreshToken);
+
+            if (user == null)
+                throw ErrorHelper.NotFound("Account does not exist.");
+
+            if (string.IsNullOrEmpty(user.RefreshToken))
+                throw ErrorHelper.BadRequest("User previously logged out.");
+
+            // Kiểm tra Refresh Token có còn hiệu lực hay không
+            if (user.RefreshTokenExpiryTime < DateTime.UtcNow)
+                throw ErrorHelper.Conflict("Refresh token has expired.");
+
+            var roleName = user.Role.ToString();
+
+            // Tạo mới access và refresh token
+            var newAccessToken = JwtUtils.GenerateJwtToken(
+                user.Id,
+                user.Email,
+                roleName,
+                configuration,
+                TimeSpan.FromHours(1)
+            );
+
+            var newRefreshToken = Guid.NewGuid().ToString();
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+
+            return new LoginResponseDto
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken
+            };
         }
 
 
@@ -93,12 +211,10 @@ namespace MovieTheater.Application.Services
             var existingUser = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
             return existingUser != null;
         }
-
-
-        private async Task GenerateAndSendOtpAsync(User user, OtpPurpose purpose, string otpCachePrefix)
+        private async Task GenerateAndSendOtpAsync(User user, OtpPurpose purpose)
         {
             var otpToken = OtpGenerator.GenerateToken(6, TimeSpan.FromMinutes(10));
-            var otp = new OtpVerification
+            var otp = new OtpStorage
             {
                 Target = user.Email,
                 OtpCode = otpToken.Code,
@@ -107,9 +223,8 @@ namespace MovieTheater.Application.Services
                 Purpose = purpose
             };
 
-            await _unitOfWork.OtpVerifications.AddAsync(otp);
+            await _unitOfWork.OtpStorages.AddAsync(otp);
             await _unitOfWork.SaveChangesAsync();
-            await _cacheService.SetAsync($"{otpCachePrefix}:{user.Email}", otpToken.Code, TimeSpan.FromMinutes(10));
 
             // Send the correct email based on OTP purpose
             if (purpose == OtpPurpose.Register)
@@ -120,18 +235,45 @@ namespace MovieTheater.Application.Services
                     Otp = otpToken.Code,
                     UserName = user.FullName
                 });
-                _logger.Info($"[GenerateAndSendOtpAsync] Registration OTP sent to {user.Email}");
+                _loggerService.Info($"[GenerateAndSendOtpAsync] Registration OTP sent to {user.Email}");
             }
-            else if (purpose == OtpPurpose.ForgotPassword)
+            //else if (purpose == OtpPurpose.ForgotPassword)
+            //{
+            //    await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
+            //    {
+            //        To = user.Email,
+            //        Otp = otpToken.Code,
+            //        UserName = user.FullName
+            //    });
+            //    _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
+            //}
+        }
+
+        private async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+        private async Task<User?> GetUserById(Guid id)
+        {
+            return await _unitOfWork.Users.GetByIdAsync(id);
+        }
+        private async Task<User?> GetUserByRefreshToken(string refreshToken)
+        {
+            return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        }
+
+
+        //========================= MAPPER ============================
+        private UserDto ToUserDto(User user)
+        {
+            return new UserDto
             {
-                await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
-                {
-                    To = user.Email,
-                    Otp = otpToken.Code,
-                    UserName = user.FullName
-                });
-                _logger.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
-            }
+                UserId = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                DateOfBirth = user.DateOfBirth,
+            };
         }
     }
 }

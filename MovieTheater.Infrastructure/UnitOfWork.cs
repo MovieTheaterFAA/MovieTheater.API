@@ -9,13 +9,17 @@ public class UnitOfWork : IUnitOfWork
     private readonly MovieTheaterDbContext _dbContext;
 
     public UnitOfWork(MovieTheaterDbContext dbContext,
-        IGenericRepository<User> userRepository)
+        IGenericRepository<User> userRepository,
+        IGenericRepository<OtpStorage> otpStorage)
     {
         _dbContext = dbContext;
         Users = userRepository;
+        OtpStorages = otpStorage;
     }
 
     public IGenericRepository<User> Users { get; }
+
+    public IGenericRepository<OtpStorage> OtpStorages { get; }
 
     public void Dispose()
     {

@@ -63,7 +63,7 @@ namespace MovieTheater.Application.Services
       <h1 style=""color:#d02a2a;font-size:22px;text-align:center;"">Verify Your Email</h1>
       <p>Thank you for registering with our cinema booking service. Please use the following code to verify your email address:</p>
       <div style=""background-color:#f4f4f4;padding:15px;border-radius:5px;text-align:center;margin:20px 0;font-size:24px;font-weight:bold;letter-spacing:5px;"">
-        {{request.Otp}}
+        {request.Otp}
       </div>
       <p>This code will expire in 10 minutes. If you didn't request this code, please ignore this email.</p>
       <p style=""margin-top:30px;"">Best regards,<br/>MovieTheater Team</p>
