@@ -19,12 +19,12 @@ namespace MovieTheater.Domain.Entities
         public string Email { get; set; }
 
         // Căn cước công dân
-        public string CCCD { get; set; }
+        public string? CCCD { get; set; }
 
         [MaxLength(15)]
         public string PhoneNumber { get; set; }
 
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
         public RoleType Role { get; set; }
 

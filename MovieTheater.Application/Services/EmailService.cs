@@ -32,19 +32,19 @@ namespace MovieTheater.Application.Services
         public async Task SendRegistrationSuccessEmailAsync(EmailRequestDto request)
         {
             var html = $@"
-<html style=""background-color:#ebeaea;margin:0;padding:0;"">
-  <body style=""font-family:Arial,sans-serif;color:#252424;padding:20px;background-color:#ebeaea;"">
-    <div style=""max-width:600px;margin:auto;background:#fff;border:1px solid #d02a2a;border-radius:6px;padding:20px;"">
+<html style=""background-color:#000000;margin:0;padding:0;"">
+  <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
+    <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
       <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater"" style=""max-width:150px;height:auto;"">
+        <img src=""https://i.ibb.co/cXtVBHpQ/rimberio.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
-      <h1 style=""color:#d02a2a;font-size:22px;"">Welcome {request.UserName}!</h1>
+      <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
       <p>You have successfully registered an account at our Cinema Booking service.</p>
       <p>We hope you enjoy browsing and booking tickets for your favorite movies.</p>
       <div style=""text-align:center;margin:25px 0;"">
-        <a href=""https://your-cinema-website.com/movies"" style=""background-color:#d02a2a;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Browse Movies</a>
+        <a href=""https://movie-theater-skibidi.com/movies"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Browse Movies</a>
       </div>
-      <p style=""margin-top:30px;"">Best regards,<br/>MovieTheater Team</p>
+      <p style=""margin-top:30px;"">Best regards,<br/>Cinema Booking Team</p>
     </div>
   </body>
 </html>";
@@ -54,15 +54,15 @@ namespace MovieTheater.Application.Services
         public async Task SendOtpVerificationEmailAsync(EmailRequestDto request)
         {
             var html = $@"
-<html style=""background-color:#ebeaea;margin:0;padding:0;"">
-  <body style=""font-family:Arial,sans-serif;color:#252424;padding:20px;background-color:#ebeaea;"">
-    <div style=""max-width:600px;margin:auto;background:#fff;border:1px solid #d02a2a;border-radius:6px;padding:20px;"">
+<html style=""background-color:#000000;margin:0;padding:0;"">
+  <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
+    <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
       <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater"" style=""max-width:150px;height:auto;"">
+        <img src=""https://i.ibb.co/cXtVBHpQ/rimberio.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
-      <h1 style=""color:#d02a2a;font-size:22px;text-align:center;"">Verify Your Email</h1>
+      <h1 style=""color:#f8c439;font-size:22px;text-align:center;"">Verify Your Email</h1>
       <p>Thank you for registering with our cinema booking service. Please use the following code to verify your email address:</p>
-      <div style=""background-color:#f4f4f4;padding:15px;border-radius:5px;text-align:center;margin:20px 0;font-size:24px;font-weight:bold;letter-spacing:5px;"">
+      <div style=""background-color:#f8f8f8;padding:15px;border-radius:5px;text-align:center;margin:20px 0;font-size:24px;font-weight:bold;letter-spacing:5px;border:2px solid #f8c439;"">
         {request.Otp}
       </div>
       <p>This code will expire in 10 minutes. If you didn't request this code, please ignore this email.</p>
