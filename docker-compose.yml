@@ -1,0 +1,34 @@
+﻿services:
+  movietheater.api:
+    image: ch1mple/movietheater:latest
+    build:
+      context: .
+      dockerfile: MovieTheater.API/Dockerfile
+    depends_on:
+      movietheater.database:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=movietheater.database;Port=5432;Database=movietheater_db;Username=postgres;Password=postgres
+      - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU
+      - JWT__Issuer=MovieTheater_Issuer
+      - JWT__Audience=MovieTheater_Audience
+      - RESEND_APITOKEN=re_VsmVCjhA_5Sv6zYPZLCDYfXcuKQtoyxGK
+      - RESEND_FROM=noreply@ae-tao-fullstack-api.site
+    ports:
+      - "5000:5000"
+
+  movietheater.database:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: movietheater_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
