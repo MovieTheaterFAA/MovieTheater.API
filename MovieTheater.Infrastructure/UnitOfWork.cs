@@ -16,7 +16,6 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public IGenericRepository<User> Users { get; }
-    //public IGenericRepository<OtpVerification> OtpVerifications { get; }
 
     public void Dispose()
     {

@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace BlindTreasure.Application.Utils;
+namespace MovieTheater.Application.Utils;
 
 public class PasswordHasher
 {

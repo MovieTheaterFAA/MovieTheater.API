@@ -1,4 +1,4 @@
-﻿namespace BlindTreasure.Infrastructure.Commons;
+﻿namespace MovieTheater.Infrastructure.Commons;
 
 public class Pagination<T> : List<T>
 {
