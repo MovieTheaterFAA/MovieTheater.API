@@ -36,7 +36,7 @@ namespace MovieTheater.Application.Services
   <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
     <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
       <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://i.ibb.co/cXtVBHpQ/rimberio.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
+        <img src=""https://i.ibb.co/vW3Wtx4/rimberio-2.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
       <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
       <p>You have successfully registered an account at our Cinema Booking service.</p>
@@ -58,7 +58,7 @@ namespace MovieTheater.Application.Services
   <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
     <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
       <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://i.ibb.co/cXtVBHpQ/rimberio.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
+        <img src=""https://i.ibb.co/vW3Wtx4/rimberio-2.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
       <h1 style=""color:#f8c439;font-size:22px;text-align:center;"">Verify Your Email</h1>
       <p>Thank you for registering with our cinema booking service. Please use the following code to verify your email address:</p>
