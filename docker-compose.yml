@@ -15,6 +15,9 @@
       - JWT__Audience=MovieTheater_Audience
       - RESEND_APITOKEN=re_d7uvVXic_7nS9QjB6HAYryqrQ2jKsXu7J
       - RESEND_FROM=noreply@ae-tao-fullstack-api.site
+      - "MINIO_ENDPOINT=minio.fpt-devteam.fun"
+      - "MINIO_ACCESS_KEY=103.211.201.162"
+      - "MINIO_SECRET_KEY=Ccubin2003@"
     ports:
       - "5000:5000"
 

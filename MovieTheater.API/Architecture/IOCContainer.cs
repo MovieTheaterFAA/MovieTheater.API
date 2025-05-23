@@ -14,7 +14,7 @@ using MovieTheater.Infrastructure.Repositories;
 using Resend;
 using System.Text;
 
-namespace BlindTreasure.API.Architecture;
+namespace MovieTheater.API.Architecture;
 
 public static class IocContainer
 {
@@ -198,14 +198,14 @@ public static class IocContainer
             options.AddPolicy("CustomerPolicy", policy =>
                 policy.RequireRole("Customer"));
 
+            options.AddPolicy("MemberPolicy", policy =>
+                policy.RequireRole("Member"));
+
+            options.AddPolicy("EmployeePolicy", policy =>
+                policy.RequireRole("Employee"));
+
             options.AddPolicy("AdminPolicy", policy =>
                 policy.RequireRole("Admin"));
-
-            options.AddPolicy("StaffPolicy", policy =>
-                policy.RequireRole("Staff"));
-
-            options.AddPolicy("SellerPolicy", policy =>
-                policy.RequireRole("Seller"));
         });
 
         return services;

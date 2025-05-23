@@ -1,7 +1,7 @@
-﻿using MovieTheater.Domain;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using MovieTheater.Domain;
 
-namespace BlindTreasure.API.Architecture;
+namespace MovieTheater.API.Architecture;
 
 public static class MigrationExtensions
 {

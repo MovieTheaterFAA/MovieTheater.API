@@ -1,8 +1,8 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using MovieTheater.API.Architecture;
+using SwaggerThemes;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BlindTreasure.API.Architecture;
-using SwaggerThemes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +51,7 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "MovieTheater API v1");
         c.RoutePrefix = string.Empty;
         c.InjectStylesheet("/swagger-ui/custom-theme.css");
-        c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.OneDark)}</style>";     // Config theme của swagger
+        c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.Dracula)}</style>";     // Config theme của swagger
     });
 }
 
