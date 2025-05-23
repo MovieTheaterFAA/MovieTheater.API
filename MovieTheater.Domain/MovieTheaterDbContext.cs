@@ -25,7 +25,7 @@ namespace MovieTheater.Domain
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<ScoreHistory> ScoreHistory { get; set; }
-        public DbSet<OtpStorage> otps { get; set; }
+        public DbSet<OtpStorage> OtpStorages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
