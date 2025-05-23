@@ -197,6 +197,76 @@ namespace MovieTheater.Application.Services
             };
         }
 
+        /// <summary>
+        ///     Verify OTP mà user truyền vào
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="otp"></param>
+        /// <returns></returns>
+        public async Task<bool> VerifyEmailOtpAsync(string email, string otp)
+        {
+            _loggerService.Info($"[VerifyEmailOtpAsync] Verifying OTP for {email}");
+
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null) throw ErrorHelper.NotFound("Account does not exist.");
+
+            if (user.IsEmailVerified) return false;
+            if (!await VerifyOtpAsync(email, otp, OtpPurpose.Register))
+                return false;
+
+            // Activate user account
+            user.IsEmailVerified = true;
+            user.UserStatus = UserStatus.Active;
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            await _emailService.SendRegistrationSuccessEmailAsync(new EmailRequestDto
+            {
+                To = user.Email,
+                UserName = user.FullName
+            });
+
+            _loggerService.Success($"[VerifyEmailOtpAsync] User {email} verified and activated.");
+            return true;
+        }
+
+
+        /// <summary>
+        ///     Check resend lại OTP là gì và gọi đúng hàm resend OTP
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="otpPurpose"></param>
+        /// <returns></returns>
+        public async Task<bool> ResendOtpAsync(string email, OtpPurpose otpPurpose)
+        {
+            return otpPurpose switch
+            {
+                OtpPurpose.Register => await ResendRegisterOtpAsync(email),
+                _ => throw ErrorHelper.BadRequest("Loại OTP không hợp lệ.")
+            };
+        }
+
+        /// <summary>
+        ///     Gửi lại OTP cho user đã đăng ký nhưng chưa xác thực email.
+        /// </summary>
+        /// <param name="email"></param>
+        /// <returns></returns>
+        private async Task<bool> ResendRegisterOtpAsync(string email)
+        {
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                throw ErrorHelper.NotFound("Email does not exist in the system.");
+
+            if (user.IsDeleted || user.UserStatus == UserStatus.Banned)
+                throw ErrorHelper.Forbidden("Account has been disabled or banned.");
+
+            if (user.IsEmailVerified)
+                throw ErrorHelper.Conflict("Verified account, no need to resend OTP.");
+
+            await GenerateAndSendOtpAsync(user, OtpPurpose.Register);
+
+            return true;
+        }
 
 
         //========================= PRIVATE HELPER METHODS ============================
@@ -262,6 +332,27 @@ namespace MovieTheater.Application.Services
             return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
         }
 
+        private async Task<bool> VerifyOtpAsync(string email, string otp, OtpPurpose purpose)
+        {
+
+            // Check trong db có tồn tại OTP chưa
+            var otpRecord = await _unitOfWork.OtpStorages.FirstOrDefaultAsync(o =>
+                o.Target == email && o.OtpCode == otp && o.Purpose == purpose && !o.IsUsed);
+
+            // Nếu ko có OTP hoặc expired thì trả log
+            if (otpRecord == null || otpRecord.ExpiredAt < DateTime.UtcNow)
+            {
+                _loggerService.Warn($"[VerifyOtpAsync] OTP not found or expired for {email} (purpose: {purpose})");
+                return false;
+            }
+
+            otpRecord.IsUsed = true;
+            await _unitOfWork.OtpStorages.Update(otpRecord);
+            await _unitOfWork.SaveChangesAsync();
+            _loggerService.Info($"[VerifyOtpAsync] OTP for {email} (purpose: {purpose}) verified and marked as used in DB.");
+            return true;
+        }
+
 
         //========================= MAPPER ============================
         private UserDto ToUserDto(User user)
@@ -275,5 +366,7 @@ namespace MovieTheater.Application.Services
                 DateOfBirth = user.DateOfBirth,
             };
         }
+
+
     }
 }

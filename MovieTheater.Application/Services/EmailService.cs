@@ -36,13 +36,13 @@ namespace MovieTheater.Application.Services
   <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
     <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
       <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://i.ibb.co/vW3Wtx4/rimberio-2.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
+        <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
       <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
       <p>You have successfully registered an account at our Cinema Booking service.</p>
       <p>We hope you enjoy browsing and booking tickets for your favorite movies.</p>
       <div style=""text-align:center;margin:25px 0;"">
-        <a href=""https://movie-theater-skibidi.com/movies"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Browse Movies</a>
+        <a href=""https://placeholder.com/logo.png"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Browse Movies</a>
       </div>
       <p style=""margin-top:30px;"">Best regards,<br/>Cinema Booking Team</p>
     </div>

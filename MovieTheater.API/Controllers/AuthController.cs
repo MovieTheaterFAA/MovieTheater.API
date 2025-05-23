@@ -99,5 +99,17 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpPost("verify-otp")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
+        {
+            var verified = await _authService.VerifyEmailOtpAsync(dto.Email, dto.Otp);
+            if (!verified)
+                return BadRequest(ApiResult.Failure("400", "OTP is invalid or expired."));
+
+            return Ok(ApiResult.Success("200", "Verification successful. Account activated."));
+        }
     }
 }
