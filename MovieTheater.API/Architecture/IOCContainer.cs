@@ -102,7 +102,7 @@ public static class IocContainer
 
     public static IServiceCollection SetupBusinessServicesLayer(this IServiceCollection services)
     {
-        // Inject những service vào DI container
+        // Inject service vào DI container
 
         //services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
