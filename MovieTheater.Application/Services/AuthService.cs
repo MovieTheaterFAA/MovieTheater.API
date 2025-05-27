@@ -269,6 +269,32 @@ namespace MovieTheater.Application.Services
             return true;
         }
 
+        /// <summary>
+        ///     Reset mật khẩu cho user đã xác thực email thành công.
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="otp"></param>
+        /// <param name="newPassword"></param>
+        /// <returns></returns>
+        public async Task<bool> ResetPasswordAsync(string email, string otp, string newPassword)
+        {
+            _loggerService.Info($"[ResetPasswordAsync] Password reset requested for {email}");
+
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
+            if (user == null) return false;
+            if (!user.IsEmailVerified) return false;
+            if (!await VerifyOtpAsync(email, otp, OtpPurpose.ForgotPassword))
+                return false;
+
+            // Hash và cập nhật mật khẩu
+            user.Password = new PasswordHasher().HashPassword(newPassword);
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[ResetPasswordAsync] Password reset successful for {email}.");
+            return true;
+        }
+
         //========================= PRIVATE HELPER METHODS ============================
 
         /// <summary>
@@ -308,16 +334,16 @@ namespace MovieTheater.Application.Services
                 });
                 _loggerService.Info($"[GenerateAndSendOtpAsync] Registration OTP sent to {user.Email}");
             }
-            //else if (purpose == OtpPurpose.ForgotPassword)
-            //{
-            //    await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
-            //    {
-            //        To = user.Email,
-            //        Otp = otpToken.Code,
-            //        UserName = user.FullName
-            //    });
-            //    _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
-            //}
+            else if (purpose == OtpPurpose.ForgotPassword)
+            {
+                await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
+                {
+                    To = user.Email,
+                    Otp = otpToken.Code,
+                    UserName = user.FullName
+                });
+                _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
+            }
         }
 
         private async Task<User?> GetUserByEmailAsync(string email)
