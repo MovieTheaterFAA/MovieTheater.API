@@ -97,7 +97,7 @@ namespace MovieTheater.Application.Services
 
         public async Task SendPasswordChangeEmailAsync(EmailRequestDto request)
         {
-            var html = @"
+            var html = $@"
 <html style=""background-color:#000000;margin:0;padding:0;"">
   <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
     <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
@@ -105,7 +105,7 @@ namespace MovieTheater.Application.Services
         <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
       <h1 style=""color:#f8c439;font-size:22px;"">Password Reset Successful!</h1>
-      <p>Hello {request.username},</p>
+      <p>Hello {request.UserName},</p>
       <p>Your password has been successfully reset for your MovieTheater account.</p>
       <p>You can now log in with your new password and continue booking tickets for your favorite movies.</p>
       <div style=""text-align:center;margin:25px 0;"">

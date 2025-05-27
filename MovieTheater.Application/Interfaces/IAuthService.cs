@@ -13,12 +13,12 @@ public interface IAuthService
 
     Task<bool> LogoutAsync(Guid userId);
 
+    Task<bool> ResetPasswordAsync(string email, string otp, string newPassword);
+
     Task<LoginResponseDto?> RefreshTokenAsync(TokenRefreshRequestDto refreshTokenDto, IConfiguration configuration);
 
     //OTP & emails
     Task<bool> ResendOtpAsync(string email, OtpPurpose otpPurpose);
 
     Task<bool> VerifyEmailOtpAsync(string email, string otp);
-
-    Task<bool> ResetPasswordAsync(string email, string otp, string newPassword);
 }

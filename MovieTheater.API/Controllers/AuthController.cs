@@ -80,6 +80,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("reset-password")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            var reset = await _authService.ResetPasswordAsync(dto.Email, dto.Otp, dto.NewPassword);
+            if (!reset) return BadRequest(ApiResult.Failure("400", "OTP is invalid, expired or data is invalid."));
+            return Ok(ApiResult.Success("200", "Password was reset successfully."));
+        }
+
         [HttpPost("refresh-token")]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]

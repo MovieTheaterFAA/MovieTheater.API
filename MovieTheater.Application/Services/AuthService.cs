@@ -283,8 +283,7 @@ namespace MovieTheater.Application.Services
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
             if (user == null) return false;
             if (!user.IsEmailVerified) return false;
-            if (!await VerifyOtpAsync(email, otp, OtpPurpose.ForgotPassword))
-                return false;
+            if (!await VerifyOtpAsync(email, otp, OtpPurpose.ForgotPassword)) return false;
 
             // Hash và cập nhật mật khẩu
             user.Password = new PasswordHasher().HashPassword(newPassword);
