@@ -37,7 +37,7 @@ namespace MovieTheater.API.Controllers
                 using var stream = file.OpenReadStream();
                 await _blobService.UploadFileAsync(file.FileName, stream, "tests", ct);
 
-                // 2) Generate a presigned URL - theo AWS S3 standard
+                // 2) Generate a presigned URL - follow AWS S3 standard
                 var url = await _blobService.GetFileUrlAsync(file.FileName, ct);
 
                 return Ok(ApiResult<string>.Success(url!, "200", "File uploaded successfully."));

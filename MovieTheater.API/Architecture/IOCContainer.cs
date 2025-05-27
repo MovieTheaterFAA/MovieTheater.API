@@ -126,7 +126,7 @@ public static class IocContainer
             {
                 Title = "MovieTheaterAPI",
                 Version = "v1",
-                Description = "API for Movie Theater Management System",
+                Description = "API for MovieTheater Ticket Management System",
             });
             var jwtSecurityScheme = new OpenApiSecurityScheme
             {

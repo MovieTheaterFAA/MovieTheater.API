@@ -53,7 +53,7 @@ namespace MovieTheater.Application.Services
                 PhoneNumber = registrationDto.PhoneNumber,
                 DateOfBirth = registrationDto.DateOfBirth,
                 UserStatus = UserStatus.Pending,
-                Role = RoleType.Member,
+                Role = RoleType.Customer,           // Mới dk thì mặc định là Customer = Guest
                 IsEmailVerified = false
             };
 
@@ -189,7 +189,6 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
-
             return new LoginResponseDto
             {
                 AccessToken = newAccessToken,
@@ -217,6 +216,9 @@ namespace MovieTheater.Application.Services
             // Activate user account
             user.IsEmailVerified = true;
             user.UserStatus = UserStatus.Active;
+            user.Role = RoleType.Member;            // Sau khi verify thì set role thành Member,
+            _loggerService.Info($"[VerifyEmailOtpAsync] OTP verified for {email}, activating account.");
+
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
@@ -229,7 +231,6 @@ namespace MovieTheater.Application.Services
             _loggerService.Success($"[VerifyEmailOtpAsync] User {email} verified and activated.");
             return true;
         }
-
 
         /// <summary>
         ///     Check resend lại OTP là gì và gọi đúng hàm resend OTP
@@ -268,6 +269,31 @@ namespace MovieTheater.Application.Services
             return true;
         }
 
+        /// <summary>
+        ///     Reset mật khẩu cho user đã xác thực email thành công.
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="otp"></param>
+        /// <param name="newPassword"></param>
+        /// <returns></returns>
+        public async Task<bool> ResetPasswordAsync(string email, string otp, string newPassword)
+        {
+            _loggerService.Info($"[ResetPasswordAsync] Password reset requested for {email}");
+
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
+            if (user == null) return false;
+            if (!user.IsEmailVerified) return false;
+            if (!await VerifyOtpAsync(email, otp, OtpPurpose.ForgotPassword))
+                return false;
+
+            // Hash và cập nhật mật khẩu
+            user.Password = new PasswordHasher().HashPassword(newPassword);
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[ResetPasswordAsync] Password reset successful for {email}.");
+            return true;
+        }
 
         //========================= PRIVATE HELPER METHODS ============================
 
@@ -281,6 +307,7 @@ namespace MovieTheater.Application.Services
             var existingUser = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
             return existingUser != null;
         }
+
         private async Task GenerateAndSendOtpAsync(User user, OtpPurpose purpose)
         {
             var otpToken = OtpGenerator.GenerateToken(6, TimeSpan.FromMinutes(10));
@@ -307,26 +334,28 @@ namespace MovieTheater.Application.Services
                 });
                 _loggerService.Info($"[GenerateAndSendOtpAsync] Registration OTP sent to {user.Email}");
             }
-            //else if (purpose == OtpPurpose.ForgotPassword)
-            //{
-            //    await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
-            //    {
-            //        To = user.Email,
-            //        Otp = otpToken.Code,
-            //        UserName = user.FullName
-            //    });
-            //    _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
-            //}
+            else if (purpose == OtpPurpose.ForgotPassword)
+            {
+                await _emailService.SendForgotPasswordOtpEmailAsync(new EmailRequestDto
+                {
+                    To = user.Email,
+                    Otp = otpToken.Code,
+                    UserName = user.FullName
+                });
+                _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
+            }
         }
 
         private async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
+
         private async Task<User?> GetUserById(Guid id)
         {
             return await _unitOfWork.Users.GetByIdAsync(id);
         }
+
         private async Task<User?> GetUserByRefreshToken(string refreshToken)
         {
             return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
@@ -334,7 +363,6 @@ namespace MovieTheater.Application.Services
 
         private async Task<bool> VerifyOtpAsync(string email, string otp, OtpPurpose purpose)
         {
-
             // Check trong db có tồn tại OTP chưa
             var otpRecord = await _unitOfWork.OtpStorages.FirstOrDefaultAsync(o =>
                 o.Target == email && o.OtpCode == otp && o.Purpose == purpose && !o.IsUsed);
@@ -353,7 +381,6 @@ namespace MovieTheater.Application.Services
             return true;
         }
 
-
         //========================= MAPPER ============================
         private UserDto ToUserDto(User user)
         {
@@ -366,7 +393,5 @@ namespace MovieTheater.Application.Services
                 DateOfBirth = user.DateOfBirth,
             };
         }
-
-
     }
 }
