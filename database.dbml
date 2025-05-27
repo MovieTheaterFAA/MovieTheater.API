@@ -1,0 +1,247 @@
+Project MovieTheater {
+  database_type: "PostgreSQL"
+}
+
+Table Users {
+  Id uuid [pk]
+  Password varchar(255)
+  FullName varchar(100)
+  DateOfBirth timestamp
+  Sex integer
+  Email text
+  CCCD text
+  Address text
+  Role integer
+  IsEmailVerified boolean
+  ScoreBalance integer
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+  PhoneNumber varchar(15)
+  RefreshToken varchar(128)
+  RefreshTokenExpiryTime timestamp
+  UserStatus integer [note: 'Default = 0']
+}
+
+Table Movies {
+  Id uuid [pk]
+  Name text
+  FromDate timestamp
+  ToDate timestamp
+  Actors text [note: 'Array']
+  ProductionCompany text
+  Director text
+  RunningTime integer
+  Version text
+  TrailerUrl text
+  Genres text [note: 'Array']
+  ContentSynopsis text
+  PosterImage text
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table CinemaRooms {
+  Id uuid [pk]
+  Name text
+  SeatQuantity int
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Seats {
+  Id uuid [pk]
+  CinemaRoomId uuid
+  SeatNumber text
+  Type integer
+  Status integer
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Showtimes {
+  Id uuid [pk]
+  MovieId uuid
+  CinemaRoomId uuid
+  ShowDate timestamp
+  Duration varchar [note: 'Was interval']
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Bookings {
+  Id uuid [pk]
+  MemberId uuid
+  ShowtimeId uuid
+  BookingDate timestamp
+  TotalAmount numeric
+  Status text
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table BookingSeats {
+  BookingId uuid [pk]
+  SeatId uuid [pk]
+  Id uuid
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Tickets {
+  Id uuid [pk]
+  BookingId uuid
+  IssuedAt timestamp
+  TotalPrice numeric
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table TicketSeats {
+  TicketId uuid [pk]
+  SeatId uuid [pk]
+  PricePerSeat numeric
+  Id uuid
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Invoices {
+  Id uuid [pk]
+  BookingId uuid
+  InvoiceDate timestamp
+  Amount numeric
+  Status text
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Payments {
+  Id uuid [pk]
+  InvoiceId uuid
+  PaymentDate timestamp
+  Amount numeric
+  Provider text
+  PaymentReference text
+  Status text
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table Promotions {
+  Id uuid [pk]
+  Title text
+  StartTime timestamp
+  EndTime timestamp
+  DiscountValue numeric
+  Detail text
+  Image text
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table ScoreHistory {
+  Id uuid [pk]
+  MemberId uuid
+  ChangeDate timestamp
+  ChangeType integer
+  ScoreValue integer
+  RelatedBookingId uuid
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Table OtpStorages {
+  Id uuid [pk]
+  Target varchar(255)
+  OtpCode varchar(10)
+  ExpiredAt timestamp
+  IsUsed boolean
+  Purpose integer
+  IsDeleted boolean
+  CreatedAt timestamp
+  CreatedBy uuid
+  UpdatedAt timestamp
+  UpdatedBy uuid
+  DeletedAt timestamp
+  DeletedBy uuid
+}
+
+Ref: Seats.CinemaRoomId > CinemaRooms.Id
+Ref: Showtimes.MovieId > Movies.Id
+Ref: Showtimes.CinemaRoomId > CinemaRooms.Id
+Ref: Bookings.MemberId > Users.Id
+Ref: Bookings.ShowtimeId > Showtimes.Id
+Ref: BookingSeats.BookingId > Bookings.Id
+Ref: BookingSeats.SeatId > Seats.Id
+Ref: Tickets.BookingId > Bookings.Id
+Ref: TicketSeats.TicketId > Tickets.Id
+Ref: TicketSeats.SeatId > Seats.Id
+Ref: Invoices.BookingId > Bookings.Id
+Ref: Payments.InvoiceId > Invoices.Id
+Ref: ScoreHistory.MemberId > Users.Id
+Ref: ScoreHistory.RelatedBookingId > Bookings.Id
