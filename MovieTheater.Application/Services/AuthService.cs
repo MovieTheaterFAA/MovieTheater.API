@@ -114,7 +114,6 @@ namespace MovieTheater.Application.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                User = ToUserDto(user)
             };
         }
 
@@ -128,6 +127,7 @@ namespace MovieTheater.Application.Services
             _loggerService.Info($"[LogoutAsync] Logout process initiated for user ID: {userId}");
 
             var user = await GetUserById(userId);
+
             if (user == null)
                 throw ErrorHelper.NotFound("Account does not exist.");
 
@@ -390,6 +390,9 @@ namespace MovieTheater.Application.Services
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
                 DateOfBirth = user.DateOfBirth,
+                Sex = user.Sex,
+                CCCD = user.CCCD,
+                Role = user.Role,
             };
         }
     }
