@@ -211,10 +211,6 @@ namespace MovieTheater.Domain.Migrations
                         .IsRequired()
                         .HasColumnType("text[]");
 
-                    b.Property<string>("ContentSynopsis")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -226,6 +222,10 @@ namespace MovieTheater.Domain.Migrations
 
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Director")
                         .IsRequired()
@@ -246,10 +246,6 @@ namespace MovieTheater.Domain.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PosterImage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ProductionCompany")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -675,6 +671,10 @@ namespace MovieTheater.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AvatarUrl")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("CCCD")

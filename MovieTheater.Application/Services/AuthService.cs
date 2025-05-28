@@ -12,9 +12,6 @@ using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
 {
-    /// <summary>
-    ///     Service for authentication and authorization operations, including login, logout, and user registration, OTP, and refresh token.
-    /// </summary>
     public class AuthService : IAuthService
     {
         private readonly IEmailService _emailService;

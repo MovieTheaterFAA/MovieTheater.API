@@ -33,6 +33,7 @@ namespace MovieTheater.Domain.Entities
 
         // JWT Token
         [MaxLength(128)] public string? RefreshToken { get; set; }
+
         [MaxLength(128)] public DateTime? RefreshTokenExpiryTime { get; set; }
 
         // Status check email đã được verify hay chưa
@@ -40,9 +41,11 @@ namespace MovieTheater.Domain.Entities
 
         public UserStatus UserStatus { get; set; }
 
+        public string AvatarUrl { get; set; }
 
         // Navigation
         public ICollection<Booking> Bookings { get; set; }
+
         public ICollection<ScoreHistory> ScoreHistory { get; set; }
     }
 }

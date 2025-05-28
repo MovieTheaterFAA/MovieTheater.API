@@ -5,7 +5,8 @@ namespace MovieTheater.Domain
 {
     public class MovieTheaterDbContext : DbContext
     {
-        public MovieTheaterDbContext() { }
+        public MovieTheaterDbContext()
+        { }
 
         public MovieTheaterDbContext(DbContextOptions<MovieTheaterDbContext> options)
             : base(options)
@@ -30,6 +31,11 @@ namespace MovieTheater.Domain
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Configure MovieVersion enum to be stored as string in the DB
+            modelBuilder.Entity<Movie>()
+                .Property(m => m.Version)
+                .HasConversion<string>();
 
             // Seat ↔ CinemaRoom (many-to-one)
             modelBuilder.Entity<Seat>()

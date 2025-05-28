@@ -41,13 +41,12 @@ namespace MovieTheater.Domain.Migrations
                     FromDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ToDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Actors = table.Column<List<string>>(type: "text[]", nullable: false),
-                    ProductionCompany = table.Column<string>(type: "text", nullable: false),
                     Director = table.Column<string>(type: "text", nullable: false),
                     RunningTime = table.Column<int>(type: "integer", nullable: true),
                     Version = table.Column<string>(type: "text", nullable: false),
                     TrailerUrl = table.Column<string>(type: "text", nullable: false),
                     Genres = table.Column<List<string>>(type: "text[]", nullable: false),
-                    ContentSynopsis = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
                     PosterImage = table.Column<string>(type: "text", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -60,6 +59,29 @@ namespace MovieTheater.Domain.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Movies", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OtpStorages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Target = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    OtpCode = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    ExpiredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false),
+                    Purpose = table.Column<int>(type: "integer", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    UpdatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DeletedBy = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OtpStorages", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -91,18 +113,21 @@ namespace MovieTheater.Domain.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Account = table.Column<string>(type: "text", nullable: false),
-                    Password = table.Column<string>(type: "text", nullable: false),
-                    FullName = table.Column<string>(type: "text", nullable: false),
+                    FullName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Password = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Sex = table.Column<int>(type: "integer", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
-                    CCCD = table.Column<string>(type: "text", nullable: false),
-                    Phone = table.Column<string>(type: "text", nullable: false),
-                    Address = table.Column<string>(type: "text", nullable: false),
+                    CCCD = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
+                    Address = table.Column<string>(type: "text", nullable: true),
                     Role = table.Column<int>(type: "integer", nullable: false),
-                    IsLocked = table.Column<bool>(type: "boolean", nullable: false),
                     ScoreBalance = table.Column<int>(type: "integer", nullable: false),
+                    RefreshToken = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    RefreshTokenExpiryTime = table.Column<DateTime>(type: "timestamp with time zone", maxLength: 128, nullable: true),
+                    IsEmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                    UserStatus = table.Column<int>(type: "integer", nullable: false),
+                    AvatarUrl = table.Column<string>(type: "text", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<Guid>(type: "uuid", nullable: false),
@@ -465,6 +490,9 @@ namespace MovieTheater.Domain.Migrations
         {
             migrationBuilder.DropTable(
                 name: "BookingSeats");
+
+            migrationBuilder.DropTable(
+                name: "OtpStorages");
 
             migrationBuilder.DropTable(
                 name: "Payments");
