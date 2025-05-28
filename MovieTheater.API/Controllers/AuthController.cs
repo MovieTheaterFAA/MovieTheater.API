@@ -25,7 +25,7 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("register")]
         [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
-        [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
+        [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
         public async Task<IActionResult> Register([FromBody] UserRegistrationDto userDto)
         {
             try
