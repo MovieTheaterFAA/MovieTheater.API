@@ -20,7 +20,7 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
-    [HttpGet]
+    [HttpGet("/get-user")]
     [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
