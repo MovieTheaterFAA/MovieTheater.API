@@ -24,7 +24,7 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Pagination<UserForListDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
-    public async Task<IActionResult> GetAllUserWithPagingAsync(
+    public async Task<IActionResult> GetAllUserAsync(
          [FromQuery] string? search,
          [FromQuery] RoleType? role,
          [FromQuery] string? sortBy,
