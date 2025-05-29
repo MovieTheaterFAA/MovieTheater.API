@@ -29,7 +29,10 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
 
         public RoleType Role { get; set; }
 
+        public string AvatarUrl { get; set; }
+
         public int ScoreBalance { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

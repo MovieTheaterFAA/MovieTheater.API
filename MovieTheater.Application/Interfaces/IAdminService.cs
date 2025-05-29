@@ -18,7 +18,13 @@ namespace MovieTheater.Application.Interfaces
             bool isDescending,
             int page,
             int pageSize);
-        Task<List<UserDto>> GetAllEmloyees();
+        Task<Pagination<UserDto>> GetAllEmployeesAsync(
+             string? search,
+             string? sortBy,
+             bool isDescending,
+             int page,
+            int pageSize
+            );
     }
 
 }

@@ -6,9 +6,10 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
+using System.Data;
 
-namespace MovieTheater.API.Controllers
-{ 
+namespace MovieTheater.API.Controllers;
+
 
 [Route("api/admin")]
 [ApiController]
@@ -50,24 +51,30 @@ public class AdminController : ControllerBase
         }
     }
     [HttpGet("employees")]
-    public async Task<IActionResult> GetAllEmployees()
+    [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> GetAllEmployees(
+         [FromQuery] string? search,
+         [FromQuery] string? sortBy,
+         [FromQuery] bool isDescending = false,
+         [FromQuery] int page = 1,
+         [FromQuery] int pageSize = 10)
     {
+        try
+        {
+            if (page < 1 || pageSize < 1)
+                return BadRequest(ApiResult<object>.Failure("400", " Invalid pagination parameter"));
 
-            try
-            {
-                var users = await _adminService.GetAllEmloyees();
+            var users = await _adminService.GetAllEmployeesAsync(search, sortBy, isDescending, page, pageSize);
 
-
-                var employees = users.Where(u => u.Role == RoleType.Employee).ToList();
-
-                return Ok(ApiResult<object>.Success(employees, "200", "Get user succesfully"));
-            }
-            catch (Exception ex)
-            {
-                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
-                return StatusCode(statusCode, errorResponse);
-            }
+            return Ok(ApiResult<object>.Success(users, "200", "Get user succesfully"));
         }
-}
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
 }

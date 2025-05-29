@@ -8,6 +8,7 @@ using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -96,40 +97,62 @@ public class AdminService : IAdminService
             throw new Exception("An error occurred while fetching users. Please try again later");
         }
     }
-    public async Task<List<UserDto>> GetAllEmloyees()
+
+    public async Task<Pagination<UserDto>> GetAllEmployeesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
     {
         try
         {
-            _loggerService.Info("Starting to retrieve all employees.");
+            _loggerService.Info($"Fetching employees - Page {page}, PageSize {pageSize}, Search: {search}");
 
-            var listusers = await _unitOfWork.Users.GetAllAsync();
+            var listUsers = await _unitOfWork.Users.GetAllAsync();
 
-            if (listusers == null || !listusers.Any(u => u.Role == RoleType.Employee))
+            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                _loggerService.Warn("No employee users found.");               
+                var searchLower = search.ToLower();
+                employeeUsers = employeeUsers.Where(u =>
+                    (!string.IsNullOrEmpty(u.FullName) && u.FullName.ToLower().Contains(searchLower)) ||
+                    (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(searchLower)) ||
+                    (!string.IsNullOrEmpty(u.PhoneNumber) && u.PhoneNumber.ToLower().Contains(searchLower))
+                );
             }
 
-            var result = listusers
-                .Where(u => u.Role == RoleType.Employee)
-                .Select(user => new UserDto
-                {
-                    FullName = user.FullName,
-                    CCCD = user.CCCD,
-                    DateOfBirth = user.DateOfBirth,
-                    Sex = user.Sex,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Address = user.Address,
-                    Role = user.Role
-                }).ToList();
+            var totalEmployees = employeeUsers.Count();
+          
+            employeeUsers = sortBy?.ToLower() switch
+            {
+                "fullname" => isDescending ? employeeUsers.OrderByDescending(u => u.FullName) : employeeUsers.OrderBy(u => u.FullName),
+                "dateofbirth" => isDescending ? employeeUsers.OrderByDescending(u => u.DateOfBirth) : employeeUsers.OrderBy(u => u.DateOfBirth),
+                _ => employeeUsers.OrderBy(u => u.Id)
+            };
 
-            _loggerService.Success($"Retrieved {result.Count} employee(s) successfully.");
-            return result;
+
+            var pagedEmployees = employeeUsers
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var result = pagedEmployees.Select(user => new UserDto
+            {
+                AvatarUrl = user.AvatarUrl,
+                FullName = user.FullName,
+                CCCD = user.CCCD,
+                DateOfBirth = user.DateOfBirth,
+                Sex = user.Sex,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            }).ToList();
+
+            _loggerService.Success($"Retrieved {result.Count} employees on page {page} successfully.");
+
+            return new Pagination<UserDto>(result, totalEmployees, page, pageSize);
         }
         catch (Exception ex)
         {
             _loggerService.Error($"Failed to retrieve employees. Exception: {ex.Message}");
-            throw;
+            throw new Exception("An error occurred while retrieving employees. Please try again later.");
         }
     }
 }
