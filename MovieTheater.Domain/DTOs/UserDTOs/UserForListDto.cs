@@ -18,11 +18,18 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
 
         public string? PhoneNumber { get; set; }
 
+        public string? CCCD { get; set; }
+
+        public string? Address { get; set; }
+
         public RoleType Role { get; set; }
 
         public int ScoreBalance { get; set; }
+
         public DateTime CreatedAt { get; set; }
+
         public string AvatarUrl { get; set; }
+
         public bool IsDeleted { get; set; }
 
     }
