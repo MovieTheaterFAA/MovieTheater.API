@@ -41,7 +41,7 @@ namespace MovieTheater.Domain.Entities
 
         public UserStatus UserStatus { get; set; }
 
-        public string AvatarUrl { get; set; }
+        public string? AvatarUrl { get; set; }
 
         // Navigation
         public ICollection<Booking> Bookings { get; set; }
