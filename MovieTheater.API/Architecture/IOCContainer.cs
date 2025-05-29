@@ -102,7 +102,7 @@ public static class IocContainer
     {
         // Inject service vào DI container
 
-        //services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ILoggerService, LoggerService>();
         services.AddScoped<ICurrentTime, CurrentTime>();
