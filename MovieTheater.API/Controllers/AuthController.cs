@@ -85,9 +85,18 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
-            var reset = await _authService.ResetPasswordAsync(dto.Email, dto.Otp, dto.NewPassword);
-            if (!reset) return BadRequest(ApiResult.Failure("400", "OTP is invalid, expired or data is invalid."));
-            return Ok(ApiResult.Success("200", "Password was reset successfully."));
+            try
+            {
+                var reset = await _authService.ResetPasswordAsync(dto.Email, dto.Otp, dto.NewPassword);
+                if (!reset) return BadRequest(ApiResult.Failure("400", "OTP is invalid, expired or data is invalid."));
+                return Ok(ApiResult.Success("200", "Password was reset successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
         }
 
         [HttpPost("refresh-token")]
@@ -115,11 +124,19 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
         {
-            var verified = await _authService.VerifyEmailOtpAsync(dto.Email, dto.Otp);
-            if (!verified)
-                return BadRequest(ApiResult.Failure("400", "OTP is invalid or expired."));
-
-            return Ok(ApiResult.Success("200", "Verification successful. Account activated."));
+            try
+            {
+                var verified = await _authService.VerifyEmailOtpAsync(dto.Email, dto.Otp);
+                if (!verified)
+                    return BadRequest(ApiResult.Failure("400", "OTP is invalid or expired."));
+                return Ok(ApiResult.Success("200", "Verification successful. Account activated."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
         }
     }
 }
