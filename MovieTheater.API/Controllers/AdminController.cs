@@ -21,7 +21,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResult<Pagination<UserForListDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
     public async Task<IActionResult> GetAllUserAsync(
@@ -39,8 +39,7 @@ public class AdminController : ControllerBase
 
             var users = await _adminService.GetListUsersAsync(search, role, sortBy, isDescending, page, pageSize);
 
-            return Ok(ApiResult<Pagination<UserForListDto>>.Success(users, "200", "Fetched succesfully"));
-
+            return Ok(ApiResult<Pagination<GetUserDto>>.Success(users, "200", "Get user succesfully"));
         }
         catch (Exception ex)
         {

@@ -12,10 +12,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MovieTheater.Application.Services;
+
 public class AdminService : IAdminService
 {
-   private readonly ILoggerService _loggerService;
-   private readonly IUnitOfWork _unitOfWork;
+    private readonly ILoggerService _loggerService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService)
     {
@@ -23,7 +24,7 @@ public class AdminService : IAdminService
         _loggerService = loggerService;
     }
 
-    public async Task<Pagination<UserForListDto>> GetListUsersAsync(string? search, RoleType? role, string? sortBy, bool isDescending, int page, int pageSize)
+    public async Task<Pagination<GetUserDto>> GetListUsersAsync(string? search, RoleType? role, string? sortBy, bool isDescending, int page, int pageSize)
     {
         try
         {
@@ -66,10 +67,10 @@ public class AdminService : IAdminService
             if (!users.Any())
             {
                 _loggerService.Warn($"No user found on page {page}");
-                return new Pagination<UserForListDto>(new List<UserForListDto>(), 0, page, pageSize);
+                return new Pagination<GetUserDto>(new List<GetUserDto>(), 0, page, pageSize);
             }
 
-            var userDtos = users.Select(u => new UserForListDto
+            var userDtos = users.Select(u => new GetUserDto
             {
                 Id = u.Id,
                 FullName = u.FullName,
@@ -86,7 +87,7 @@ public class AdminService : IAdminService
 
             _loggerService.Success($"Retrieved {userDtos.Count} users on page {page}");
 
-            return new Pagination<UserForListDto>(userDtos, totalUsers, page, pageSize);
+            return new Pagination<GetUserDto>(userDtos, totalUsers, page, pageSize);
         }
         catch (Exception ex)
         {
@@ -95,4 +96,3 @@ public class AdminService : IAdminService
         }
     }
 }
-

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MovieTheater.Domain.DTOs.UserDTOs
 {
-    public class UserForListDto
+    public class GetUserDto
     {
         public Guid Id { get; set; }
         public string? FullName { get; set; }
@@ -31,6 +31,5 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
         public string AvatarUrl { get; set; }
 
         public bool IsDeleted { get; set; }
-
     }
 }

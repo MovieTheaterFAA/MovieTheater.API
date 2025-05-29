@@ -11,7 +11,7 @@ namespace MovieTheater.Application.Interfaces
 {
     public interface IAdminService
     {
-        Task<Pagination<UserForListDto>> GetListUsersAsync(
+        Task<Pagination<GetUserDto>> GetListUsersAsync(
             string? search,
             RoleType? role,
             string? sortBy,
