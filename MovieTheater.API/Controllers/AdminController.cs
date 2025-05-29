@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
@@ -7,7 +7,8 @@ using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 
-namespace MovieTheater.API.Controllers;
+namespace MovieTheater.API.Controllers
+{ 
 
 [Route("api/admin")]
 [ApiController]
@@ -20,7 +21,7 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
-    [HttpGet("/get-user")]
+    [HttpGet("get-user")]
     [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -35,7 +36,7 @@ public class AdminController : ControllerBase
         try
         {
             if (page < 1 || pageSize < 1)
-                return BadRequest(ApiResult<object>.Failure("400 - Invalid pagination parameter"));
+                return BadRequest(ApiResult<object>.Failure("400"," Invalid pagination parameter"));
 
             var users = await _adminService.GetListUsersAsync(search, role, sortBy, isDescending, page, pageSize);
 
@@ -48,4 +49,25 @@ public class AdminController : ControllerBase
             return StatusCode(statusCode, errorResponse);
         }
     }
+    [HttpGet("employees")]
+    public async Task<IActionResult> GetAllEmployees()
+    {
+
+            try
+            {
+                var users = await _adminService.GetAllEmloyees();
+
+
+                var employees = users.Where(u => u.Role == RoleType.Employee).ToList();
+
+                return Ok(ApiResult<object>.Success(employees, "200", "Get user succesfully"));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+}
 }

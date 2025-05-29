@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
@@ -93,6 +94,42 @@ public class AdminService : IAdminService
         {
             _loggerService.Error($"Error while fetching users: {ex.Message}");
             throw new Exception("An error occurred while fetching users. Please try again later");
+        }
+    }
+    public async Task<List<UserDto>> GetAllEmloyees()
+    {
+        try
+        {
+            _loggerService.Info("Starting to retrieve all employees.");
+
+            var listusers = await _unitOfWork.Users.GetAllAsync();
+
+            if (listusers == null || !listusers.Any(u => u.Role == RoleType.Employee))
+            {
+                _loggerService.Warn("No employee users found.");               
+            }
+
+            var result = listusers
+                .Where(u => u.Role == RoleType.Employee)
+                .Select(user => new UserDto
+                {
+                    FullName = user.FullName,
+                    CCCD = user.CCCD,
+                    DateOfBirth = user.DateOfBirth,
+                    Sex = user.Sex,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Address = user.Address,
+                    Role = user.Role
+                }).ToList();
+
+            _loggerService.Success($"Retrieved {result.Count} employee(s) successfully.");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Failed to retrieve employees. Exception: {ex.Message}");
+            throw;
         }
     }
 }
