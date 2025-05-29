@@ -16,8 +16,8 @@ namespace MovieTheater.Domain.Entities
 
         public DateTime ToDate { get; set; }
 
-        public List<string> Actors { get; set; }
-
+        public List<string> Actors { get; set; }      // Danh sách dàn cast
+        public List<string> ActorsUrl { get; set; }   // Đường dẫn tới ảnh của diễn viên
         public string Director { get; set; }
 
         public int? RunningTime { get; set; }         // Thời lượng chiếu
