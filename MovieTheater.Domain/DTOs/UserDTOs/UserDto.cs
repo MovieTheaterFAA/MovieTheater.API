@@ -1,10 +1,4 @@
 ﻿using MovieTheater.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MovieTheater.Domain.DTOs.UserDTOs
 {
@@ -29,7 +23,10 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
 
         public RoleType Role { get; set; }
 
+        public string? AvatarUrl { get; set; }
+
         public int ScoreBalance { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

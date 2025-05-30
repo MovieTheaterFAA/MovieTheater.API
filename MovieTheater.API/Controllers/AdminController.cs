@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
@@ -20,7 +20,7 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
-    [HttpGet("/get-user")]
+    [HttpGet("user")]
     [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -35,7 +35,7 @@ public class AdminController : ControllerBase
         try
         {
             if (page < 1 || pageSize < 1)
-                return BadRequest(ApiResult<object>.Failure("400 - Invalid pagination parameter"));
+                return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameter"));
 
             var users = await _adminService.GetListUsersAsync(search, role, sortBy, isDescending, page, pageSize);
 
@@ -45,6 +45,53 @@ public class AdminController : ControllerBase
         {
             var statusCode = ExceptionUtils.ExtractStatusCode(ex);
             var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpGet("employee")]
+    [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> GetAllEmployeeAsync(
+         [FromQuery] string? search,
+         [FromQuery] string? sortBy,
+         [FromQuery] bool isDescending = false,
+         [FromQuery] int page = 1,
+         [FromQuery] int pageSize = 10)
+    {
+        try
+        {
+            if (page < 1 || pageSize < 1)
+                return BadRequest(ApiResult<object>.Failure("400", " Invalid pagination parameter"));
+
+            var users = await _adminService.GetAllEmployeesAsync(search, sortBy, isDescending, page, pageSize);
+
+            return Ok(ApiResult<object>.Success(users, "200", "Get user succesfully"));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpPost("employee")]
+    [Authorize(Policy = "AdminPolicy")]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
+    public async Task<IActionResult> AddEmployeeAsync([FromBody] AddEmployeeRequestDto addEmployee)
+    {
+        try
+        {
+            var result = await _adminService.AddEmployeeAsync(addEmployee);
+            return Ok(ApiResult<UserDto>.Success(result!, "200", "Added employee successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
             return StatusCode(statusCode, errorResponse);
         }
     }

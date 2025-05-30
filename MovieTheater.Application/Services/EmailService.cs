@@ -118,5 +118,32 @@ namespace MovieTheater.Application.Services
 </html>";
             await SendEmailAsync(request.To, "Password has been changed at MovieTheater", html);
         }
+
+        public async Task SendEmployeeCredentialsEmailAsync(EmployeeCredentialsEmailDto request)
+        {
+            var html = $@"
+<html style=""background-color:#000000;margin:0;padding:0;"">
+  <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
+    <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
+      <div style=""text-align:center;margin-bottom:20px;"">
+        <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
+      </div>
+      <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
+      <p>Your account has been created successfully.</p>
+      <p>Here are your login credentials:</p>
+      <ul>
+        <li><strong>Email:</strong> {request.To}</li>
+        <li><strong>Password:</strong> {request.Password}</li>
+      </ul>
+      <p>Please change your password after your first login to keep your account secure.</p>
+      <div style=""text-align:center;margin:25px 0;"">
+        <a href=""https://placeholder.com/login"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Login Now</a>
+      </div>
+      <p style=""margin-top:30px;"">Best regards,<br/>MovieTheater Team</p>
+    </div>
+  </body>
+</html>";
+            await SendEmailAsync(request.To, "Your Account Credentials", html);
+        }
     }
 }
