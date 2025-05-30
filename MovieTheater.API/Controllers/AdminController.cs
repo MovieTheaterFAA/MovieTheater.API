@@ -1,15 +1,13 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
-using System.Data;
 
 namespace MovieTheater.API.Controllers;
-
 
 [Route("api/admin")]
 [ApiController]
@@ -50,11 +48,12 @@ public class AdminController : ControllerBase
             return StatusCode(statusCode, errorResponse);
         }
     }
+
     [HttpGet("employee")]
     [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
-    public async Task<IActionResult> GetAllEmployees(
+    public async Task<IActionResult> GetAllEmployeeAsync(
          [FromQuery] string? search,
          [FromQuery] string? sortBy,
          [FromQuery] bool isDescending = false,
@@ -74,6 +73,25 @@ public class AdminController : ControllerBase
         {
             var statusCode = ExceptionUtils.ExtractStatusCode(ex);
             var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpPost("employee")]
+    [Authorize(Policy = "AdminPolicy")]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
+    public async Task<IActionResult> AddEmployeeAsync([FromBody] AddEmployeeRequestDto addEmployee)
+    {
+        try
+        {
+            var result = await _adminService.AddEmployeeAsync(addEmployee);
+            return Ok(ApiResult<UserDto>.Success(result!, "200", "Added employee successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
             return StatusCode(statusCode, errorResponse);
         }
     }
