@@ -7,7 +7,7 @@ namespace MovieTheater.Application.Interfaces
 {
     public interface IAdminService
     {
-        Task<Pagination<GetUserDto>> GetListUsersAsync(
+        Task<Pagination<GetUserDto>> GetListUserAsync(
             string? search,
             RoleType? role,
             string? sortBy,
@@ -15,7 +15,7 @@ namespace MovieTheater.Application.Interfaces
             int page,
             int pageSize);
 
-        Task<Pagination<UserDto>> GetAllEmployeesAsync(
+        Task<Pagination<UserDto>> GetListEmployeeAsync(
              string? search,
              string? sortBy,
              bool isDescending,
@@ -24,7 +24,7 @@ namespace MovieTheater.Application.Interfaces
             );
 
         Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto);
-        Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
 
+        Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
     }
 }

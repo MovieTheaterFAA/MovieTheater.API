@@ -86,7 +86,7 @@ public class AdminService : IAdminService
         return ToUserDto(user);
     }
 
-    public async Task<Pagination<GetUserDto>> GetListUsersAsync(string? search, RoleType? role, string? sortBy, bool isDescending, int page, int pageSize)
+    public async Task<Pagination<GetUserDto>> GetListUserAsync(string? search, RoleType? role, string? sortBy, bool isDescending, int page, int pageSize)
     {
         try
         {
@@ -158,7 +158,7 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<Pagination<UserDto>> GetAllEmployeesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+    public async Task<Pagination<UserDto>> GetListEmployeeAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
     {
         try
         {
