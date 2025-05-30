@@ -95,4 +95,22 @@ public class AdminService : IAdminService
             throw new Exception("An error occurred while fetching users. Please try again later");
         }
     }
+    public async Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(employeeId);
+        if (user == null || user.IsDeleted ||
+            !(user.Role == RoleType.Employee || user.Role == RoleType.Admin))
+        {
+            return false;
+        }
+
+        user.UserStatus = UserStatus.Deleted;
+        user.IsDeleted = true;
+        user.DeletedAt = DateTime.UtcNow;
+        user.DeletedBy = adminId;
+
+        _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
 }

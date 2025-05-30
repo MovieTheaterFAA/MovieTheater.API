@@ -18,5 +18,7 @@ namespace MovieTheater.Application.Interfaces
             bool isDescending,
             int page,
             int pageSize);
+        Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
+
     }
 }
