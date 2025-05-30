@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
@@ -45,6 +44,25 @@ public class AdminController : ControllerBase
         {
             var statusCode = ExceptionUtils.ExtractStatusCode(ex);
             var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpPost("add-employee")]
+    [Authorize(Policy = "AdminPolicy")]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
+    public async Task<IActionResult> AddEmployee([FromBody] UserRequestDTO employee)
+    {
+        try
+        {
+            var result = await _adminService.AddEmployeeAsync(employee);
+            return Ok(ApiResult<UserDto>.Success(result!, "200", "Added employee successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
             return StatusCode(statusCode, errorResponse);
         }
     }
