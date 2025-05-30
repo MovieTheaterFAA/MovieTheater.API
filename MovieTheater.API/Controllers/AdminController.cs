@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
@@ -19,7 +20,7 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
-    [HttpGet("/get-user")]
+    [HttpGet("user")]
     [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -48,15 +49,15 @@ public class AdminController : ControllerBase
         }
     }
 
-    [HttpPost("add-employee")]
+    [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
     [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
     [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
-    public async Task<IActionResult> AddEmployee([FromBody] UserRequestDTO employee)
+    public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeRequestDto addEmployee)
     {
         try
         {
-            var result = await _adminService.AddEmployeeAsync(employee);
+            var result = await _adminService.AddEmployeeAsync(addEmployee);
             return Ok(ApiResult<UserDto>.Success(result!, "200", "Added employee successfully."));
         }
         catch (Exception ex)

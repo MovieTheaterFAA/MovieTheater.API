@@ -2,12 +2,12 @@
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Reactive;
 
 namespace MovieTheater.Application.Services;
 
@@ -26,14 +26,14 @@ public class AdminService : IAdminService
         _claimsService = claimsService;
     }
 
-    public async Task<UserDto?> AddEmployeeAsync(UserRequestDTO userRequestDTO)
+    public async Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto)
     {
-        _loggerService.Info($"[AddEmployeeAsync] Start registration employee for {userRequestDTO.Email}");
+        _loggerService.Info($"[AddEmployeeAsync] Start registration employee for {dto.Email}");
 
         // Kiểm tra email đã tồn tại chưa
-        if (await UserExistsAsync(userRequestDTO.Email))
+        if (await UserExistsAsync(dto.Email))
         {
-            _loggerService.Warn($"[AddEmployeeAsync] Email {userRequestDTO.Email} already registered.");
+            _loggerService.Warn($"[AddEmployeeAsync] Email {dto.Email} already registered.");
             throw ErrorHelper.Conflict("Email has been used.");
         }
 
@@ -44,7 +44,7 @@ public class AdminService : IAdminService
         var hashedPassword = new PasswordHasher().HashPassword(plainPassword);
 
         // Tạo đối tượng User mới với role Employee
-        var user = MapToUser(userRequestDTO);
+        var user = ToAddEmployeeDto(dto);
         user.Password = hashedPassword;
         user.UserStatus = UserStatus.Active;
         user.Role = RoleType.Employee;
@@ -81,8 +81,6 @@ public class AdminService : IAdminService
         // Trả về UserDto ( có phương thức chuyển đổi)
         return ToUserDto(user);
     }
-
-
 
     public async Task<Pagination<GetUserDto>> GetListUsersAsync(string? search, RoleType? role, string? sortBy, bool isDescending, int page, int pageSize)
     {
@@ -156,6 +154,7 @@ public class AdminService : IAdminService
         }
     }
 
+    //========================= PRIVATE HELPER METHODS ============================
 
     /// <summary>
     ///     Check những employee đã tồn tại trong hệ thống hay chưa.
@@ -185,15 +184,13 @@ public class AdminService : IAdminService
         return new string(chars);
     }
 
-
     //========================= MAPPER ============================
-    // Map Entity To DTO
     private UserDto ToUserDto(User user)
     {
         return new UserDto
         {
             UserId = user.Id,
-            FullName = user.FullName,          
+            FullName = user.FullName,
             DateOfBirth = user.DateOfBirth,
             Sex = user.Sex,
             Email = user.Email,
@@ -206,29 +203,20 @@ public class AdminService : IAdminService
         };
     }
 
-    // Map DTO to Enitty
-    private User MapToUser(UserRequestDTO dto, User? user = null)
+    private User ToAddEmployeeDto(AddEmployeeRequestDto dto, User? user = null)
     {
         user ??= new User();
 
         user.FullName = dto.FullName;
+        user.DateOfBirth = DateTime.SpecifyKind(dto.DateOfBirth, DateTimeKind.Utc);
+        user.Sex = dto.Sex;
+        user.CCCD = dto.CCCD;
         user.Email = dto.Email;
         user.PhoneNumber = dto.PhoneNumber;
-
-        // Chuyển DateOfBirth về UTC
-        if (dto.DateOfBirth != default)
-            user.DateOfBirth = DateTime.SpecifyKind(dto.DateOfBirth, DateTimeKind.Utc);
-        user.CCCD = dto.IdentityCard;          // Nếu DTO có trường IdentityCard, map vào CCCD
         user.Address = dto.Address;
-        user.Sex = dto.Sex;
+        user.CreatedAt = dto.CreateAt != default ? DateTime.SpecifyKind(dto.CreateAt, DateTimeKind.Utc) : DateTime.UtcNow;
 
-        // Nếu bạn có trường AvatarUrl trong DTO (ví dụ Image), map thêm
-        user.AvatarUrl = dto.Image;
-
-        // Chú ý: Password được set riêng biệt ở AddEmployeeAsync (vì cần hash)
-
+        // Note: Password, UserStatus, Role, IsEmailVerified, CreatedBy are set above
         return user;
     }
-
-
 }
