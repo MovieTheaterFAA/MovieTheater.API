@@ -32,11 +32,11 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public async Task<UserDto?> RegisterUserAsync(UserRegistrationDto registrationDto)
         {
-            _loggerService.Info($"[RegisterUserAsync] Start registration for {registrationDto.Email}");
+            _loggerService.Info($"Start registration for {registrationDto.Email}");
 
             if (await UserExistsAsync(registrationDto.Email))
             {
-                _loggerService.Warn($"[RegisterUserAsync] Email {registrationDto.Email} already registered.");
+                _loggerService.Warn($"Email {registrationDto.Email} already registered.");
                 throw ErrorHelper.Conflict("Email have been used.");
             }
 
@@ -57,11 +57,11 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            _loggerService.Success($"[RegisterUserAsync] User {user.Email} created successfully.");
+            _loggerService.Success($"User {user.Email} created successfully.");
 
             await GenerateAndSendOtpAsync(user, OtpPurpose.Register);
 
-            _loggerService.Info($"[RegisterUserAsync] OTP sent to {user.Email} for verification.");
+            _loggerService.Info($"OTP sent to {user.Email} for verification.");
 
             return ToUserDto(user);
         }
@@ -74,7 +74,7 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginDto, IConfiguration configuration)
         {
-            _loggerService.Info($"[LoginAsync] Login attempt for {loginDto.Email}");
+            _loggerService.Info($"Login attempt for {loginDto.Email}");
 
             // Get user from DB
             var user = await GetUserByEmailAsync(loginDto.Email!);
@@ -87,7 +87,7 @@ namespace MovieTheater.Application.Services
             if (user.UserStatus != UserStatus.Active)
                 throw ErrorHelper.Forbidden("Account have not verified yet.");
 
-            _loggerService.Success($"[LoginAsync] User {loginDto.Email} authenticated successfully.");
+            _loggerService.Success($"User {loginDto.Email} authenticated successfully.");
 
             // Generate JWT token and refresh token
             var accessToken = JwtUtils.GenerateJwtToken(
@@ -105,7 +105,7 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
-            _loggerService.Info($"[LoginAsync] Tokens generated and user cache updated for {user.Email}");
+            _loggerService.Info($"Tokens generated and user cache updated for {user.Email}");
 
             return new LoginResponseDto
             {
@@ -121,7 +121,7 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public async Task<bool> LogoutAsync(Guid userId)
         {
-            _loggerService.Info($"[LogoutAsync] Logout process initiated for user ID: {userId}");
+            _loggerService.Info($"Logout process initiated for user ID: {userId}");
 
             var user = await GetUserById(userId);
 
@@ -141,7 +141,7 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
-            _loggerService.Info($"[LogoutAsync] Logout successful for user ID: {userId}.");
+            _loggerService.Info($"Logout successful for user ID: {userId}.");
             return true;
         }
 
@@ -194,14 +194,14 @@ namespace MovieTheater.Application.Services
         }
 
         /// <summary>
-        ///     Verify OTP mà user truyền vào
+        ///     Verify account
         /// </summary>
         /// <param name="email"></param>
         /// <param name="otp"></param>
         /// <returns></returns>
         public async Task<bool> VerifyEmailOtpAsync(string email, string otp)
         {
-            _loggerService.Info($"[VerifyEmailOtpAsync] Verifying OTP for {email}");
+            _loggerService.Info($"Verifying OTP for {email}");
 
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null) throw ErrorHelper.NotFound("Account does not exist.");
@@ -214,7 +214,7 @@ namespace MovieTheater.Application.Services
             user.IsEmailVerified = true;
             user.UserStatus = UserStatus.Active;
             user.Role = RoleType.Member;            // Sau khi verify thì set role thành Member,
-            _loggerService.Info($"[VerifyEmailOtpAsync] OTP verified for {email}, activating account.");
+            _loggerService.Info($"OTP verified for {email}, activating account.");
 
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
@@ -225,7 +225,7 @@ namespace MovieTheater.Application.Services
                 UserName = user.FullName
             });
 
-            _loggerService.Success($"[VerifyEmailOtpAsync] User {email} verified and activated.");
+            _loggerService.Success($"User {email} verified and activated.");
             return true;
         }
 
@@ -239,35 +239,14 @@ namespace MovieTheater.Application.Services
         {
             return otpPurpose switch
             {
-                OtpPurpose.Register => await ResendRegisterOtpAsync(email),
-                _ => throw ErrorHelper.BadRequest("Loại OTP không hợp lệ.")
+                OtpPurpose.Register => await SendRegisterOtpAsync(email),
+                OtpPurpose.ForgotPassword => await SendForgotPasswordOtpAsync(email),
+                _ => throw ErrorHelper.BadRequest("Invalid OTP type.")
             };
         }
 
         /// <summary>
-        ///     Gửi lại OTP cho user đã đăng ký nhưng chưa xác thực email.
-        /// </summary>
-        /// <param name="email"></param>
-        /// <returns></returns>
-        private async Task<bool> ResendRegisterOtpAsync(string email)
-        {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
-            if (user == null)
-                throw ErrorHelper.NotFound("Email does not exist in the system.");
-
-            if (user.IsDeleted || user.UserStatus == UserStatus.Banned)
-                throw ErrorHelper.Forbidden("Account has been disabled or banned.");
-
-            if (user.IsEmailVerified)
-                throw ErrorHelper.Conflict("Verified account, no need to resend OTP.");
-
-            await GenerateAndSendOtpAsync(user, OtpPurpose.Register);
-
-            return true;
-        }
-
-        /// <summary>
-        ///     Reset mật khẩu cho user đã xác thực email thành công.
+        ///     Reset mật khẩu cho user.
         /// </summary>
         /// <param name="email"></param>
         /// <param name="otp"></param>
@@ -275,7 +254,7 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public async Task<bool> ResetPasswordAsync(string email, string otp, string newPassword)
         {
-            _loggerService.Info($"[ResetPasswordAsync] Password reset requested for {email}");
+            _loggerService.Info($"Password reset requested for {email}");
 
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
             if (user == null) return false;
@@ -283,21 +262,29 @@ namespace MovieTheater.Application.Services
             if (!await VerifyOtpAsync(email, otp, OtpPurpose.ForgotPassword)) return false;
 
             // Hash và cập nhật mật khẩu
-            user.Password = new PasswordHasher().HashPassword(newPassword);
+            var hashedPassword = new PasswordHasher().HashPassword(newPassword);
+            if (hashedPassword == null)
+            {
+                _loggerService.Warn($"Failed to hash password for {email}");
+                return false;
+            }
+
+            user.Password = hashedPassword;
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
-            _loggerService.Success($"[ResetPasswordAsync] Password reset successful for {email}.");
+            await _emailService.SendPasswordChangeSuccessAsync(new EmailRequestDto
+            {
+                To = user.Email,
+                UserName = user.FullName
+            });
+
+            _loggerService.Success($"Password reset successful for {email}.");
             return true;
         }
 
         //========================= PRIVATE HELPER METHODS ============================
 
-        /// <summary>
-        ///     Check những user đã tồn tại trong hệ thống hay chưa.
-        /// </summary>
-        /// <param name="email"></param>
-        /// <returns></returns>
         private async Task<bool> UserExistsAsync(string email)
         {
             var existingUser = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -328,7 +315,7 @@ namespace MovieTheater.Application.Services
                     Otp = otpToken.Code,
                     UserName = user.FullName
                 });
-                _loggerService.Info($"[GenerateAndSendOtpAsync] Registration OTP sent to {user.Email}");
+                _loggerService.Info($"Registration OTP sent to {user.Email}");
             }
             else if (purpose == OtpPurpose.ForgotPassword)
             {
@@ -338,7 +325,7 @@ namespace MovieTheater.Application.Services
                     Otp = otpToken.Code,
                     UserName = user.FullName
                 });
-                _loggerService.Info($"[GenerateAndSendOtpAsync] Forgot password OTP sent to {user.Email}");
+                _loggerService.Info($"Forgot password OTP sent to {user.Email}");
             }
         }
 
@@ -355,6 +342,37 @@ namespace MovieTheater.Application.Services
         private async Task<User?> GetUserByRefreshToken(string refreshToken)
         {
             return await _unitOfWork.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        }
+
+        private async Task<bool> SendRegisterOtpAsync(string email)
+        {
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                throw ErrorHelper.NotFound("Email does not exist in the system.");
+
+            if (user.IsDeleted || user.UserStatus == UserStatus.Banned)
+                throw ErrorHelper.Forbidden("Account has been disabled or banned.");
+
+            if (user.IsEmailVerified)
+                throw ErrorHelper.Conflict("Verified account, no need to resend OTP.");
+
+            await GenerateAndSendOtpAsync(user, OtpPurpose.Register);
+
+            return true;
+        }
+
+        private async Task<bool> SendForgotPasswordOtpAsync(string email)
+        {
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                throw ErrorHelper.NotFound("Email does not exist in the system.");
+
+            if (user.IsDeleted || user.UserStatus == UserStatus.Banned)
+                throw ErrorHelper.Forbidden("Account has been disabled or banned.");
+
+            await GenerateAndSendOtpAsync(user, OtpPurpose.ForgotPassword);
+
+            return true;
         }
 
         private async Task<bool> VerifyOtpAsync(string email, string otp, OtpPurpose purpose)

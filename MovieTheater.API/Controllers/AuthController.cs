@@ -119,6 +119,30 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("resend-otp")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequestDto dto)
+        {
+            try
+            {
+                var success = await _authService.ResendOtpAsync(dto.Email, dto.Purpose);
+                if (!success)
+                {
+                    return BadRequest(ApiResult.Failure("400", "Failed to resend OTP. Possibly invalid state or email."));
+                }
+
+                return Ok(ApiResult.Success("200", "OTP resent successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
         [HttpPost("verify-otp")]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]

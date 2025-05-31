@@ -39,7 +39,7 @@ namespace MovieTheater.Application.Services
         <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
       </div>
       <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
-      <p>You have successfully registered an account at our Cinema Booking service.</p>
+      <p>You have successfully registered an account at our MovieTheater service.</p>
       <p>We hope you enjoy browsing and booking tickets for your favorite movies.</p>
       <div style=""text-align:center;margin:25px 0;"">
         <a href=""https://placeholder.com/logo.png"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Browse Movies</a>
@@ -95,7 +95,7 @@ namespace MovieTheater.Application.Services
             await SendEmailAsync(request.To, "OTP password recovery at MovieTheater", html);
         }
 
-        public async Task SendPasswordChangeEmailAsync(EmailRequestDto request)
+        public async Task SendPasswordChangeSuccessAsync(EmailRequestDto request)
         {
             var html = $@"
 <html style=""background-color:#000000;margin:0;padding:0;"">
@@ -119,6 +119,11 @@ namespace MovieTheater.Application.Services
             await SendEmailAsync(request.To, "Password has been changed at MovieTheater", html);
         }
 
+        /// <summary>
+        ///     Sends an email to the employee with their login credentials.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public async Task SendEmployeeCredentialsEmailAsync(EmployeeCredentialsEmailDto request)
         {
             var html = $@"

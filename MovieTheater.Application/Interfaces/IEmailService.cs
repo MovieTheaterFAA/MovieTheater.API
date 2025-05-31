@@ -10,6 +10,7 @@ public interface IEmailService
 
     Task SendForgotPasswordOtpEmailAsync(EmailRequestDto request);
 
-    Task SendPasswordChangeEmailAsync(EmailRequestDto request);
+    Task SendPasswordChangeSuccessAsync(EmailRequestDto request);
+
     Task SendEmployeeCredentialsEmailAsync(EmployeeCredentialsEmailDto request);
 }
