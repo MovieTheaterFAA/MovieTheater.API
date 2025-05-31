@@ -20,7 +20,7 @@ public class AdminController : ControllerBase
         _adminService = adminService;
     }
 
-    [HttpGet("user")]
+    [HttpGet("users")]
     [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -37,7 +37,7 @@ public class AdminController : ControllerBase
             if (page < 1 || pageSize < 1)
                 return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameter"));
 
-            var users = await _adminService.GetListUsersAsync(search, role, sortBy, isDescending, page, pageSize);
+            var users = await _adminService.GetListUserAsync(search, role, sortBy, isDescending, page, pageSize);
 
             return Ok(ApiResult<Pagination<GetUserDto>>.Success(users, "200", "Get user succesfully"));
         }
@@ -49,7 +49,7 @@ public class AdminController : ControllerBase
         }
     }
 
-    [HttpGet("employee")]
+    [HttpGet("employees")]
     [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -65,7 +65,7 @@ public class AdminController : ControllerBase
             if (page < 1 || pageSize < 1)
                 return BadRequest(ApiResult<object>.Failure("400", " Invalid pagination parameter"));
 
-            var users = await _adminService.GetAllEmployeesAsync(search, sortBy, isDescending, page, pageSize);
+            var users = await _adminService.GetListEmployeeAsync(search, sortBy, isDescending, page, pageSize);
 
             return Ok(ApiResult<object>.Success(users, "200", "Get user succesfully"));
         }
