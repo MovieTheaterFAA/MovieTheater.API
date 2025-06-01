@@ -215,6 +215,11 @@ public class AdminService : IAdminService
         }
     }
 
+    //public async Task<EditEmployeeDto> EditEmployeeAsync(Guid userId, EditEmployeeDto editEmployeeDto)
+    //{
+
+    //}
+
     public async Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(employeeId);
@@ -299,4 +304,6 @@ public class AdminService : IAdminService
         // Note: Password, UserStatus, Role, IsEmailVerified, CreatedBy are set above
         return user;
     }
+
+
 }
