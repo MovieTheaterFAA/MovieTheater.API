@@ -13,7 +13,7 @@ build:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - docker build -t $DOCKER_IMAGE -f BlindTreasure.API/Dockerfile .
+    - docker build -t $DOCKER_IMAGE -f MovieTheater.API/Dockerfile .
     - docker push $DOCKER_IMAGE
   only:
     - main
@@ -34,14 +34,15 @@ deploy:
     - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - ssh $VPS_USER@$VPS_HOST "
-        cd /root/projects/blindtreasure &&
-        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
-        docker pull $DOCKER_IMAGE &&
-        docker image tag $DOCKER_IMAGE blindtreasureapi:backup || true &&
-        docker compose up -d &&
-        docker image prune -f &&
-        curl -f http://localhost:5000/health || echo 'WARNING: Healthcheck failed'
-      "
+    - |
+    ssh $VPS_USER@$VPS_HOST "
+      cd /root/projects/movietheater &&
+      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+      docker pull $DOCKER_IMAGE &&
+      docker image tag $DOCKER_IMAGE movietheaterapi:backup || true &&
+      docker compose up -d &&
+      docker image prune -f &&
+      curl -f http://localhost:5000/health || echo 'WARNING: Healthcheck failed'
+    "
   only:
     - main 
