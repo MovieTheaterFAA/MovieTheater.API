@@ -35,14 +35,14 @@ deploy:
     - chmod 644 ~/.ssh/known_hosts
   script:
     - |
-    ssh $VPS_USER@$VPS_HOST "
-      cd /root/projects/movietheater &&
-      docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
-      docker pull $DOCKER_IMAGE &&
-      docker image tag $DOCKER_IMAGE movietheaterapi:backup || true &&
-      docker compose up -d &&
-      docker image prune -f &&
-      curl -f http://localhost:5000/health || echo 'WARNING: Healthcheck failed'
-    "
+      ssh $VPS_USER@$VPS_HOST "
+        cd /root/projects/movietheater &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        docker pull $DOCKER_IMAGE &&
+        docker image tag $DOCKER_IMAGE movietheaterapi:backup || true &&
+        docker compose up -d &&
+        docker image prune -f &&
+        curl -f http://localhost:5000/health || echo 'WARNING: Healthcheck failed'
+      "
   only:
     - main 
