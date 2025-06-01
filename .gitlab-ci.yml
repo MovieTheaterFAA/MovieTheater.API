@@ -12,6 +12,8 @@ build:
     - docker:dind
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - git config --global credential.helper store
+    - echo "https://25_CPL_NET_05_SE172440:${GITLAB_ACCESS_TOKEN}@git.fa.edu.vn" > ~/.git-credentials
   script:
     - docker build -t $DOCKER_IMAGE -f MovieTheater.API/Dockerfile .
     - docker push $DOCKER_IMAGE
