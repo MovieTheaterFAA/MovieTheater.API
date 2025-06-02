@@ -11,7 +11,7 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
     {
         public string? FullName { get; set; }
 
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         public DateTime? DateOfBirth { get; set; }
 

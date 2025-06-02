@@ -52,7 +52,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> UpdateUserProfile([FromForm] UserUpdateDto userUpdateDto)
+        public async Task<IActionResult> UpdateUserProfile([FromBody] UserUpdateDto userUpdateDto)
         {
             try
             {
