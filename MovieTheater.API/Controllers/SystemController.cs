@@ -65,7 +65,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000000"
+            CCCD = "11000000000",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         // Employees
         new()
@@ -80,7 +81,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000001"
+            CCCD = "11000000001",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         new()
         {
@@ -94,7 +96,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000002"
+            CCCD = "11000000002",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         new()
         {
@@ -108,7 +111,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000003"
+            CCCD = "11000000003",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         // Members
         new()
@@ -123,7 +127,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000004"
+            CCCD = "11000000004",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         new()
         {
@@ -137,7 +142,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000005"
+            CCCD = "11000000005",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         },
         new()
         {
@@ -151,7 +157,8 @@ public class SystemController : ControllerBase
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
-            CCCD = "11000000006"
+            CCCD = "11000000006",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
         }
         };
         _logger.Info("Seeding users with roles...");
