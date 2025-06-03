@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 namespace MovieTheater.Application.Interfaces
 {
     public interface IUserService
-    {     
+    {
+        Task<CurrentUserDto> GetUserDetails(Guid userId);
+        Task<UserUpdateDto> UpdateUserInfo(Guid userId, UserUpdateDto userUpdateDto);
     }
 }

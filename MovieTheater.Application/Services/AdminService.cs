@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -215,6 +216,111 @@ public class AdminService : IAdminService
         }
     }
 
+    public async Task<EditEmployeeDto> EditEmployeeAsync(Guid userId, EditEmployeeDto editEmployeeDto)
+    {
+        try
+        {
+            _loggerService.Info($"[Admin] Starting employee info update for UserID: {userId}");
+
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+            {
+                _loggerService.Warn($"User with ID {userId} not found.");
+                throw new KeyNotFoundException("User not found.");
+            }
+
+            bool isUpdated = false;
+
+            // 1. Full Name
+            if (!string.IsNullOrEmpty(editEmployeeDto.FullName) && user.FullName != editEmployeeDto.FullName)
+            {
+                user.FullName = editEmployeeDto.FullName;
+                isUpdated = true;
+            }
+
+            // 2. Date of Birth
+            if (editEmployeeDto.DateOfBirth.HasValue && user.DateOfBirth != editEmployeeDto.DateOfBirth)
+            {
+                if (editEmployeeDto.DateOfBirth.Value > DateTime.UtcNow)
+                    throw new ArgumentException("Date of birth cannot be in the future.");
+
+                user.DateOfBirth = editEmployeeDto.DateOfBirth.Value;
+                isUpdated = true;
+            }
+
+            // 3. Gender
+            if (editEmployeeDto.Sex.HasValue && user.Sex != editEmployeeDto.Sex)
+            {
+                user.Sex = editEmployeeDto.Sex.Value;
+                isUpdated = true;
+            }
+
+            // 4. CCCD
+            if (!string.IsNullOrEmpty(editEmployeeDto.CCCD) && user.CCCD != editEmployeeDto.CCCD)
+            {
+                if (!Regex.IsMatch(editEmployeeDto.CCCD, @"^\d{12}$"))
+                    throw new ArgumentException("Citizen ID must consist of exactly 12 digits.");
+
+                user.CCCD = editEmployeeDto.CCCD;
+                isUpdated = true;
+            }
+
+            // 5. Phone Number
+            if (!string.IsNullOrEmpty(editEmployeeDto.PhoneNumber) && user.PhoneNumber != editEmployeeDto.PhoneNumber)
+            {
+                if (!Regex.IsMatch(editEmployeeDto.PhoneNumber, @"^\d{10,15}$"))
+                    throw new ArgumentException("Invalid phone number format.");
+
+                user.PhoneNumber = editEmployeeDto.PhoneNumber;
+                isUpdated = true;
+            }
+
+            // 6. Address
+            if (!string.IsNullOrEmpty(editEmployeeDto.Address) && user.Address != editEmployeeDto.Address)
+            {
+                user.Address = editEmployeeDto.Address;
+                isUpdated = true;
+            }
+
+            // 7. Password (admin sets a new one)
+            if (!string.IsNullOrWhiteSpace(editEmployeeDto.Password))
+            {
+                if (editEmployeeDto.Password.Length <= 6)
+                    throw new ArgumentException("Password must be longer than 6 characters.");
+
+                user.Password = new PasswordHasher().HashPassword(editEmployeeDto.Password);
+                isUpdated = true;
+            }
+
+            if (!isUpdated)
+            {
+                _loggerService.Warn($"No changes detected for EmployeeId: {userId}");
+                return editEmployeeDto;
+            }
+
+            await _unitOfWork.Users.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[Admin] Employee info updated successfully for UserId: {userId}");
+
+            return new EditEmployeeDto
+            {
+                FullName = user.FullName,
+                Password = "",
+                DateOfBirth = user.DateOfBirth,
+                Sex = user.Sex,
+                CCCD = user.CCCD,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            };
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Error updating employee info for UserId: {userId}. Exception: {ex.Message}");
+            throw;
+        }
+    }
+
     public async Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(employeeId);
@@ -299,4 +405,6 @@ public class AdminService : IAdminService
         // Note: Password, UserStatus, Role, IsEmailVerified, CreatedBy are set above
         return user;
     }
+
+
 }

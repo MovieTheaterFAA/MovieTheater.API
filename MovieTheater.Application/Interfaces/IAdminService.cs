@@ -25,6 +25,8 @@ namespace MovieTheater.Application.Interfaces
 
         Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto);
 
+        Task<EditEmployeeDto> EditEmployeeAsync(Guid userId, EditEmployeeDto editEmployeeDto);
+
         Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
     }
 }

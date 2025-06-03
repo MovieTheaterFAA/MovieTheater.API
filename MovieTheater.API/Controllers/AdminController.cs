@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
+using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers;
 
@@ -14,10 +17,12 @@ namespace MovieTheater.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly IClaimsService _claimsService;
 
-    public AdminController(IAdminService adminService)
+    public AdminController(IAdminService adminService,IClaimsService claimsService)
     {
         _adminService = adminService;
+        _claimsService = claimsService;
     }
 
     [HttpGet("users")]
@@ -80,7 +85,7 @@ public class AdminController : ControllerBase
     [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
     [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
-    [ProducesResponseType(typeof(ApiResult<UserDto>), 409)]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
     public async Task<IActionResult> AddEmployeeAsync([FromBody] AddEmployeeRequestDto addEmployee)
     {
         try
@@ -95,4 +100,65 @@ public class AdminController : ControllerBase
             return StatusCode(statusCode, errorResponse);
         }
     }
+
+    [HttpPut("employee/{id}")]
+    [Authorize(Policy = "AdminPolicy")]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
+    public async Task<IActionResult> EditEmployeeAsync(Guid id, [FromBody] EditEmployeeDto dto)
+    {
+        if (id == Guid.Empty)
+            return BadRequest(ApiResult<object>.Failure("400", "Invalid update request. User ID is required."));
+
+        try
+        {
+            var adminId = _claimsService.GetCurrentUserId;
+
+            var result = await _adminService.EditEmployeeAsync(id, dto);
+
+            if (result == null)
+                return BadRequest(ApiResult<object>.Failure("400", "Update failed. No user found with the provided ID."));
+
+            return Ok(ApiResult<EditEmployeeDto>.Success(result, "200", "User updated successfully."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResult<object>.Failure("400", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<EditEmployeeDto>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpDelete("employee/{id}")]
+    [Authorize(Policy = "AdminPolicy")]
+    [ProducesResponseType(typeof(ApiResult<object>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        if (id == Guid.Empty)
+            return BadRequest(ApiResult<object>.Failure("400", "Invalid delete request. User ID is required."));
+
+        try
+        {
+            var adminId =  _claimsService.GetCurrentUserId;
+            var result = await _adminService.DeleteEmployeeAsync(id,adminId);
+
+            if (!result)
+                return BadRequest(ApiResult<object>.Failure("400", "Delete failed. No user found with the provided ID."));
+
+            return Ok(ApiResult<object>.Success(result, "200", "User deleted successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
 }
