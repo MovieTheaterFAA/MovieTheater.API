@@ -1,4 +1,4 @@
-name: Docker Build and Push
+name: Docker Build, Push and Deploy
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main  # Khi có code mới được push lên nhánh main thì workflow này sẽ chạy
 
 jobs:
-  build-and-push:
+  build-push-and-deploy:
     runs-on: ubuntu-latest  # Máy chủ ảo của GitHub cung cấp để chạy pipeline
 
     steps:
@@ -32,9 +32,28 @@ jobs:
           cache-from: type=gha               # Dùng cache từ GitHub Actions
           cache-to: type=gha,mode=max        # Lưu cache dùng lại lần sau
 
-      - name: Trigger Deployment
-        uses: peter-evans/repository-dispatch@v2
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3          # Plugin để chạy lệnh SSH từ xa vào VPS
         with:
-          token: ${{ secrets.REPO_DISPATCH_TOKEN }}
-          repository: MovieTheaterFAA/MovieTheater.API    # OK: repo hiện tại
-          event-type: deploy-movietheater              # OK: khớp với tên sự kiện trong deploy.yml
+          host: ${{ secrets.VPS_HOST }}           # IP hoặc domain của VPS (khai báo trong repo secret)
+          username: ${{ secrets.VPS_USER }}       # Tên user đăng nhập (thường là root)
+          password: ${{ secrets.VPS_PASSWORD }}   # SSH password để đăng nhập
+
+          script: |
+            cd /root/projects/movietheater                                          # Di chuyển đến thư mục chứa file docker-compose -f docker-compose.deploy.yml.yml trên VPS
+
+            echo "Pulling latest Docker image..."
+            docker compose pull                                                     # Kéo image mới nhất từ Docker Hub
+
+            echo "Backing up previous image tag..."
+            docker image tag movietheaterapi:latest movietheaterapi:backup || true  # Gắn tag dự phòng để rollback nếu cần
+
+            echo "Restarting container..."
+            docker compose up -d --build                                            # Chạy hoặc restart container với image mới
+
+            echo "Removing dangling images to save space..."
+            docker image prune -f                                                   # Xóa những image không dùng tới để tiết kiệm dung lượng ổ đĩa
+
+            echo "Checking health status..."
+            curl -f http://localhost:5000/health || echo "WARNING: Healthcheck failed"  
+            # Gọi thử endpoint của API xem có chạy không, nếu lỗi thì cảnh báo nhưng không dừng workflow
