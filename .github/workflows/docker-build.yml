@@ -49,7 +49,7 @@ jobs:
             docker image tag movietheaterapi:latest movietheaterapi:backup || true  # Gắn tag dự phòng để rollback nếu cần
 
             echo "Restarting container..."
-            docker compose up -d --build                                            # Chạy hoặc restart container với image mới
+            docker compose up -d                                                    # Chạy hoặc restart container với image mới
 
             echo "Removing dangling images to save space..."
             docker image prune -f                                                   # Xóa những image không dùng tới để tiết kiệm dung lượng ổ đĩa
