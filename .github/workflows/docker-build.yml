@@ -36,5 +36,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.REPO_DISPATCH_TOKEN }}
-          repository: MovieTheater/MovieTheater.API    # OK: repo hiện tại
+          repository: MovieTheaterFAA/MovieTheater.API    # OK: repo hiện tại
           event-type: deploy-movietheater              # OK: khớp với tên sự kiện trong deploy.yml
