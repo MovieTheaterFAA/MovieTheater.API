@@ -17,7 +17,7 @@
       - RESEND_FROM=noreply@ae-tao-fullstack-api.site
       - MINIO_ENDPOINT=103.211.201.162:9000
       - MINIO_HOST=https://minio.fpt-devteam.fun
-      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_ACCESS_KEY=minioadmin 
       - MINIO_SECRET_KEY=minioadmin
     ports:
       - "5000:5000"
