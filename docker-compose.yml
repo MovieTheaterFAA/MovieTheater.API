@@ -9,7 +9,7 @@
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=movietheater.database;Port=5432;Database=movietheater_db;Username=postgres;Password=postgres
+      - ConnectionStrings__DefaultConnection=Host=103.211.201.162;Port=5433;Database=MovieTheaterDB;Username=postgres;Password=postgres
       - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU
       - JWT__Issuer=MovieTheater_Issuer
       - JWT__Audience=MovieTheater_Audience
