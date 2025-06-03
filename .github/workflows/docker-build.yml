@@ -1,0 +1,40 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches:
+      - main  # Khi có code mới được push lên nhánh main thì workflow này sẽ chạy
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest  # Máy chủ ảo của GitHub cung cấp để chạy pipeline
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3  # Lấy code từ GitHub repository về
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3  # Thiết lập công cụ Buildx của Docker để build hiệu quả hơn
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # Đăng nhập Docker Hub bằng secret
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .                         # Thư mục chứa Dockerfile và mã nguồn
+          file: MovieTheater.API/Dockerfile  # Vị trí file Dockerfile
+          push: true                         # Sau khi build xong thì đẩy (push) lên Docker Hub
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/movietheater:latest  # Gán tag cho image
+          cache-from: type=gha               # Dùng cache từ GitHub Actions
+          cache-to: type=gha,mode=max        # Lưu cache dùng lại lần sau
+
+      - name: Trigger Deployment
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.REPO_DISPATCH_TOKEN }}
+          repository: MovieTheater/MovieTheater.API    # OK: repo hiện tại
+          event-type: deploy-movietheater              # OK: khớp với tên sự kiện trong deploy.yml
