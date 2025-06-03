@@ -67,7 +67,7 @@ public class AdminController : ControllerBase
         try
         {
             if (page < 1 || pageSize < 1)
-                return BadRequest(ApiResult<object>.Failure("400", " Invalid pagination parameter"));
+                return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameter"));
 
             var users = await _adminService.GetListEmployeeAsync(search, sortBy, isDescending, page, pageSize);
 
