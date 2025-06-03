@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.VisualBasic;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
@@ -13,6 +11,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 
+// test
 [Route("api/admin")]
 [ApiController]
 public class AdminController : ControllerBase
@@ -20,7 +19,7 @@ public class AdminController : ControllerBase
     private readonly IAdminService _adminService;
     private readonly IClaimsService _claimsService;
 
-    public AdminController(IAdminService adminService,IClaimsService claimsService)
+    public AdminController(IAdminService adminService, IClaimsService claimsService)
     {
         _adminService = adminService;
         _claimsService = claimsService;
@@ -149,8 +148,8 @@ public class AdminController : ControllerBase
 
         try
         {
-            var adminId =  _claimsService.GetCurrentUserId;
-            var result = await _adminService.DeleteEmployeeAsync(id,adminId);
+            var adminId = _claimsService.GetCurrentUserId;
+            var result = await _adminService.DeleteEmployeeAsync(id, adminId);
 
             if (!result)
                 return BadRequest(ApiResult<object>.Failure("400", "Delete failed. No user found with the provided ID."));

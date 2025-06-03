@@ -49,7 +49,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("AllowAll");
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline - test
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
