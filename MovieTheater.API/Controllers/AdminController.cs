@@ -27,9 +27,9 @@ public class AdminController : ControllerBase
 
     [HttpGet("users")]
     [SwaggerOperation(Summary = "Get all users", Description = "Get paginated list of users with optional filters.")]
-    [SwaggerResponse(200, "Users retrieved successfully", typeof(ApiResult<Pagination<GetUserDto>>))]
-    [SwaggerResponse(400, "Bad request", typeof(ApiResult<object>))]
-    [SwaggerResponse(500, "Internal server error", typeof(ApiResult<object>))]
+    [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
     public async Task<IActionResult> GetAllUserAsync(
              [FromQuery, SwaggerParameter(Description = "Search by name or email (optional)")] string? search,
              [FromQuery, SwaggerParameter(Description = "Filter by user role (optional)")] RoleType? role,
@@ -107,10 +107,13 @@ public class AdminController : ControllerBase
 
     [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
-    [SwaggerOperation(Summary = "Add new employee")]
+    [SwaggerOperation(
+    Summary = "Add new employee",
+    Description = "Creates a new employee with the provided information. Requires Admin privileges.")]
     [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
-    public async Task<IActionResult> AddEmployeeAsync([FromBody] AddEmployeeRequestDto addEmployee)
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> AddEmployeeAsync([FromBody, SwaggerParameter("New employee data to be added")] AddEmployeeRequestDto addEmployee)
     {
         try
         {
@@ -127,11 +130,13 @@ public class AdminController : ControllerBase
 
     [HttpPut("employee/{id}")]
     [Authorize(Policy = "AdminPolicy")]
-    [SwaggerOperation(Summary = "Update employee information")]
+    [SwaggerOperation(
+        Summary = "Update employee information", 
+        Description = "Update an existing employee using their ID with the provided updated information.")]
     [ProducesResponseType(typeof(ApiResult<EditEmployeeDto>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
-
-    public async Task<IActionResult> EditEmployeeAsync(Guid id, [FromBody] EditEmployeeDto dto)
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> EditEmployeeAsync([SwaggerParameter("The unique identifier of the employee.")] Guid id, [FromBody, SwaggerRequestBody(Description = "Employee information to update")] EditEmployeeDto dto)
     {
         if (id == Guid.Empty)
             return BadRequest(ApiResult<object>.Failure("400", "Invalid update request. User ID is required."));
@@ -161,10 +166,13 @@ public class AdminController : ControllerBase
 
     [HttpDelete("employee/{id}")]
     [Authorize(Policy = "AdminPolicy")]
-    [SwaggerOperation(Summary = "Delete employee")]
+    [SwaggerOperation(
+        Summary = "Delete employee",
+        Description = "Delete an employee by their unique ID. Requires Admin privileges.")]
     [ProducesResponseType(typeof(ApiResult<object>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> DeleteUser([SwaggerParameter("The unique identifier of the employee to be deleted.")]Guid id)
     {
         if (id == Guid.Empty)
             return BadRequest(ApiResult<object>.Failure("400", "Invalid delete request. User ID is required."));
