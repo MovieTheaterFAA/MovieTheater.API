@@ -160,6 +160,8 @@ public static class IocContainer
 
             // Cấu hình Swagger để sử dụng Newtonsoft.Json
             c.UseAllOfForInheritance();
+
+            c.EnableAnnotations();
         });
 
         return services;

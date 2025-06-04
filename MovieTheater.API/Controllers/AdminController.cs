@@ -7,6 +7,7 @@ using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 
@@ -25,16 +26,18 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("users")]
-    [ProducesResponseType(typeof(ApiResult<Pagination<GetUserDto>>), 200)]
-    [ProducesResponseType(typeof(ApiResult<object>), 400)]
-    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    [SwaggerOperation(Summary = "Get all users", Description = "Get paginated list of users with optional filters.")]
+    [SwaggerResponse(200, "Users retrieved successfully", typeof(ApiResult<Pagination<GetUserDto>>))]
+    [SwaggerResponse(400, "Bad request", typeof(ApiResult<object>))]
+    [SwaggerResponse(500, "Internal server error", typeof(ApiResult<object>))]
     public async Task<IActionResult> GetAllUserAsync(
-         [FromQuery] string? search,
-         [FromQuery] RoleType? role,
-         [FromQuery] string? sortBy,
-         [FromQuery] bool isDescending = false,
-         [FromQuery] int page = 1,
-         [FromQuery] int pageSize = 10)
+             [FromQuery, SwaggerParameter(Description = "Search by name or email (optional)")] string? search,
+             [FromQuery, SwaggerParameter(Description = "Filter by user role (optional)")] RoleType? role,
+             [FromQuery, SwaggerParameter(Description = "Sort by field: ScoreBalance, CreatedAt (optional)")] string? sortBy,
+             [FromQuery, SwaggerParameter(Description = "Sort descending? Default: false")] bool isDescending = false,
+             [FromQuery, SwaggerParameter(Description = "Page number, starts at 1")] int page = 1,
+             [FromQuery, SwaggerParameter(Description = "Items per page")] int pageSize = 10)
+
     {
         try
         {
@@ -57,12 +60,33 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    [SwaggerOperation(
+        Summary = "Get employee list",
+        Description = "Retrieve a paginated, searchable, and sortable list of employees."
+    )]
+
     public async Task<IActionResult> GetAllEmployeeAsync(
-         [FromQuery] string? search,
-         [FromQuery] string? sortBy,
-         [FromQuery] bool isDescending = false,
-         [FromQuery] int page = 1,
-         [FromQuery] int pageSize = 10)
+         [FromQuery]
+    [SwaggerParameter("Search by name, email, or phone number (optional).")]
+    string? search,
+
+        [FromQuery]
+    [SwaggerParameter("Field to sort by (e.g. 'FullName', 'DateOfBirth').")]
+    string? sortBy,
+
+        [FromQuery]
+    [SwaggerParameter("Sort descending if true (default: false).")]
+    bool isDescending = false,
+
+        [FromQuery]
+    [SwaggerParameter("Page number (default: 1).")]
+    int page = 1,
+
+        [FromQuery]
+    [SwaggerParameter("Page size (default: 10).")]
+    int pageSize = 10
+    )
+
     {
         try
         {
@@ -83,8 +107,9 @@ public class AdminController : ControllerBase
 
     [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
+    [SwaggerOperation(Summary = "Add new employee")]
     [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
-    [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
     public async Task<IActionResult> AddEmployeeAsync([FromBody] AddEmployeeRequestDto addEmployee)
     {
         try
@@ -102,8 +127,10 @@ public class AdminController : ControllerBase
 
     [HttpPut("employee/{id}")]
     [Authorize(Policy = "AdminPolicy")]
-    [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
-    [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
+    [SwaggerOperation(Summary = "Update employee information")]
+    [ProducesResponseType(typeof(ApiResult<EditEmployeeDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+
     public async Task<IActionResult> EditEmployeeAsync(Guid id, [FromBody] EditEmployeeDto dto)
     {
         if (id == Guid.Empty)
@@ -134,9 +161,9 @@ public class AdminController : ControllerBase
 
     [HttpDelete("employee/{id}")]
     [Authorize(Policy = "AdminPolicy")]
+    [SwaggerOperation(Summary = "Delete employee")]
     [ProducesResponseType(typeof(ApiResult<object>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
-    [ProducesResponseType(typeof(ApiResult<object>), 500)]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         if (id == Guid.Empty)
