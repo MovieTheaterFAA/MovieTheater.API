@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -55,19 +54,112 @@ public class SystemController : ControllerBase
         var users = new List<User>
         {
             new()
-            {
-                FullName = "Admin User",
-                Email = "admin@gmail.com",
-                Sex = Gender.Female,
-                DateOfBirth = DateTime.UtcNow,
-                PhoneNumber = "0944000000",
-                Password = passwordHasher.HashPassword("1@"),
-                Role = RoleType.Admin,
-                ScoreBalance = 0,
-                IsEmailVerified = true,
-                UserStatus = UserStatus.Active,
-                CCCD = "11000000000"
-            }
+        {
+            FullName = "Admin User",
+            Email = "admin@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-30),
+            PhoneNumber = "0944000000",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Admin,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000000",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        // Employees
+        new()
+        {
+            FullName = "Test Employee 1",
+            Email = "employee1@gmail.com",
+            Sex = Gender.Male,
+            DateOfBirth = DateTime.UtcNow.AddYears(-28),
+            PhoneNumber = "0944000001",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Employee,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000001",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        new()
+        {
+            FullName = "Test Employee 2",
+            Email = "employee2@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-27),
+            PhoneNumber = "0944000002",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Employee,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000002",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        new()
+        {
+            FullName = "Test Employee 3",
+            Email = "employee3@gmail.com",
+            Sex = Gender.Male,
+            DateOfBirth = DateTime.UtcNow.AddYears(-26),
+            PhoneNumber = "0944000003",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Employee,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000003",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        // Members
+        new()
+        {
+            FullName = "Test Member 1",
+            Email = "member1@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-25),
+            PhoneNumber = "0944000004",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Member,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000004",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        new()
+        {
+            FullName = "Test Member 2",
+            Email = "member2@gmail.com",
+            Sex = Gender.Male,
+            DateOfBirth = DateTime.UtcNow.AddYears(-24),
+            PhoneNumber = "0944000005",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Member,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000005",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+        new()
+        {
+            FullName = "Test Member 3",
+            Email = "member3@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-23),
+            PhoneNumber = "0944000006",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.Member,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000006",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        }
         };
         _logger.Info("Seeding users with roles...");
         await _context.Users.AddRangeAsync(users);
