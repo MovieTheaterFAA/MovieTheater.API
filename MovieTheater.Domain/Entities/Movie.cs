@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MovieTheater.Domain.Enums;
+﻿using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Domain.Entities
 {
@@ -31,6 +25,7 @@ namespace MovieTheater.Domain.Entities
         public string Description { get; set; }
 
         public string PosterImage { get; set; }       // Poster film trên MinIO
+        public string BackgroundImage { get; set; }   // Hình nền của phim trên MinIO
 
         // Navigation
         public ICollection<ShowTime> Showtimes { get; set; }
