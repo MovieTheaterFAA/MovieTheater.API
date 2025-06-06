@@ -7,6 +7,7 @@ namespace MovieTheater.Application.Services
 {
     public class MovieService : IMovieService
     {
+
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService)

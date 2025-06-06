@@ -6,5 +6,8 @@ public interface IUnitOfWork : IDisposable
 {
     IGenericRepository<User> Users { get; }
     IGenericRepository<OtpStorage> OtpStorages { get; }
+    IGenericRepository<Movie> Movies { get; }
+    IGenericRepository<ShowTime> ShowTimes { get; }
+    IGenericRepository<Promotion> Promotions { get; }
     Task<int> SaveChangesAsync();
 }
