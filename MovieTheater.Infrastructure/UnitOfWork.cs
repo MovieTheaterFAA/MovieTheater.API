@@ -10,16 +10,27 @@ public class UnitOfWork : IUnitOfWork
 
     public UnitOfWork(MovieTheaterDbContext dbContext,
         IGenericRepository<User> userRepository,
-        IGenericRepository<OtpStorage> otpStorage)
+        IGenericRepository<OtpStorage> otpStorage,
+        IGenericRepository<Movie> movies,
+        IGenericRepository<ShowTime> showTimes,
+        IGenericRepository<Promotion> promotions)
     {
         _dbContext = dbContext;
         Users = userRepository;
         OtpStorages = otpStorage;
+        Movies = movies;
+        ShowTimes = showTimes;
+        Promotions = promotions;
     }
 
     public IGenericRepository<User> Users { get; }
 
     public IGenericRepository<OtpStorage> OtpStorages { get; }
+
+    public IGenericRepository<Movie> Movies { get; }
+
+    public IGenericRepository<ShowTime> ShowTimes { get; }
+    public IGenericRepository<Promotion> Promotions { get; }
 
     public void Dispose()
     {

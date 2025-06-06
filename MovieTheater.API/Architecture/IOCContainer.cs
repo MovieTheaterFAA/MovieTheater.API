@@ -111,6 +111,8 @@ public static class IocContainer
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IBlobService, BlobService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IMovieService, MovieService>();
+        services.AddScoped<IPromotionService, PromotionService>();
 
         services.AddHttpContextAccessor();
 
