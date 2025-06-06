@@ -16,7 +16,7 @@ namespace MovieTheater.Application.Services
             _loggerService = loggerService;
         }
 
-        public async Task<MovieUpdateDto> UpdateMovieInfo(Guid movieId, MovieUpdateDto movieUpdateDto)
+        public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
             try
             {

@@ -4,6 +4,6 @@ namespace MovieTheater.Application.Interfaces
 {
     public interface IMovieService
     {
-        Task<MovieUpdateDto> UpdateMovieInfo(Guid movieId, MovieUpdateDto movieUpdateDto);
+        Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto);
     }
 }

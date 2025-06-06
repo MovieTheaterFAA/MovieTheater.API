@@ -31,7 +31,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<MovieUpdateDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> UpdateMovie([FromRoute] Guid movieId, [FromBody] MovieUpdateDto movieUpdateDto)
+        public async Task<IActionResult> UpdateMovieAsync([FromRoute] Guid movieId, [FromBody] MovieUpdateDto movieUpdateDto)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace MovieTheater.API.Controllers
                     return BadRequest(ApiResult<object>.Failure("400", "Movie update data is required."));
                 }
 
-                var updatedMovie = await _movieService.UpdateMovieInfo(movieId, movieUpdateDto);
+                var updatedMovie = await _movieService.UpdateMovieInfoAsync(movieId, movieUpdateDto);
 
                 return Ok(ApiResult<MovieUpdateDto>.Success(updatedMovie, "200", "Movie updated successfully."));
             }
