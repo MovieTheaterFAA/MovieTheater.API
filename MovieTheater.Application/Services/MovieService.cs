@@ -99,8 +99,8 @@ namespace MovieTheater.Application.Services
 
                 if (!string.IsNullOrWhiteSpace(Name))
                 {
-                    var lowerKeyword = Name.ToLower();
-                    movieQuery = movieQuery.Where(m => !string.IsNullOrEmpty(m.Name) && m.Name.ToLower().Contains(lowerKeyword));
+                    var name = Name.ToLower();
+                    movieQuery = movieQuery.Where(m => !string.IsNullOrEmpty(m.Name) && m.Name.ToLower().Contains(name));
                 }
 
                 // Sort A-Z by movie name

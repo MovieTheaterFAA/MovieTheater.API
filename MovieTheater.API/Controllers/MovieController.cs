@@ -56,11 +56,11 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> GetMoviesAsync(
-        [FromQuery, SwaggerParameter(Description = "Movie name to search (optional)")] string? keyword)
+        [FromQuery, SwaggerParameter(Description = "Movie name to search (optional)")] string? Name)
         {
             try
             {
-                var result = await _movieService.GetMovieByNameAsync(keyword);
+                var result = await _movieService.GetMovieByNameAsync(Name);
 
                 if (!result.Any())
                 {
