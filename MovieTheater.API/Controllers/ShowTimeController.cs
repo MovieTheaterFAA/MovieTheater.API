@@ -9,7 +9,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/showtime")]
     [ApiController]
     public class ShowTimeController : ControllerBase
     {
@@ -22,7 +22,7 @@ namespace MovieTheater.API.Controllers
             _claimsService = claimsService;
         }
 
-        [HttpPost("showtime")]
+        [HttpPost("movieId")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
             Summary = "Add a new showtime",

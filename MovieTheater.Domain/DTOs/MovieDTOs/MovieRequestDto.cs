@@ -48,6 +48,10 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         [Url(ErrorMessage = "Poster image must be a valid URL.")]
         public string PosterImage { get; set; }
 
+        [Required(ErrorMessage = "Background image URL is required.")]
+        [Url(ErrorMessage = "Background image must be a valid URL.")]
+        public string BackgroundImage { get; set; }
+
         // Custom validation to ensure FromDate is not greater than ToDate
         [CustomDateRange(ErrorMessage = "ToDate cannot be earlier than FromDate.")]
         public bool IsValidDateRange()
@@ -72,5 +76,5 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         }
     }
 
-   
+
 }
