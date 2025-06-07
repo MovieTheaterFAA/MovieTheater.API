@@ -10,7 +10,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/movies")]
     [ApiController]
     public class MovieController : ControllerBase
     {
@@ -22,7 +22,7 @@ namespace MovieTheater.API.Controllers
             _movieService = movieService;
             _claimsService = claimsService;
         }
-        [HttpGet("movies")]
+        [HttpGet("all-movies")]
         [SwaggerOperation(Summary = "Get all movies", Description = "Retrieve a paginated list of movies with optional search and sorting.")]
         [ProducesResponseType(typeof(ApiResult<Pagination<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
@@ -50,7 +50,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-        [HttpGet("movies/search/name")]
+        [HttpGet("search-name")]
         [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
