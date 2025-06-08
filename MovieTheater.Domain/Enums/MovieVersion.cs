@@ -2,8 +2,8 @@
 {
     public enum MovieVersion
     {
-        TwoD,
-        FourD,
-        IMAX
+        TwoD,       // 2 phòng
+        FourD,      // 1 phòng
+        IMAX        // 2 phòng
     }
 }
