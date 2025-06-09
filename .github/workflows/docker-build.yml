@@ -28,7 +28,7 @@ jobs:
           context: .                         # Thư mục chứa Dockerfile và mã nguồn
           file: MovieTheater.API/Dockerfile  # Vị trí file Dockerfile
           push: true                         # Sau khi build xong thì đẩy (push) lên Docker Hub
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/movietheater:latest  # Gán tag cho image
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/movietheater-api:latest  # Gán tag cho image
           cache-from: type=gha               # Dùng cache từ GitHub Actions
           cache-to: type=gha,mode=max        # Lưu cache dùng lại lần sau
 
@@ -46,7 +46,7 @@ jobs:
             docker compose pull                                                     # Kéo image mới nhất từ Docker Hub
 
             echo "Backing up previous image tag..."
-            docker image tag movietheaterapi:latest movietheaterapi:backup || true  # Gắn tag dự phòng để rollback nếu cần
+            docker image tag movietheater-api:latest movietheater-api:backup || true  # Gắn tag dự phòng để rollback nếu cần
 
             echo "Restarting container..."
             docker compose up -d                                                    # Chạy hoặc restart container với image mới
