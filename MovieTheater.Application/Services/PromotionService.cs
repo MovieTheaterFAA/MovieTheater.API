@@ -22,56 +22,61 @@ namespace MovieTheater.Application.Services
 
         public async Task<PromotionResponseDto> AddPromotionAsync(PromotionRequestDto promotionRequestDto)
         {
-            _loggerService.Info($"[AddPromotionAsync] Start adding promotion for Title: {promotionRequestDto.Title}");
-
-            // Kiểm tra nếu đã có khuyến mãi với Title trùng
-            var existingPromotion = await _unitOfWork.Promotions.FirstOrDefaultAsync(p => p.Title == promotionRequestDto.Title && !p.IsDeleted);
-            if (existingPromotion != null)
-            {
-                _loggerService.Warn($"[AddPromotionAsync] Promotion with title '{promotionRequestDto.Title}' already exists.");
-                throw new InvalidOperationException("Promotion with the same title already exists.");
-            }
-
-            // Tạo mới Promotion
-            var promotion = new Promotion
-            {
-                Title = promotionRequestDto.Title,
-                StartTime = promotionRequestDto.StartTime,
-                EndTime = promotionRequestDto.EndTime,
-                DiscountValue = promotionRequestDto.DiscountValue,
-                Detail = promotionRequestDto.Detail,
-                Image = promotionRequestDto.Image,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _claimsService.GetCurrentUserId // Gán CreatedBy từ ClaimsService
-            };
-
-            // Thêm Promotion vào cơ sở dữ liệu
-            await _unitOfWork.Promotions.AddAsync(promotion);
             try
             {
+                _loggerService.Info($"[AddPromotionAsync] Start adding promotion for Title: {promotionRequestDto.Title}");
+
+                // Kiểm tra nếu đã có khuyến mãi với Title trùng
+                var existingPromotion = await _unitOfWork.Promotions.FirstOrDefaultAsync(p => p.Title == promotionRequestDto.Title && !p.IsDeleted);
+                if (existingPromotion != null)
+                {
+                    _loggerService.Warn($"[AddPromotionAsync] Promotion with title '{promotionRequestDto.Title}' already exists.");
+                    throw new InvalidOperationException("Promotion with the same title already exists.");
+                }
+
+                // Tạo mới Promotion
+                var promotion = new Promotion
+                {
+                    Title = promotionRequestDto.Title,
+                    StartTime = promotionRequestDto.StartTime,
+                    EndTime = promotionRequestDto.EndTime,
+                    DiscountValue = promotionRequestDto.DiscountValue,
+                    Detail = promotionRequestDto.Detail,
+                    Image = promotionRequestDto.Image,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = _claimsService.GetCurrentUserId
+                };
+
+                // Thêm Promotion vào cơ sở dữ liệu
+                await _unitOfWork.Promotions.AddAsync(promotion);
                 await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Success($"[AddPromotionAsync] Promotion '{promotion.Title}' added successfully.");
+
+                // Trả về PromotionResponseDto
+                var responseDto = new PromotionResponseDto
+                {
+                    Id = promotion.Id,
+                    Title = promotion.Title,
+                    StartTime = promotion.StartTime,
+                    EndTime = promotion.EndTime,
+                    DiscountValue = promotion.DiscountValue,
+                    Detail = promotion.Detail,
+                    Image = promotion.Image
+                };
+
+                return responseDto;
             }
             catch (DbUpdateException dbEx)
             {
                 _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
                 throw;
             }
-
-            _loggerService.Success($"[AddPromotionAsync] Promotion '{promotion.Title}' added successfully.");
-
-            // Trả về PromotionResponseDto
-            var responseDto = new PromotionResponseDto
+            catch (Exception ex)
             {
-                Id = promotion.Id,
-                Title = promotion.Title,
-                StartTime = promotion.StartTime,
-                EndTime = promotion.EndTime,
-                DiscountValue = promotion.DiscountValue,
-                Detail = promotion.Detail,
-                Image = promotion.Image
-            };
-
-            return responseDto;
+                _loggerService.Error($"[UpdatePromotionAsync] Error updating promotion: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<PromotionResponseDto> UpdatePromotionAsync(Guid promotionId, PromotionUpdateDto promotionUpdateDto)
