@@ -1,6 +1,6 @@
 ﻿services:
   movietheater.api:
-    image: ch1mple/movietheater:latest
+    image: ch1mple/movietheater-api:latest
     build:
       context: .
       dockerfile: MovieTheater.API/Dockerfile

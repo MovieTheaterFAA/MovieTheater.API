@@ -9,5 +9,6 @@ public interface IUnitOfWork : IDisposable
     IGenericRepository<Movie> Movies { get; }
     IGenericRepository<ShowTime> ShowTimes { get; }
     IGenericRepository<Promotion> Promotions { get; }
+    IGenericRepository<CinemaRoom> CinemaRooms { get; }
     Task<int> SaveChangesAsync();
 }

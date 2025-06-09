@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MovieTheater.Domain.Entities
+﻿namespace MovieTheater.Domain.Entities
 {
     public class CinemaRoom : BaseEntity
     {

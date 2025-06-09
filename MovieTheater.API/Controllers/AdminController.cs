@@ -56,6 +56,7 @@ public class AdminController : ControllerBase
         }
     }
 
+
     [HttpGet("employees")]
     [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]

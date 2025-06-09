@@ -8,7 +8,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/promotion")]
     [ApiController]
     public class PromotionController : ControllerBase
     {
@@ -21,10 +21,10 @@ namespace MovieTheater.API.Controllers
             _claimsService = claimsService;
         }
 
-        [HttpPost("promotion")]
+        [HttpPost()]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
-            Summary = "Add new promotion",
+            Summary = "Add a new promotion",
             Description = "Creates a new promotion with the provided information. Requires Admin privileges."
         )]
         [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
