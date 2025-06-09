@@ -22,7 +22,8 @@ namespace MovieTheater.API.Controllers
             _movieService = movieService;
             _claimsService = claimsService;
         }
-        [HttpGet("all-movies")]
+
+        [HttpGet]
         [SwaggerOperation(Summary = "Get all movies", Description = "Retrieve a paginated list of movies with optional search and sorting.")]
         [ProducesResponseType(typeof(ApiResult<Pagination<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
@@ -50,7 +51,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-        [HttpGet("search-name")]
+        [HttpGet("search")]
         [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]

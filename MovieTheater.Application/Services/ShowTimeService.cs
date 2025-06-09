@@ -9,7 +9,6 @@ namespace MovieTheater.Application.Services
 {
     public class ShowTimeService : IShowTimeService
     {
-
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
@@ -20,6 +19,7 @@ namespace MovieTheater.Application.Services
             _loggerService = loggerService;
             _claimsService = claimsService;
         }
+
         public async Task<ShowtimeResponseDTO> AddShowTimeAsync(ShowTimeRequestDto showTimeRequestDto)
         {
             _loggerService.Info($"[AddShowTimeAsync] Start adding showtime for MovieId {showTimeRequestDto.MovieId} and CinemaRoomId {showTimeRequestDto.CinemaRoomId}");
@@ -33,19 +33,24 @@ namespace MovieTheater.Application.Services
             }
 
             // Kiểm tra CinemaRoomId có tồn tại không
-            var cinemaRoom = await _unitOfWork.Movies.GetByIdAsync(showTimeRequestDto.CinemaRoomId);
+            var cinemaRoom = await _unitOfWork.CinemaRooms.GetByIdAsync(showTimeRequestDto.CinemaRoomId);
             if (cinemaRoom == null)
             {
                 _loggerService.Warn($"[AddShowTimeAsync] CinemaRoomId {showTimeRequestDto.CinemaRoomId} not found.");
                 throw new InvalidOperationException("Cinema Room not found.");
             }
+
+            // Tính toán Duration = RunningTime của Movie + 15 phút
+            var movieRunningTime = movie.RunningTime ?? 0; // Lấy RunningTime của Movie, mặc định là 0 nếu không có
+            var duration = TimeSpan.FromMinutes(movieRunningTime + 15); // Cộng thêm 15 phút
+
             // Tạo mới ShowTime
             var showTime = new ShowTime
             {
                 MovieId = showTimeRequestDto.MovieId,
                 CinemaRoomId = showTimeRequestDto.CinemaRoomId,
                 ShowDate = showTimeRequestDto.ShowDate,
-                Duration = showTimeRequestDto.Duration,
+                Duration = duration, // Gán Duration đã tính
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _claimsService.GetCurrentUserId // Gán CreatedBy từ ClaimsService
             };
@@ -77,4 +82,5 @@ namespace MovieTheater.Application.Services
             return responseDto;
         }
     }
+
 }

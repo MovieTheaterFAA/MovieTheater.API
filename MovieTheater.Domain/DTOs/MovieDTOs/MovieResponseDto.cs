@@ -16,6 +16,7 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         public List<string> Genres { get; set; }
         public string Description { get; set; }
         public string PosterImage { get; set; }
+        public string BackgroundImage { get; set; }
 
     }
 

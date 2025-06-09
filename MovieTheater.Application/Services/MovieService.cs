@@ -6,11 +6,6 @@ using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MovieTheater.Application.Services
 {
@@ -158,6 +153,7 @@ namespace MovieTheater.Application.Services
                 Genres = movieRequestDto.Genres,
                 Description = movieRequestDto.Description,
                 PosterImage = movieRequestDto.PosterImage,
+                BackgroundImage = movieRequestDto.BackgroundImage,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _claimsService.GetCurrentUserId // Gán giá trị CreatedBy từ service của Claims
             };
@@ -189,7 +185,8 @@ namespace MovieTheater.Application.Services
                 TrailerUrl = movie.TrailerUrl,
                 Genres = movie.Genres,
                 Description = movie.Description,
-                PosterImage = movie.PosterImage
+                PosterImage = movie.PosterImage,
+                BackgroundImage = movie.BackgroundImage,
             };
 
             return responseDto;
