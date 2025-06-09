@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Services.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
@@ -20,6 +22,111 @@ namespace MovieTheater.Application.Services
             _loggerService = loggerService;
             _claimsService = claimsService;
         }
+        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+        {
+            try
+            {
+                _loggerService.Info($"Fetching movies - Page {page}, PageSize {pageSize}, Search: {search}");
+
+                var movies = await _unitOfWork.Movies.GetAllAsync();
+
+                var query = movies.AsQueryable();
+
+                // Filter by search
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var lowerSearch = search.ToLower();
+                    query = query.Where(m =>
+                        (!string.IsNullOrEmpty(m.Name) && m.Name.ToLower().Contains(lowerSearch)) ||
+                        (!string.IsNullOrEmpty(m.Director) && m.Director.ToLower().Contains(lowerSearch)) ||
+                        (m.Actors != null && m.Actors.Any(a => a.ToLower().Contains(lowerSearch)))
+                    );
+                }
+
+                var totalMovies = query.Count();
+
+                // Sort
+                query = sortBy?.ToLower() switch
+                {
+                    "name" => isDescending ? query.OrderByDescending(m => m.Name) : query.OrderBy(m => m.Name),
+                    "fromdate" => isDescending ? query.OrderByDescending(m => m.FromDate) : query.OrderBy(m => m.FromDate),
+                    "todate" => isDescending ? query.OrderByDescending(m => m.ToDate) : query.OrderBy(m => m.ToDate),
+                    _ => query.OrderBy(m => m.Id)
+                };
+
+                var pagedMovies = query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var result = pagedMovies.Select(m => new MovieResponseDto
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    FromDate = m.FromDate,
+                    ToDate = m.ToDate,
+                    Actors = m.Actors,
+                    Director = m.Director,
+                    RunningTime = m.RunningTime,
+                    Version = m.Version,
+                    TrailerUrl = m.TrailerUrl,
+                    Genres = m.Genres,
+                    Description = m.Description,
+                    PosterImage = m.PosterImage
+                }).ToList();
+
+                _loggerService.Success($"Retrieved {result.Count} movies on page {page} successfully.");
+
+                return new Pagination<MovieResponseDto>(result, totalMovies, page, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Failed to retrieve movies. Exception: {ex.Message}");
+                throw new Exception("An error occurred while retrieving movies. Please try again later.");
+            }
+        }
+        public async Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name)
+        {
+            try
+            {
+                var movies = await _unitOfWork.Movies.GetAllAsync();
+                var movieQuery = movies.AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(Name))
+                {
+                    var name = Name.ToLower();
+                    movieQuery = movieQuery.Where(m => !string.IsNullOrEmpty(m.Name) && m.Name.ToLower().Contains(name));
+                }
+
+                // Sort A-Z by movie name
+                movieQuery = movieQuery.OrderBy(m => m.Name);
+
+                var movieList = movieQuery.Select(m => new MovieResponseDto
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    FromDate = m.FromDate,
+                    ToDate = m.ToDate,
+                    Actors = m.Actors,
+                    Director = m.Director,
+                    RunningTime = m.RunningTime,
+                    Version = m.Version,
+                    TrailerUrl = m.TrailerUrl,
+                    Genres = m.Genres,
+                    Description = m.Description,
+                    PosterImage = m.PosterImage
+                }).ToList();
+
+                return movieList;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"SearchMoviesByNameAsync failed: {ex.Message}");
+                throw new Exception("An error occurred while searching for movies. Please try again later.");
+            }
+        }
+
+
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
             _loggerService.Info($"[AddMovieAsync] Start adding movie {movieRequestDto.Name}");
@@ -86,3 +193,4 @@ namespace MovieTheater.Application.Services
         }
     }
 }
+
