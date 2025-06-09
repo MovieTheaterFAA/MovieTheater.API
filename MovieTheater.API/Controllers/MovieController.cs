@@ -1,12 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
@@ -16,11 +15,13 @@ namespace MovieTheater.API.Controllers
     {
         private readonly IMovieService _movieService;
         private readonly IClaimsService _claimsService;
+        private readonly ILoggerService _loggerService;
 
-        public MovieController(IMovieService movieService, IClaimsService claimsService)
+        public MovieController(IMovieService movieService, IClaimsService claimsService, ILoggerService loggerService)
         {
             _movieService = movieService;
             _claimsService = claimsService;
+            _loggerService = loggerService;
         }
 
         [HttpGet]
@@ -51,6 +52,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+        
         [HttpGet("search")]
         [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
@@ -85,21 +87,35 @@ namespace MovieTheater.API.Controllers
         [SwaggerOperation(
         Summary = "Add a new movie",
         Description = "Creates a new movie with the provided information. Requires Admin privileges."
-    )]
+        )]
         [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), 200)]
+
+
+        /// <summary>
+        /// Update movie information by movieId.
+        /// </summary>
+        [HttpPut("{movieId}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResult<MovieUpdateDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDTO movieRequestDto)
+        public async Task<IActionResult> UpdateMovieAsync([FromRoute] Guid movieId, [FromBody] MovieUpdateDto movieUpdateDto)
         {
             try
             {
-                var result = await _movieService.AddMovieAsync(movieRequestDto);
-                return Ok(ApiResult<MovieResponseDto>.Success(result, "200", "Movie added successfully."));
+                if (movieUpdateDto == null)
+                {
+                    return BadRequest(ApiResult<object>.Failure("400", "Movie update data is required."));
+                }
+
+                var updatedMovie = await _movieService.UpdateMovieInfoAsync(movieId, movieUpdateDto);
+
+                return Ok(ApiResult<MovieUpdateDto>.Success(updatedMovie, "200", "Movie updated successfully."));
             }
             catch (Exception ex)
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<MovieResponseDto>(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }

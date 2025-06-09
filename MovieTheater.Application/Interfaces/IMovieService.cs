@@ -5,6 +5,7 @@ namespace MovieTheater.Application.Interfaces
 {
     public interface IMovieService
     {
+        Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto);
         Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto);
         Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
             string? search, 

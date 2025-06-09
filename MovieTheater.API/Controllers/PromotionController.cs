@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
@@ -44,6 +43,34 @@ namespace MovieTheater.API.Controllers
             catch (Exception ex)
             {
                 // Handle any exception and return an error response
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<PromotionResponseDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPut("{promotionId}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Update promotion",
+            Description = "Updates an existing promotion. Requires Admin privileges."
+        )]
+        [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> UpdatePromotionAsync([FromRoute] Guid promotionId, [FromBody, SwaggerParameter("Promotion data to update")] PromotionUpdateDto promotionUpdateDto)
+        {
+            try
+            {
+                if (promotionUpdateDto == null)
+                {
+                    return BadRequest(ApiResult<object>.Failure("400", "Promotion update data is required."));
+                }
+                var result = await _promotionService.UpdatePromotionAsync(promotionId, promotionUpdateDto);
+                return Ok(ApiResult<PromotionResponseDto>.Success(result, "200", "Updated promotion successfully."));
+            }
+            catch (Exception ex)
+            {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
                 var errorResponse = ExceptionUtils.CreateErrorResponse<PromotionResponseDto>(ex);
                 return StatusCode(statusCode, errorResponse);
