@@ -13,7 +13,5 @@ namespace MovieTheater.Domain.DTOs.ShowTimeDTOs
         [Required(ErrorMessage = "Show date is required.")]
         public DateTime ShowDate { get; set; }
 
-        [Required(ErrorMessage = "Duration is required.")]
-        public TimeSpan Duration { get; set; }
     }
 }
