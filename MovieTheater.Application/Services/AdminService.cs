@@ -1,6 +1,8 @@
 ﻿using System.Data;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -19,13 +21,15 @@ public class AdminService : IAdminService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
     private readonly IClaimsService _claimsService;
+    private readonly IAuditLogService _auditLogService;
 
-    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService)
+    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService, IAuditLogService auditLogService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _emailService = emailService;
         _claimsService = claimsService;
+        _auditLogService = auditLogService;
     }
 
     public async Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto)
@@ -229,6 +233,16 @@ public class AdminService : IAdminService
                 throw new KeyNotFoundException("User not found.");
             }
 
+            var oldData = new
+            {
+                user.FullName,
+                user.DateOfBirth,
+                user.Sex,
+                user.CCCD,
+                user.PhoneNumber,
+                user.Address
+            };
+
             bool isUpdated = false;
 
             // 1. Full Name
@@ -300,6 +314,40 @@ public class AdminService : IAdminService
 
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
+
+            var newData = new
+            {
+                user.FullName,
+                user.DateOfBirth,
+                user.Sex,
+                user.CCCD,
+                user.PhoneNumber,
+                user.Address
+            };
+
+            var changedFields = JsonSerializer.Serialize(new
+            {
+                editEmployeeDto.FullName,
+                editEmployeeDto.DateOfBirth,
+                editEmployeeDto.Sex,
+                editEmployeeDto.CCCD,
+                editEmployeeDto.PhoneNumber,
+                editEmployeeDto.Address
+            });
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            await _auditLogService.LogAsync
+                (
+                adminId,
+                AuditActionType.Update,
+                "Employee",
+                userId  ,
+                oldData,
+                newData,
+                changedFields,
+                "Admin updated employee information"
+                );
 
             _loggerService.Success($"[Admin] Employee info updated successfully for UserId: {userId}");
 

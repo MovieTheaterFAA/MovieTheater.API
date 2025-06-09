@@ -1,23 +1,29 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
+using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 [ApiController]
-[Route("api/controller")]
+[Route("api/system")]
 public class SystemController : ControllerBase
 {
     private readonly MovieTheaterDbContext _context;
     private readonly ILoggerService _logger;
+    private readonly IAuditLogService _auditLogService;
 
-    public SystemController(MovieTheaterDbContext context, ILoggerService logger)
+    public SystemController(MovieTheaterDbContext context, ILoggerService logger, IAuditLogService auditLogService)
     {
         _context = context;
         _logger = logger;
+        _auditLogService = auditLogService;
     }
 
     [HttpPost("seed-all-data")]
@@ -189,5 +195,15 @@ public class SystemController : ControllerBase
             _logger.Error($"Deleted data fail: {ex.Message}");
             throw;
         }
+    }
+
+    [HttpGet]
+    [Authorize(Policy = "AdminPolicy")]
+    [SwaggerOperation(Summary = "View all audit logs", Description = "Get all logs from the database.")]
+    [ProducesResponseType(typeof(ApiResult<List<AuditLogDto>>), 200)]
+    public async Task<IActionResult> ViewLogAsync()
+    {
+        var logs = await _auditLogService.ViewLogAsync();
+        return Ok(ApiResult<List<AuditLogDto>>.Success(logs, "200", "Audit logs retrieved successfully."));
     }
 }
