@@ -53,7 +53,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-        
+
         [HttpGet("search")]
         [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
@@ -104,7 +104,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPut("{movieId}")]
+        [HttpPut("{id}")]
         [Authorize]
         [SwaggerOperation(
                Summary = "Update movie information",
