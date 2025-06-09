@@ -1,6 +1,8 @@
 ﻿using System.Data;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -19,13 +21,15 @@ public class AdminService : IAdminService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
     private readonly IClaimsService _claimsService;
+    private readonly IAuditLogService _auditLogService;
 
-    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService)
+    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService, IAuditLogService auditLogService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _emailService = emailService;
         _claimsService = claimsService;
+        _auditLogService = auditLogService;
     }
 
     public async Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto)
@@ -94,6 +98,8 @@ public class AdminService : IAdminService
             _loggerService.Info($"Fetching users - Page {page}, PageSize {pageSize}, Role: {role}, Search: {search}");
 
             var query = _unitOfWork.Users.GetQueryable();
+
+            query = query.Where(u => !u.IsDeleted);
 
             if (role.HasValue)
             {
@@ -167,7 +173,7 @@ public class AdminService : IAdminService
 
             var listUsers = await _unitOfWork.Users.GetAllAsync();
 
-            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee).AsQueryable();
+            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee && !u.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -195,12 +201,14 @@ public class AdminService : IAdminService
 
             var result = pagedEmployees.Select(user => new UserDto
             {
+                UserId = user.Id,
                 AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 CCCD = user.CCCD,
                 DateOfBirth = user.DateOfBirth,
                 Sex = user.Sex,
                 Email = user.Email,
+                Role = user.Role,
                 PhoneNumber = user.PhoneNumber,
                 Address = user.Address
             }).ToList();
@@ -228,6 +236,16 @@ public class AdminService : IAdminService
                 _loggerService.Warn($"User with ID {userId} not found.");
                 throw new KeyNotFoundException("User not found.");
             }
+
+            var oldData = new
+            {
+                user.FullName,
+                user.DateOfBirth,
+                user.Sex,
+                user.CCCD,
+                user.PhoneNumber,
+                user.Address
+            };
 
             bool isUpdated = false;
 
@@ -300,6 +318,40 @@ public class AdminService : IAdminService
 
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
+
+            var newData = new
+            {
+                user.FullName,
+                user.DateOfBirth,
+                user.Sex,
+                user.CCCD,
+                user.PhoneNumber,
+                user.Address
+            };
+
+            var changedFields = JsonSerializer.Serialize(new
+            {
+                editEmployeeDto.FullName,
+                editEmployeeDto.DateOfBirth,
+                editEmployeeDto.Sex,
+                editEmployeeDto.CCCD,
+                editEmployeeDto.PhoneNumber,
+                editEmployeeDto.Address
+            });
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            await _auditLogService.LogAsync
+                (
+                adminId,
+                AuditActionType.Update,
+                "Employee",
+                userId  ,
+                oldData,
+                newData,
+                changedFields,
+                "Admin updated employee information"
+                );
 
             _loggerService.Success($"[Admin] Employee info updated successfully for UserId: {userId}");
 
