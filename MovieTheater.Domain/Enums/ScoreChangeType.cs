@@ -2,7 +2,7 @@
 {
     public enum ScoreChangeType
     {
-        Add,
-        Use
+        Add = 0,
+        Use = 1
     }
 }

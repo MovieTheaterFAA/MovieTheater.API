@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MovieTheater.Domain.Entities
 {
@@ -29,8 +22,10 @@ namespace MovieTheater.Domain.Entities
 
         // Navigation
         public ICollection<BookingSeat> BookingSeats { get; set; }
+
         public ICollection<Ticket> Tickets { get; set; }
         public Invoice Invoice { get; set; }
         public ICollection<ScoreHistory> ScoreHistories { get; set; }
+        public ICollection<BookingFood> BookingFoods { get; set; }
     }
 }

@@ -24,8 +24,9 @@ namespace MovieTheater.Domain.Entities
 
         public string Description { get; set; }
 
-        public string PosterImage { get; set; }       // Poster film trên MinIO
-        public string BackgroundImage { get; set; }   // Hình nền của phim trên MinIO
+        public string PosterImage { get; set; }
+        public string BackgroundImage { get; set; }
+        public MovieStatus Status { get; set; }       // Trạng thái phim
 
         // Navigation
         public ICollection<ShowTime> Showtimes { get; set; }

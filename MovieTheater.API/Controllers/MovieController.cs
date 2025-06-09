@@ -6,6 +6,7 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
@@ -52,7 +53,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-        
+
         [HttpGet("search")]
         [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
@@ -80,22 +81,35 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-
-
-        [HttpPost("movie")]
+        [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
-        Summary = "Add a new movie",
-        Description = "Creates a new movie with the provided information. Requires Admin privileges."
-        )]
+               Summary = "Add a new movie",
+               Description = "Creates a new movie with the provided information. Requires Admin privileges.")]
         [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDTO movieRequestDto)
+        {
+            try
+            {
+                var result = await _movieService.AddMovieAsync(movieRequestDto);
+                return Ok(ApiResult<MovieResponseDto>.Success(result, "200", "Movie added successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<MovieResponseDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
 
-
-        /// <summary>
-        /// Update movie information by movieId.
-        /// </summary>
-        [HttpPut("{movieId}")]
+        [HttpPut("{id}")]
         [Authorize]
+        [SwaggerOperation(
+               Summary = "Update movie information",
+               Description = "Updates the details of a specific movie by its ID."
+        )]
         [ProducesResponseType(typeof(ApiResult<MovieUpdateDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
