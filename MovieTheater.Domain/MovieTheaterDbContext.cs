@@ -28,6 +28,8 @@ namespace MovieTheater.Domain
         public DbSet<ScoreHistory> ScoreHistory { get; set; }
         public DbSet<OtpStorage> OtpStorages { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<FoodAndDrink> FoodAndDrinks { get; set; }
+        public DbSet<BookingFood> BookingFoods { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -126,6 +128,21 @@ namespace MovieTheater.Domain
                 .WithMany(b => b.ScoreHistories)
                 .HasForeignKey(sh => sh.RelatedBookingId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<BookingFood>()
+                .HasKey(bf => new { bf.BookingId, bf.FoodAndDrinkId });
+
+            // BookingFood ↔ Booking (many-to-one)
+            modelBuilder.Entity<BookingFood>()
+                .HasOne(bf => bf.Booking)
+                .WithMany(b => b.BookingFoods)
+                .HasForeignKey(bf => bf.BookingId);
+
+            // FoodAndDrink ↔ BookingFood (many-to-one)
+            modelBuilder.Entity<BookingFood>()
+                .HasOne(bf => bf.FoodAndDrink)
+                .WithMany(fd => fd.BookingFoods)
+                .HasForeignKey(bf => bf.FoodAndDrinkId);
 
             // Promotions, Otp: standalone, no relationships with other entities
         }
