@@ -13,10 +13,12 @@ namespace MovieTheater.Application.Services
 
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService)
+        private readonly IClaimsService _claimsService;
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
+            _claimsService = claimsService;
         }
 
         public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
@@ -157,6 +159,7 @@ namespace MovieTheater.Application.Services
 
             // Thêm bộ phim vào cơ sở dữ liệu
             await _unitOfWork.Movies.AddAsync(movie);
+            await _unitOfWork.SaveChangesAsync();
             
              _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
             // Trả về MovieResponseDto
@@ -180,7 +183,7 @@ namespace MovieTheater.Application.Services
             return responseDto;
        }
 
-    public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
+        public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
             try
             {
@@ -323,6 +326,6 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-    }
+        }
 }
 
