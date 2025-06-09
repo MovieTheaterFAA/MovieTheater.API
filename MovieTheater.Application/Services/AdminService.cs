@@ -99,6 +99,8 @@ public class AdminService : IAdminService
 
             var query = _unitOfWork.Users.GetQueryable();
 
+            query = query.Where(u => !u.IsDeleted);
+
             if (role.HasValue)
             {
                 query = query.Where(u => u.Role == role.Value);
@@ -171,7 +173,7 @@ public class AdminService : IAdminService
 
             var listUsers = await _unitOfWork.Users.GetAllAsync();
 
-            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee).AsQueryable();
+            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee && !u.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -199,12 +201,14 @@ public class AdminService : IAdminService
 
             var result = pagedEmployees.Select(user => new UserDto
             {
+                UserId = user.Id,
                 AvatarUrl = user.AvatarUrl,
                 FullName = user.FullName,
                 CCCD = user.CCCD,
                 DateOfBirth = user.DateOfBirth,
                 Sex = user.Sex,
                 Email = user.Email,
+                Role = user.Role,
                 PhoneNumber = user.PhoneNumber,
                 Address = user.Address
             }).ToList();
