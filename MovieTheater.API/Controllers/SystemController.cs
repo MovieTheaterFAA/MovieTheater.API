@@ -11,6 +11,7 @@ using MovieTheater.Domain.Enums;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
+
 [ApiController]
 [Route("api/system")]
 public class SystemController : ControllerBase
@@ -53,6 +54,7 @@ public class SystemController : ControllerBase
             return StatusCode(500, "Error seeding data: General failure.");
         }
     }
+
     private async Task SeedUserAsync()
     {
         var passwordHasher = new PasswordHasher();
@@ -169,10 +171,12 @@ public class SystemController : ControllerBase
         }
         };
         _logger.Info("Seeding users with roles...");
+
         await _context.Users.AddRangeAsync(users);
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
+    
     private async  Task SeedDataMovie()
     {
         var movies = new List<Movie>
@@ -344,6 +348,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
