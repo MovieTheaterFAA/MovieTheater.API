@@ -74,6 +74,48 @@ public class AdminService : IAdminService
             _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
             throw;
         }
+        var adminId = _claimsService.GetCurrentUserId;
+
+        var newData = new
+        {
+            user.FullName,
+            user.DateOfBirth,
+            user.Sex,
+            user.CCCD,
+            user.Email,
+            user.PhoneNumber,
+            user.Address,
+            user.Role,
+            user.UserStatus,
+            user.IsEmailVerified
+        };
+
+        var changedFields = JsonSerializer.Serialize(new
+        {
+            user.FullName,
+            user.DateOfBirth,
+            user.Sex,
+            user.CCCD,
+            user.Email,
+            user.PhoneNumber,
+            user.Address,
+            user.Role,
+            user.UserStatus,
+            user.IsEmailVerified
+        });
+
+        await _auditLogService.LogAsync
+                (
+                adminId,
+                AuditActionType.Create,
+                "Employee",
+                user.Id,
+                null,
+                newData,
+                changedFields,
+                "Admin created new employee"
+                );
+
 
         _loggerService.Success($"[AddEmployeeAsync] Employee {user.Email} created successfully.");
 
@@ -382,13 +424,42 @@ public class AdminService : IAdminService
             return false;
         }
 
+        var oldValue = new
+        {
+            user.UserStatus,
+        };
+
+
         user.UserStatus = UserStatus.Deleted;
         user.IsDeleted = true;
         user.DeletedAt = DateTime.UtcNow;
         user.DeletedBy = adminId;
 
+        var newValue = new
+        {
+            user.UserStatus,
+        };
+
+        var changedFields = JsonSerializer.Serialize(new
+        {
+            UserStatus = UserStatus.Deleted,
+        });
+
         await _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
+
+        await _auditLogService.LogAsync
+               (
+               adminId,
+               AuditActionType.Delete,
+               "Employee",
+               employeeId,
+               oldValue,
+               newValue,
+               changedFields,
+               "Deleted employee account"
+               );
+
         return true;
     }
 

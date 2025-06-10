@@ -190,7 +190,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Animation", "Fantasy", "Action" },
         Description = "Sequel to Ne Zha, huge Chinese mythological animated hit.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.8f,
     },
 
     new Movie
@@ -205,7 +205,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Adventure", "Fantasy" },
         Description = "Live‑action/CGI adaptation of Minecraft game world.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.8f
     },
 
     new Movie
@@ -220,7 +220,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Family", "Adventure", "Comedy" },
         Description = "Live‑action remake of Disney classic.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.7f
     },
 
     new Movie
@@ -235,7 +235,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Comedy", "Mystery" },
         Description = "Chinese detective comedy set in early 1900s.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.5f
     },
 
     new Movie
@@ -250,7 +250,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon,Rating =  9.0f
     },
 
     new Movie
@@ -265,7 +265,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.8f
     },
 
     new Movie
@@ -280,7 +280,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.7f
     },
 
     new Movie
@@ -295,7 +295,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Original" },
         Description = "Original vampire horror film by Ryan Coogler.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.1f
     },
 
     new Movie
@@ -310,7 +310,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.5f
     },
 
     new Movie
@@ -325,7 +325,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Fantasy", "Musical" },
         Description = "Disney’s new live‑action Snow White adaptation.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.3f
     },
 
         };
@@ -411,6 +411,7 @@ public class SystemController : ControllerBase
                 () => context.Movies.ExecuteDeleteAsync(),
                 () => context.Seats.ExecuteDeleteAsync(),
                 () => context.CinemaRooms.ExecuteDeleteAsync(),
+                () => context.AuditLogs.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();
