@@ -32,9 +32,10 @@ public class SystemController : ControllerBase
             //Seed user data
             await SeedUserAsync();
             //Seed movie data
-            await SeedDataMovie();
+            await SeedMovieAsync();
             //Seed cinema rooms and seats
             await SeedCinemaRoomAsync();
+
             return Ok(ApiResult<object>.Success(new
             {
                 Message = "Data seeded successfully."
@@ -173,7 +174,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-    private async Task SeedDataMovie()
+    private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
         {
@@ -407,7 +408,9 @@ public class SystemController : ControllerBase
             var tablesToDelete = new List<Func<Task>>
             {
                 () => context.Users.ExecuteDeleteAsync(),
-                () => context.Movies.ExecuteDeleteAsync()
+                () => context.Movies.ExecuteDeleteAsync(),
+                () => context.Seats.ExecuteDeleteAsync(),
+                () => context.CinemaRooms.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();
