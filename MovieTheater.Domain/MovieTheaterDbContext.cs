@@ -25,6 +25,7 @@ namespace MovieTheater.Domain
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<Event> Events { get; set; }
         public DbSet<ScoreHistory> ScoreHistory { get; set; }
         public DbSet<OtpStorage> OtpStorages { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -34,11 +35,6 @@ namespace MovieTheater.Domain
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // Configure MovieVersion enum to be stored as string in the DB
-            modelBuilder.Entity<Movie>()
-                .Property(m => m.Version)
-                .HasConversion<string>();
 
             // Seat ↔ CinemaRoom (many-to-one)
             modelBuilder.Entity<Seat>()
@@ -143,6 +139,12 @@ namespace MovieTheater.Domain
                 .HasOne(bf => bf.FoodAndDrink)
                 .WithMany(fd => fd.BookingFoods)
                 .HasForeignKey(bf => bf.FoodAndDrinkId);
+
+            // Promotion ↔ Event (one-to-many)
+            modelBuilder.Entity<Event>()
+            .HasOne(e => e.Promotion)
+            .WithMany(p => p.Events)
+            .HasForeignKey(e => e.PromotionId);
 
             // Promotions, Otp: standalone, no relationships with other entities
         }

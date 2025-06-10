@@ -1,5 +1,4 @@
-﻿using MovieTheater.Domain.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
@@ -29,9 +28,6 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
 
         [Range(1, 300, ErrorMessage = "Running time must be between 1 and 300 minutes.")]
         public int? RunningTime { get; set; }
-
-        [Required(ErrorMessage = "Version is required.")]
-        public MovieVersion Version { get; set; }
 
         [Url(ErrorMessage = "Trailer URL must be a valid URL.")]
         public string TrailerUrl { get; set; }

@@ -176,8 +176,8 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-    
-    private async  Task SeedDataMovie()
+
+    private async Task SeedDataMovie()
     {
         var movies = new List<Movie>
         {
@@ -190,7 +190,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jiaozi",
         RunningTime = 144,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Animation", "Fantasy", "Action" },
         Description = "Sequel to Ne Zha, huge Chinese mythological animated hit.",
@@ -206,7 +205,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jared Hess",
         RunningTime = 100,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Adventure", "Fantasy" },
         Description = "Live‑action/CGI adaptation of Minecraft game world.",
@@ -222,7 +220,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Dean Fleischer Camp",
         RunningTime = 95,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Family", "Adventure", "Comedy" },
         Description = "Live‑action remake of Disney classic.",
@@ -238,7 +235,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Chen Sicheng",
         RunningTime = 120,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Comedy", "Mystery" },
         Description = "Chinese detective comedy set in early 1900s.",
@@ -254,7 +250,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Christopher McQuarrie",
         RunningTime = 150,
-        Version = MovieVersion.IMAX,
         TrailerUrl = "",
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
@@ -270,7 +265,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Julius Onah",
         RunningTime = 130,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
@@ -286,7 +280,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jake Schreier",
         RunningTime = 120,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
@@ -302,7 +295,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Ryan Coogler",
         RunningTime = 115,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Original" },
         Description = "Original vampire horror film by Ryan Coogler.",
@@ -318,7 +310,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Zach Lipovsky",
         RunningTime = 110,
-        Version = MovieVersion.IMAX,
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
@@ -334,7 +325,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Marc Webb",
         RunningTime = 110,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Fantasy", "Musical" },
         Description = "Disney’s new live‑action Snow White adaptation.",
