@@ -1,18 +1,20 @@
-﻿namespace MovieTheater.Domain.DTOs.PromotionDTOs
+﻿namespace MovieTheater.Domain.DTOs.EventDTOs
 {
-    public class PromotionResponseDto
+    public class EventResponseDto
     {
         public Guid Id { get; set; }
 
-        public string Title { get; set; }
+        public string Name { get; set; }
 
-        public decimal DiscountValue { get; set; }
+        public DateTime StartTime { get; set; }
+
+        public DateTime EndTime { get; set; }
 
         public string Detail { get; set; }
 
         public string Image { get; set; }
 
-        public bool IsDeleted { get; set; }
+        public Guid PromotionId { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
