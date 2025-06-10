@@ -82,6 +82,46 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while retrieving movies. Please try again later.");
             }
         }
+
+        public async Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId)
+        {
+            try
+            {
+                _loggerService.Info($"[GetMovieDetailAsync] Fetching details for MovieId: {movieId}");
+
+                var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+                if (movie == null || movie.IsDeleted)
+                {
+                    _loggerService.Warn($"[GetMovieDetailAsync] Movie with ID {movieId} not found.");
+                    throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
+                }
+
+                var responseDto = new MovieResponseDto
+                {
+                    Id = movie.Id,
+                    Name = movie.Name,
+                    FromDate = movie.FromDate,
+                    ToDate = movie.ToDate,
+                    Actors = movie.Actors,
+                    Director = movie.Director,
+                    RunningTime = movie.RunningTime,
+                    TrailerUrl = movie.TrailerUrl,
+                    Genres = movie.Genres,
+                    Description = movie.Description,
+                    PosterImage = movie.PosterImage,
+                    BackgroundImage = movie.BackgroundImage
+                };
+
+                _loggerService.Success($"[GetMovieDetailAsync] Movie details fetched successfully for MovieId: {movieId}");
+                return responseDto;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[GetMovieDetailAsync] Error fetching movie details for MovieId: {movieId}. Exception: {ex.Message}");
+                throw new Exception("An error occurred while fetching movie details. Please try again later.");
+            }
+        }
+
         public async Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name)
         {
             try
