@@ -14,7 +14,7 @@ namespace MovieTheater.Application.Interfaces
             int page,
             int pageSize
             );
-        Task<MovieResponseDto> GetMovieDetailAsync();
+        Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId);
         Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name);
     }
 }
