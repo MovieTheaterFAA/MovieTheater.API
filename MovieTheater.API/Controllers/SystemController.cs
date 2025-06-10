@@ -1,14 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
-using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 
@@ -18,13 +15,11 @@ public class SystemController : ControllerBase
 {
     private readonly MovieTheaterDbContext _context;
     private readonly ILoggerService _logger;
-    private readonly IAuditLogService _auditLogService;
 
     public SystemController(MovieTheaterDbContext context, ILoggerService logger, IAuditLogService auditLogService)
     {
         _context = context;
         _logger = logger;
-        _auditLogService = auditLogService;
     }
 
     [HttpPost("seed-all-data")]
@@ -38,6 +33,8 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             //Seed movie data
             await SeedDataMovie();
+            //Seed cinema rooms and seats
+            await SeedCinemaRoomAsync();
             return Ok(ApiResult<object>.Success(new
             {
                 Message = "Data seeded successfully."
@@ -176,7 +173,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-
     private async Task SeedDataMovie()
     {
         var movies = new List<Movie>
@@ -338,6 +334,68 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+    private async Task SeedCinemaRoomAsync()
+    {
+        var rooms = new List<CinemaRoom>
+    {
+        new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
+        new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
+        new() { Name = "2D Room 1",   Type = RoomType.TwoD },
+        new() { Name = "2D Room 2",   Type = RoomType.TwoD },
+        new() { Name = "4D Room 1",   Type = RoomType.FourD }
+    };
+
+        var seatLayouts = new Dictionary<RoomType, int>
+    {
+        { RoomType.IMAX, 120 },
+        { RoomType.TwoD, 80 },
+        { RoomType.FourD, 60 }
+    };
+
+        var seats = new List<Seat>();
+
+        foreach (var room in rooms)
+        {
+            int totalSeats = seatLayouts[room.Type];
+            int rows = 6;
+            int cols = totalSeats / rows;
+            int seatCounter = 0;
+
+            for (int r = 0; r < rows; r++)
+            {
+                char rowLabel = (char)('A' + r);
+                SeatType seatType;
+
+                if (r == 0) seatType = SeatType.Couple;                  // Row A
+                else if (r >= 1 && r <= 3) seatType = SeatType.VIP;      // Rows B, C, D
+                else seatType = SeatType.Normal;                         // Rows E, F
+
+                for (int c = 1; c <= cols; c++)
+                {
+                    seats.Add(new Seat
+                    {
+                        CinemaRoom = room,
+                        Row = rowLabel.ToString(),
+                        Number = c,
+                        Type = seatType,
+                        Status = SeatStatus.Available
+                    });
+                    seatCounter++;
+                }
+            }
+
+            room.SeatQuantity = seatCounter;
+        }
+
+        _logger.Info("Seeding cinema rooms and seats...");
+        await _context.CinemaRooms.AddRangeAsync(rooms);
+        await _context.Seats.AddRangeAsync(seats);
+        await _context.SaveChangesAsync();
+        _logger.Success("Cinema rooms and seats seeded successfully.");
+    }
+
+
+
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
@@ -363,15 +421,5 @@ public class SystemController : ControllerBase
             _logger.Error($"Deleted data fail: {ex.Message}");
             throw;
         }
-    }
-
-    [HttpGet]
-    [Authorize(Policy = "AdminPolicy")]
-    [SwaggerOperation(Summary = "View all audit logs", Description = "Get all logs from the database.")]
-    [ProducesResponseType(typeof(ApiResult<List<AuditLogDto>>), 200)]
-    public async Task<IActionResult> ViewLogAsync()
-    {
-        var logs = await _auditLogService.ViewLogAsync();
-        return Ok(ApiResult<List<AuditLogDto>>.Success(logs, "200", "Audit logs retrieved successfully."));
     }
 }
