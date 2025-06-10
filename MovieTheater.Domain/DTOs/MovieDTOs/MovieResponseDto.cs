@@ -1,6 +1,4 @@
-﻿using MovieTheater.Domain.Enums;
-
-namespace MovieTheater.Domain.DTOs.MovieDTOs
+﻿namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
     public class MovieResponseDto
     {
@@ -11,7 +9,6 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         public List<string> Actors { get; set; }
         public string Director { get; set; }
         public int? RunningTime { get; set; }
-        public MovieVersion Version { get; set; }
         public string TrailerUrl { get; set; }
         public List<string> Genres { get; set; }
         public string Description { get; set; }

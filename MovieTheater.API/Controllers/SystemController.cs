@@ -1,14 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
-using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 
@@ -18,13 +15,11 @@ public class SystemController : ControllerBase
 {
     private readonly MovieTheaterDbContext _context;
     private readonly ILoggerService _logger;
-    private readonly IAuditLogService _auditLogService;
 
     public SystemController(MovieTheaterDbContext context, ILoggerService logger, IAuditLogService auditLogService)
     {
         _context = context;
         _logger = logger;
-        _auditLogService = auditLogService;
     }
 
     [HttpPost("seed-all-data")]
@@ -37,7 +32,10 @@ public class SystemController : ControllerBase
             //Seed user data
             await SeedUserAsync();
             //Seed movie data
-            await SeedDataMovie();
+            await SeedMovieAsync();
+            //Seed cinema rooms and seats
+            await SeedCinemaRoomAsync();
+
             return Ok(ApiResult<object>.Success(new
             {
                 Message = "Data seeded successfully."
@@ -176,8 +174,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-    
-    private async  Task SeedDataMovie()
+    private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
         {
@@ -190,7 +187,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jiaozi",
         RunningTime = 144,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Animation", "Fantasy", "Action" },
         Description = "Sequel to Ne Zha, huge Chinese mythological animated hit.",
@@ -206,7 +202,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jared Hess",
         RunningTime = 100,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Adventure", "Fantasy" },
         Description = "Live‑action/CGI adaptation of Minecraft game world.",
@@ -222,7 +217,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Dean Fleischer Camp",
         RunningTime = 95,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Family", "Adventure", "Comedy" },
         Description = "Live‑action remake of Disney classic.",
@@ -238,7 +232,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Chen Sicheng",
         RunningTime = 120,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Comedy", "Mystery" },
         Description = "Chinese detective comedy set in early 1900s.",
@@ -254,7 +247,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Christopher McQuarrie",
         RunningTime = 150,
-        Version = MovieVersion.IMAX,
         TrailerUrl = "",
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
@@ -270,7 +262,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Julius Onah",
         RunningTime = 130,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
@@ -286,7 +277,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jake Schreier",
         RunningTime = 120,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
@@ -302,7 +292,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Ryan Coogler",
         RunningTime = 115,
-        Version = MovieVersion.FourD,
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Original" },
         Description = "Original vampire horror film by Ryan Coogler.",
@@ -318,7 +307,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Zach Lipovsky",
         RunningTime = 110,
-        Version = MovieVersion.IMAX,
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
@@ -334,7 +322,6 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Marc Webb",
         RunningTime = 110,
-        Version = MovieVersion.TwoD,
         TrailerUrl = "",
         Genres = new List<string>{ "Fantasy", "Musical" },
         Description = "Disney’s new live‑action Snow White adaptation.",
@@ -348,6 +335,68 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+    private async Task SeedCinemaRoomAsync()
+    {
+        var rooms = new List<CinemaRoom>
+    {
+        new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
+        new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
+        new() { Name = "2D Room 1",   Type = RoomType.TwoD },
+        new() { Name = "2D Room 2",   Type = RoomType.TwoD },
+        new() { Name = "4D Room 1",   Type = RoomType.FourD }
+    };
+
+        var seatLayouts = new Dictionary<RoomType, int>
+    {
+        { RoomType.IMAX, 120 },
+        { RoomType.TwoD, 80 },
+        { RoomType.FourD, 60 }
+    };
+
+        var seats = new List<Seat>();
+
+        foreach (var room in rooms)
+        {
+            int totalSeats = seatLayouts[room.Type];
+            int rows = 6;
+            int cols = totalSeats / rows;
+            int seatCounter = 0;
+
+            for (int r = 0; r < rows; r++)
+            {
+                char rowLabel = (char)('A' + r);
+                SeatType seatType;
+
+                if (r == 0) seatType = SeatType.Couple;                  // Row A
+                else if (r >= 1 && r <= 3) seatType = SeatType.VIP;      // Rows B, C, D
+                else seatType = SeatType.Normal;                         // Rows E, F
+
+                for (int c = 1; c <= cols; c++)
+                {
+                    seats.Add(new Seat
+                    {
+                        CinemaRoom = room,
+                        Row = rowLabel.ToString(),
+                        Number = c,
+                        Type = seatType,
+                        Status = SeatStatus.Available
+                    });
+                    seatCounter++;
+                }
+            }
+
+            room.SeatQuantity = seatCounter;
+        }
+
+        _logger.Info("Seeding cinema rooms and seats...");
+        await _context.CinemaRooms.AddRangeAsync(rooms);
+        await _context.Seats.AddRangeAsync(seats);
+        await _context.SaveChangesAsync();
+        _logger.Success("Cinema rooms and seats seeded successfully.");
+    }
+
+
+
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
@@ -359,7 +408,9 @@ public class SystemController : ControllerBase
             var tablesToDelete = new List<Func<Task>>
             {
                 () => context.Users.ExecuteDeleteAsync(),
-                () => context.Movies.ExecuteDeleteAsync()
+                () => context.Movies.ExecuteDeleteAsync(),
+                () => context.Seats.ExecuteDeleteAsync(),
+                () => context.CinemaRooms.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();
@@ -373,15 +424,5 @@ public class SystemController : ControllerBase
             _logger.Error($"Deleted data fail: {ex.Message}");
             throw;
         }
-    }
-
-    [HttpGet]
-    [Authorize(Policy = "AdminPolicy")]
-    [SwaggerOperation(Summary = "View all audit logs", Description = "Get all logs from the database.")]
-    [ProducesResponseType(typeof(ApiResult<List<AuditLogDto>>), 200)]
-    public async Task<IActionResult> ViewLogAsync()
-    {
-        var logs = await _auditLogService.ViewLogAsync();
-        return Ok(ApiResult<List<AuditLogDto>>.Success(logs, "200", "Audit logs retrieved successfully."));
     }
 }

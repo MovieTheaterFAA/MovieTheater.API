@@ -1,6 +1,5 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
-using MovieTheater.Application.Services.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Commons;
@@ -67,7 +66,6 @@ namespace MovieTheater.Application.Services
                     Actors = m.Actors,
                     Director = m.Director,
                     RunningTime = m.RunningTime,
-                    Version = m.Version,
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
@@ -109,7 +107,6 @@ namespace MovieTheater.Application.Services
                     Actors = m.Actors,
                     Director = m.Director,
                     RunningTime = m.RunningTime,
-                    Version = m.Version,
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
@@ -147,7 +144,6 @@ namespace MovieTheater.Application.Services
                 ActorsUrl = movieRequestDto.ActorsUrl,
                 Director = movieRequestDto.Director,
                 RunningTime = movieRequestDto.RunningTime,
-                Version = movieRequestDto.Version,
                 TrailerUrl = movieRequestDto.TrailerUrl,
                 Genres = movieRequestDto.Genres,
                 Description = movieRequestDto.Description,
@@ -160,8 +156,8 @@ namespace MovieTheater.Application.Services
             // Thêm bộ phim vào cơ sở dữ liệu
             await _unitOfWork.Movies.AddAsync(movie);
             await _unitOfWork.SaveChangesAsync();
-            
-             _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
+
+            _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
             // Trả về MovieResponseDto
             var responseDto = new MovieResponseDto
             {
@@ -172,7 +168,6 @@ namespace MovieTheater.Application.Services
                 Actors = movie.Actors,
                 Director = movie.Director,
                 RunningTime = movie.RunningTime,
-                Version = movie.Version,
                 TrailerUrl = movie.TrailerUrl,
                 Genres = movie.Genres,
                 Description = movie.Description,
@@ -181,7 +176,7 @@ namespace MovieTheater.Application.Services
             };
 
             return responseDto;
-       }
+        }
 
         public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
@@ -248,12 +243,6 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (movieUpdateDto.Version.HasValue && movie.Version != movieUpdateDto.Version)
-                {
-                    movie.Version = movieUpdateDto.Version.Value;
-                    isUpdated = true;
-                }
-
                 if (!string.IsNullOrWhiteSpace(movieUpdateDto.TrailerUrl) && movie.TrailerUrl != movieUpdateDto.TrailerUrl)
                 {
                     movie.TrailerUrl = movieUpdateDto.TrailerUrl;
@@ -292,7 +281,6 @@ namespace MovieTheater.Application.Services
                         ActorsUrl = movie.ActorsUrl,
                         Director = movie.Director,
                         RunningTime = movie.RunningTime,
-                        Version = movie.Version,
                         TrailerUrl = movie.TrailerUrl,
                         Genres = movie.Genres,
                         Description = movie.Description,
@@ -313,7 +301,6 @@ namespace MovieTheater.Application.Services
                     ActorsUrl = movie.ActorsUrl,
                     Director = movie.Director,
                     RunningTime = movie.RunningTime,
-                    Version = movie.Version,
                     TrailerUrl = movie.TrailerUrl,
                     Genres = movie.Genres,
                     Description = movie.Description,
@@ -326,6 +313,6 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-        }
+    }
 }
 
