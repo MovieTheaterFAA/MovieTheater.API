@@ -25,6 +25,7 @@ namespace MovieTheater.Domain.Entities
         public string PosterImage { get; set; }
         public string BackgroundImage { get; set; }
         public MovieStatus Status { get; set; }       // Trạng thái phim
+        public float Rating { get; set; }             // Điểm đánh giá
 
         // Navigation
         public ICollection<ShowTime> Showtimes { get; set; }
