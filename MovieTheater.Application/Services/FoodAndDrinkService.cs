@@ -134,5 +134,30 @@ namespace MovieTheater.Application.Services
             var existingFoodAndDrink = await _unitOfWork.FoodAndDrinks.FirstOrDefaultAsync(f => f.Name == name);
             return existingFoodAndDrink != null;
         }
+
+        public async Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId)
+        {
+            try
+            {
+                var foodAndDrink = await _unitOfWork.FoodAndDrinks.GetByIdAsync(foodAndDrinkId);
+                if (foodAndDrink == null)
+                {
+                    _loggerService.Warn($"FoodAndDrink with ID {foodAndDrinkId} not found.");
+                    return false;
+                }
+
+                await _unitOfWork.FoodAndDrinks.SoftRemove(foodAndDrink);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Info($"Successfully deleted FoodAndDrink with ID {foodAndDrinkId}.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"An error occurred while deleting FoodAndDrink: {ex.Message}");
+                return false;
+            }
+        }
+
     }
 }
