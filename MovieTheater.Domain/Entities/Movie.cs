@@ -16,8 +16,6 @@ namespace MovieTheater.Domain.Entities
 
         public int? RunningTime { get; set; }         // Thời lượng chiếu
 
-        public MovieVersion Version { get; set; }     // Phiên bản phim (2D, 3D, IMAX, v.v.)
-
         public string TrailerUrl { get; set; }
 
         public List<string> Genres { get; set; }      // Thể loại phim - MovieType
@@ -27,6 +25,7 @@ namespace MovieTheater.Domain.Entities
         public string PosterImage { get; set; }
         public string BackgroundImage { get; set; }
         public MovieStatus Status { get; set; }       // Trạng thái phim
+        public float Rating { get; set; }             // Điểm đánh giá
 
         // Navigation
         public ICollection<ShowTime> Showtimes { get; set; }

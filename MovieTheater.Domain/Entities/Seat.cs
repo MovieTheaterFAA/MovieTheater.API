@@ -1,11 +1,5 @@
 ﻿using MovieTheater.Domain.Enums;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MovieTheater.Domain.Entities
 {
@@ -15,11 +9,9 @@ namespace MovieTheater.Domain.Entities
 
         [ForeignKey(nameof(CinemaRoomId))]
         public CinemaRoom CinemaRoom { get; set; }
-
-        public string SeatNumber { get; set; }
-
+        public string Row { get; set; }          // E.g. "A", "B"
+        public int Number { get; set; }          // E.g. 1, 2, 3
         public SeatType Type { get; set; }
-
         public SeatStatus Status { get; set; }
 
         // Navigation

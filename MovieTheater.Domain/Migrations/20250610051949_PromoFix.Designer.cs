@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieTheater.Domain;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    partial class MovieTheaterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250610051949_PromoFix")]
+    partial class PromoFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -449,9 +452,6 @@ namespace MovieTheater.Domain.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<float>("Rating")
-                        .HasColumnType("real");
-
                     b.Property<int?>("RunningTime")
                         .HasColumnType("integer");
 
@@ -704,10 +704,7 @@ namespace MovieTheater.Domain.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("Number")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Row")
+                    b.Property<string>("SeatNumber")
                         .IsRequired()
                         .HasColumnType("text");
 

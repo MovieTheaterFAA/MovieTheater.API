@@ -1,5 +1,4 @@
-﻿using MovieTheater.Domain.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
@@ -30,9 +29,6 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         [Range(1, 300, ErrorMessage = "Running time must be between 1 and 300 minutes.")]
         public int? RunningTime { get; set; }
 
-        [Required(ErrorMessage = "Version is required.")]
-        public MovieVersion Version { get; set; }
-
         [Url(ErrorMessage = "Trailer URL must be a valid URL.")]
         public string TrailerUrl { get; set; }
 
@@ -51,6 +47,9 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         [Required(ErrorMessage = "Background image URL is required.")]
         [Url(ErrorMessage = "Background image must be a valid URL.")]
         public string BackgroundImage { get; set; }
+
+        [Range(0, 10, ErrorMessage = "Rating must be between 0 and 10.")]
+        public float Rating { get; set; }
 
         // Custom validation to ensure FromDate is not greater than ToDate
         [CustomDateRange(ErrorMessage = "ToDate cannot be earlier than FromDate.")]

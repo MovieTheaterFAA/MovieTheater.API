@@ -16,8 +16,6 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
 
         public int? RunningTime { get; set; }         // Thời lượng chiếu
 
-        public MovieVersion? Version { get; set; }     // Phiên bản phim (2D, 3D, IMAX, v.v.)
-
         public string? TrailerUrl { get; set; }
 
         public List<string>? Genres { get; set; }      // Thể loại phim - MovieType
@@ -25,5 +23,8 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         public string? Description { get; set; }
 
         public string? PosterImage { get; set; }
+
+        public MovieStatus? Status { get; set; }       
+        public float? Rating { get; set; }
     }
 }

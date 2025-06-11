@@ -1,8 +1,8 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
-using MovieTheater.Application.Services.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
@@ -10,10 +10,10 @@ namespace MovieTheater.Application.Services
 {
     public class MovieService : IMovieService
     {
-
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+
         public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
         {
             _unitOfWork = unitOfWork;
@@ -67,11 +67,13 @@ namespace MovieTheater.Application.Services
                     Actors = m.Actors,
                     Director = m.Director,
                     RunningTime = m.RunningTime,
-                    Version = m.Version,
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    BackgroundImage = m.BackgroundImage,
+                    Rating = m.Rating,
+                    Status = m.Status
                 }).ToList();
 
                 _loggerService.Success($"Retrieved {result.Count} movies on page {page} successfully.");
@@ -84,6 +86,47 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while retrieving movies. Please try again later.");
             }
         }
+
+        public async Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId)
+        {
+            try
+            {
+                _loggerService.Info($"[GetMovieDetailAsync] Fetching details for MovieId: {movieId}");
+
+                var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+                if (movie == null || movie.IsDeleted)
+                {
+                    _loggerService.Warn($"[GetMovieDetailAsync] Movie with ID {movieId} not found.");
+                    throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
+                }
+
+                var responseDto = new MovieResponseDto
+                {
+                    Id = movie.Id,
+                    Name = movie.Name,
+                    FromDate = movie.FromDate,
+                    ToDate = movie.ToDate,
+                    Actors = movie.Actors,
+                    ActorsUrl = movie.ActorsUrl,
+                    Director = movie.Director,
+                    RunningTime = movie.RunningTime,
+                    TrailerUrl = movie.TrailerUrl,
+                    Genres = movie.Genres,
+                    Description = movie.Description,
+                    PosterImage = movie.PosterImage,
+                    BackgroundImage = movie.BackgroundImage
+                };
+
+                _loggerService.Success($"[GetMovieDetailAsync] Movie details fetched successfully for MovieId: {movieId}");
+                return responseDto;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[GetMovieDetailAsync] Error fetching movie details for MovieId: {movieId}. Exception: {ex.Message}");
+                throw new Exception("An error occurred while fetching movie details. Please try again later.");
+            }
+        }
+
         public async Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name)
         {
             try
@@ -109,11 +152,13 @@ namespace MovieTheater.Application.Services
                     Actors = m.Actors,
                     Director = m.Director,
                     RunningTime = m.RunningTime,
-                    Version = m.Version,
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    Status = m.Status,
+                    Rating = m.Rating,
+                    BackgroundImage = m.BackgroundImage,
                 }).ToList();
 
                 return movieList;
@@ -124,7 +169,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-
 
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
@@ -147,12 +191,13 @@ namespace MovieTheater.Application.Services
                 ActorsUrl = movieRequestDto.ActorsUrl,
                 Director = movieRequestDto.Director,
                 RunningTime = movieRequestDto.RunningTime,
-                Version = movieRequestDto.Version,
                 TrailerUrl = movieRequestDto.TrailerUrl,
                 Genres = movieRequestDto.Genres,
                 Description = movieRequestDto.Description,
                 PosterImage = movieRequestDto.PosterImage,
                 BackgroundImage = movieRequestDto.BackgroundImage,
+                Rating = movieRequestDto.Rating,
+                Status = Domain.Enums.MovieStatus.ComingSoon,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _claimsService.GetCurrentUserId // Gán giá trị CreatedBy từ service của Claims
             };
@@ -160,8 +205,8 @@ namespace MovieTheater.Application.Services
             // Thêm bộ phim vào cơ sở dữ liệu
             await _unitOfWork.Movies.AddAsync(movie);
             await _unitOfWork.SaveChangesAsync();
-            
-             _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
+
+            _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
             // Trả về MovieResponseDto
             var responseDto = new MovieResponseDto
             {
@@ -172,16 +217,17 @@ namespace MovieTheater.Application.Services
                 Actors = movie.Actors,
                 Director = movie.Director,
                 RunningTime = movie.RunningTime,
-                Version = movie.Version,
                 TrailerUrl = movie.TrailerUrl,
                 Genres = movie.Genres,
                 Description = movie.Description,
                 PosterImage = movie.PosterImage,
                 BackgroundImage = movie.BackgroundImage,
+                Rating = movie.Rating,
+                Status = movie.Status,
             };
 
             return responseDto;
-       }
+        }
 
         public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
@@ -248,12 +294,6 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (movieUpdateDto.Version.HasValue && movie.Version != movieUpdateDto.Version)
-                {
-                    movie.Version = movieUpdateDto.Version.Value;
-                    isUpdated = true;
-                }
-
                 if (!string.IsNullOrWhiteSpace(movieUpdateDto.TrailerUrl) && movie.TrailerUrl != movieUpdateDto.TrailerUrl)
                 {
                     movie.TrailerUrl = movieUpdateDto.TrailerUrl;
@@ -279,6 +319,17 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
+                if (movieUpdateDto.Rating >= 0 && movieUpdateDto.Rating <= 10 && movie.Rating != movieUpdateDto.Rating)
+                {
+                    movie.Rating = movieUpdateDto.Rating.Value;
+                    isUpdated = true;
+                }
+
+                if (Enum.IsDefined(typeof(MovieStatus), movieUpdateDto.Status) && movie.Status != movieUpdateDto.Status)
+                {
+                    movie.Status = movieUpdateDto.Status.Value;
+                    isUpdated = true;
+                }
 
                 if (!isUpdated)
                 {
@@ -292,11 +343,12 @@ namespace MovieTheater.Application.Services
                         ActorsUrl = movie.ActorsUrl,
                         Director = movie.Director,
                         RunningTime = movie.RunningTime,
-                        Version = movie.Version,
                         TrailerUrl = movie.TrailerUrl,
                         Genres = movie.Genres,
                         Description = movie.Description,
-                        PosterImage = movie.PosterImage
+                        PosterImage = movie.PosterImage,
+                        Rating = movie.Rating,
+                        Status = movie.Status,
                     };
                 }
 
@@ -313,11 +365,12 @@ namespace MovieTheater.Application.Services
                     ActorsUrl = movie.ActorsUrl,
                     Director = movie.Director,
                     RunningTime = movie.RunningTime,
-                    Version = movie.Version,
                     TrailerUrl = movie.TrailerUrl,
                     Genres = movie.Genres,
                     Description = movie.Description,
-                    PosterImage = movie.PosterImage
+                    PosterImage = movie.PosterImage,
+                    Rating = movie.Rating,
+                    Status = movie.Status,
                 };
             }
             catch (Exception ex)
@@ -326,6 +379,5 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-        }
+    }
 }
-

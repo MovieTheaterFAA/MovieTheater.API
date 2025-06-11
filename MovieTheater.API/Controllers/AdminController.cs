@@ -63,31 +63,14 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
     [SwaggerOperation(
         Summary = "Get employee list",
-        Description = "Retrieve a paginated, searchable, and sortable list of employees."
-    )]
-
+        Description = "Retrieve a paginated, searchable, and sortable list of employees.")]
     public async Task<IActionResult> GetAllEmployeeAsync(
-         [FromQuery]
-    [SwaggerParameter("Search by name, email, or phone number (optional).")]
-    string? search,
-
-        [FromQuery]
-    [SwaggerParameter("Field to sort by (e.g. 'FullName', 'DateOfBirth').")]
-    string? sortBy,
-
-        [FromQuery]
-    [SwaggerParameter("Sort descending if true (default: false).")]
-    bool isDescending = false,
-
-        [FromQuery]
-    [SwaggerParameter("Page number (default: 1).")]
-    int page = 1,
-
-        [FromQuery]
-    [SwaggerParameter("Page size (default: 10).")]
-    int pageSize = 10
+         [FromQuery] [SwaggerParameter("Search by name, email, or phone number (optional).")]  string? search,
+         [FromQuery] [SwaggerParameter("Field to sort by (e.g. 'FullName', 'DateOfBirth').")] string? sortBy,
+         [FromQuery] [SwaggerParameter("Sort descending if true (default: false).")]    bool isDescending = false,
+         [FromQuery] [SwaggerParameter("Page number (default: 1).")]    int page = 1,
+         [FromQuery] [SwaggerParameter("Page size (default: 10).")]   int pageSize = 10
     )
-
     {
         try
         {
