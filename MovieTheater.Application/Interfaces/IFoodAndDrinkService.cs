@@ -13,5 +13,7 @@ namespace MovieTheater.Application.Interfaces
             int page,
             int pageSize);
         Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
+        Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId);
+
     }
 }
