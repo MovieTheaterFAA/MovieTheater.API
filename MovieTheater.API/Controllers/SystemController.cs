@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -174,6 +174,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
+
     private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
@@ -184,13 +185,18 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 1, 29, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 31, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Lü Yanting", "Han Mo" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>
+        { "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fyanting-lu.jpg&version_id=null",
+          "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fmo-han.jpg&version_id=null"
+        },
         Director = "Jiaozi",
         RunningTime = 144,
-        TrailerUrl = "",
+        TrailerUrl = "gsiAYjyiIBM",
         Genres = new List<string>{ "Animation", "Fantasy", "Action" },
-        Description = "Sequel to Ne Zha, huge Chinese mythological animated hit.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.8f,
+        Description = "After a great catastrophe, the souls of Nezha and Aobing are saved, but their bodies face ruin. To give them new life, Taiyi Zhenren turns to the mystical seven-colored lotus in a daring bid to rebuild them and change their fate.",
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fnatra.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fnatra.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
@@ -202,10 +208,12 @@ public class SystemController : ControllerBase
         ActorsUrl = new List<string>{ "", "" },
         Director = "Jared Hess",
         RunningTime = 100,
-        TrailerUrl = "",
+        TrailerUrl = "8B1EtVPBSMw",
         Genres = new List<string>{ "Adventure", "Fantasy" },
-        Description = "Live‑action/CGI adaptation of Minecraft game world.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.8f
+        Description = "Four misfits are suddenly pulled through a mysterious portal into a bizarre cubic wonderland that thrives on imagination. To get back home they'll have to master this world while embarking on a quest with an unexpected expert crafter.",
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fminecraft.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fminecraft.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
@@ -220,7 +228,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Family", "Adventure", "Comedy" },
         Description = "Live‑action remake of Disney classic.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.7f
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
     },
 
     new Movie
@@ -235,7 +243,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Comedy", "Mystery" },
         Description = "Chinese detective comedy set in early 1900s.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.5f
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
     },
 
     new Movie
@@ -250,7 +258,9 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon,Rating =  9.0f
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fmission-impossible.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fmission-impossible.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
@@ -265,12 +275,14 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.8f
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fcaptain-america.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fcaptain-america.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
     {
-        Name = "Thunderbolts*",
+        Name = "Thunderbolts",
         FromDate = new DateTime(2025, 4, 25, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Sebastian Stan", "Florence Pugh" },
@@ -280,7 +292,9 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.7f
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fthunderbolts.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fthunderbolts.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
@@ -295,7 +309,7 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Original" },
         Description = "Original vampire horror film by Ryan Coogler.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.1f
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
     },
 
     new Movie
@@ -304,13 +318,17 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Tony Todd", "New Cast" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>{
+            "",
+            "" },
         Director = "Zach Lipovsky",
         RunningTime = 110,
         TrailerUrl = "",
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 9.5f
+        PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Ffinal-destination.jpg&version_id=null",
+        BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Ffinal-destination.jpg&version_id=null",
+        Status = MovieStatus.NowShowing
     },
 
     new Movie
@@ -325,9 +343,8 @@ public class SystemController : ControllerBase
         TrailerUrl = "",
         Genres = new List<string>{ "Fantasy", "Musical" },
         Description = "Disney’s new live‑action Snow White adaptation.",
-        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon, Rating = 8.3f
+        PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
     },
-
         };
 
         _logger.Info("Seeding movie...");
@@ -335,6 +352,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -395,9 +413,6 @@ public class SystemController : ControllerBase
         _logger.Success("Cinema rooms and seats seeded successfully.");
     }
 
-
-
-
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
@@ -411,7 +426,6 @@ public class SystemController : ControllerBase
                 () => context.Movies.ExecuteDeleteAsync(),
                 () => context.Seats.ExecuteDeleteAsync(),
                 () => context.CinemaRooms.ExecuteDeleteAsync(),
-                () => context.AuditLogs.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();

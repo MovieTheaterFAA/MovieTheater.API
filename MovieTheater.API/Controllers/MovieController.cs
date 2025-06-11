@@ -26,7 +26,9 @@ namespace MovieTheater.API.Controllers
         }
 
         [HttpGet]
-        [SwaggerOperation(Summary = "Get all movies", Description = "Retrieve a paginated list of movies with optional search and sorting.")]
+        [SwaggerOperation(
+            Summary = "Get all movies",
+            Description = "Retrieve a paginated list of movies with optional search and sorting.")]
         [ProducesResponseType(typeof(ApiResult<Pagination<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -54,8 +56,36 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        [SwaggerOperation(
+            Summary = "Get movie details",
+            Description = "Retrieve detailed information for a specific movie by its ID.")]
+        [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetMovieDetailAsync([FromRoute] Guid id)
+        {
+            try
+            {
+                var movie = await _movieService.GetMovieDetailAsync(id);
+                return Ok(ApiResult<MovieResponseDto>.Success(movie, "200", "Movie details retrieved successfully."));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResult<object>.Failure("404", ex.Message));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
         [HttpGet("search")]
-        [SwaggerOperation(Summary = "Search movies by name", Description = "Allows members to search for movies by name.")]
+        [SwaggerOperation(
+            Summary = "Search movies by name",
+            Description = "Allows members to search for movies by name.")]
         [ProducesResponseType(typeof(ApiResult<List<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -113,7 +143,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<MovieUpdateDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> UpdateMovieAsync([FromRoute] Guid movieId, [FromBody] MovieUpdateDto movieUpdateDto)
+        public async Task<IActionResult> UpdateMovieAsync([FromRoute] Guid id, [FromBody] MovieUpdateDto movieUpdateDto)
         {
             try
             {
@@ -122,7 +152,7 @@ namespace MovieTheater.API.Controllers
                     return BadRequest(ApiResult<object>.Failure("400", "Movie update data is required."));
                 }
 
-                var updatedMovie = await _movieService.UpdateMovieInfoAsync(movieId, movieUpdateDto);
+                var updatedMovie = await _movieService.UpdateMovieInfoAsync(id, movieUpdateDto);
 
                 return Ok(ApiResult<MovieUpdateDto>.Success(updatedMovie, "200", "Movie updated successfully."));
             }
