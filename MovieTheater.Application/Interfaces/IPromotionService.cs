@@ -7,5 +7,7 @@ namespace MovieTheater.Application.Interfaces
     {
         Task<List<PromotionResponseDto>> GetAllPromotionListAsync();
         Task<PromotionResponseDto?> AddPromotionAsync(PromotionRequestDto dto);
+        Task<bool> DeletePromotionAsync(Guid promotionId);
+
     }
 }
