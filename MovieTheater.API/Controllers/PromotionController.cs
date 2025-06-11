@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Threading.Tasks;
+using System;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -41,6 +43,30 @@ namespace MovieTheater.API.Controllers
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
                 var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        // API to add a new promotion
+        [HttpPost]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Add a new promotion",
+            Description = "Creates a new promotion with the provided information. Requires Admin privileges.")]
+        [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AddPromotionAsync([FromBody] PromotionRequestDto promotionDto)
+        {
+            try
+            {
+                var result = await _promotionService.AddPromotionAsync(promotionDto);
+                return Ok(ApiResult<PromotionResponseDto>.Success(result!, "200", "Added promotion successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<PromotionResponseDto>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }

@@ -1,4 +1,5 @@
-﻿using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
+﻿using System.Threading.Tasks;
+using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
@@ -11,5 +12,6 @@ namespace MovieTheater.Application.Interfaces
             bool isDescending,
             int page,
             int pageSize);
+        Task<FoodAndDrinkResponseDTO> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
     }
 }
