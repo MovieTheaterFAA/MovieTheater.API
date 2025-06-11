@@ -37,14 +37,15 @@ namespace MovieTheater.API.Controllers
         [FromQuery, SwaggerParameter(Description = "Sort by field: name, fromDate, toDate (optional)")] string? sortBy,
         [FromQuery, SwaggerParameter(Description = "Sort in descending order? Default: false")] bool isDescending = false,
         [FromQuery, SwaggerParameter(Description = "Page number, starting from 1")] int page = 1,
-        [FromQuery, SwaggerParameter(Description = "Number of items per page")] int pageSize = 10)
+        [FromQuery, SwaggerParameter(Description = "Number of items per page")] int pageSize = 10,
+        [FromQuery(Name = "genres")] List<string>? genres = null)
         {
             try
             {
                 if (page < 1 || pageSize < 1)
                     return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameters."));
 
-                var movies = await _movieService.GetAllMoviesAsync(search, sortBy, isDescending, page, pageSize);
+                var movies = await _movieService.GetAllMoviesAsync(search, sortBy, isDescending, page, pageSize, genres);
 
                 return Ok(ApiResult<Pagination<MovieResponseDto>>.Success(movies, "200", "Movies retrieved successfully."));
             }
