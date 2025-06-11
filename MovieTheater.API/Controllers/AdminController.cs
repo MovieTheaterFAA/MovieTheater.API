@@ -56,7 +56,6 @@ public class AdminController : ControllerBase
         }
     }
 
-
     [HttpGet("employees")]
     [ProducesResponseType(typeof(ApiResult<Pagination<UserDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
@@ -65,11 +64,11 @@ public class AdminController : ControllerBase
         Summary = "Get employee list",
         Description = "Retrieve a paginated, searchable, and sortable list of employees.")]
     public async Task<IActionResult> GetAllEmployeeAsync(
-         [FromQuery] [SwaggerParameter("Search by name, email, or phone number (optional).")]  string? search,
-         [FromQuery] [SwaggerParameter("Field to sort by (e.g. 'FullName', 'DateOfBirth').")] string? sortBy,
-         [FromQuery] [SwaggerParameter("Sort descending if true (default: false).")]    bool isDescending = false,
-         [FromQuery] [SwaggerParameter("Page number (default: 1).")]    int page = 1,
-         [FromQuery] [SwaggerParameter("Page size (default: 10).")]   int pageSize = 10
+         [FromQuery][SwaggerParameter("Search by name, email, or phone number (optional).")] string? search,
+         [FromQuery][SwaggerParameter("Field to sort by (e.g. 'FullName', 'DateOfBirth').")] string? sortBy,
+         [FromQuery][SwaggerParameter("Sort descending if true (default: false).")] bool isDescending = false,
+         [FromQuery][SwaggerParameter("Page number (default: 1).")] int page = 1,
+         [FromQuery][SwaggerParameter("Page size (default: 10).")] int pageSize = 10
     )
     {
         try
@@ -115,7 +114,7 @@ public class AdminController : ControllerBase
     [HttpPut("employee/{id}")]
     [Authorize(Policy = "AdminPolicy")]
     [SwaggerOperation(
-        Summary = "Update employee information", 
+        Summary = "Update employee information",
         Description = "Update an existing employee using their ID with the provided updated information.")]
     [ProducesResponseType(typeof(ApiResult<EditEmployeeDto>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
@@ -156,7 +155,7 @@ public class AdminController : ControllerBase
     [ProducesResponseType(typeof(ApiResult<object>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
     [ProducesResponseType(typeof(ApiResult<object>), 500)]
-    public async Task<IActionResult> DeleteUser([SwaggerParameter("The unique identifier of the employee to be deleted.")]Guid id)
+    public async Task<IActionResult> DeleteUser([SwaggerParameter("The unique identifier of the employee to be deleted.")] Guid id)
     {
         if (id == Guid.Empty)
             return BadRequest(ApiResult<object>.Failure("400", "Invalid delete request. User ID is required."));
@@ -178,5 +177,4 @@ public class AdminController : ControllerBase
             return StatusCode(statusCode, errorResponse);
         }
     }
-
 }

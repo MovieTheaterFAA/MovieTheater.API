@@ -31,6 +31,8 @@ namespace MovieTheater.Application.Services
 
                 var query = movies.AsQueryable();
 
+                query = query.Where(m => !m.IsDeleted);
+
                 // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -138,6 +140,7 @@ namespace MovieTheater.Application.Services
             {
                 var movies = await _unitOfWork.Movies.GetAllAsync();
                 var movieQuery = movies.AsQueryable();
+                movieQuery = movieQuery.Where(m => !m.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(Name))
                 {
