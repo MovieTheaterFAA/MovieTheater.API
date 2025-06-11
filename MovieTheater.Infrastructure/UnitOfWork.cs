@@ -41,7 +41,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IGenericRepository<CinemaRoom> CinemaRooms { get; }
 
-    public IGenericRepository<AuditLog > AuditLogs { get; }
+    public IGenericRepository<AuditLog> AuditLogs { get; }
 
     public IGenericRepository<FoodAndDrink> FoodAndDrinks { get; }
 

@@ -1,7 +1,6 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
-using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
@@ -12,6 +11,7 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+
         public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
         {
             _unitOfWork = unitOfWork;
@@ -25,7 +25,7 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Info($"Fetching food and drinks - Page {page}, PageSize {pageSize}, Search: {search}");
 
-                var foodAndDrinks = await _unitOfWork.FoodAndDrink.GetAllAsync();
+                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync();
 
                 var query = foodAndDrinks.AsQueryable();
 
@@ -78,4 +78,3 @@ namespace MovieTheater.Application.Services
         }
     }
 }
-
