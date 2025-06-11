@@ -59,6 +59,14 @@ public class PromotionService : IPromotionService
             throw new InvalidOperationException("Promotion with this title already exists.");
         }
 
+        // Kiểm tra EventId có hợp lệ hay không (sử dụng IUnitOfWork)
+        var existingEvent = await _unitOfWork.Events.GetByIdAsync(dto.EventId);
+        if (existingEvent == null)
+        {
+            _loggerService.Warn($"[AddPromotionAsync] Event with ID {dto.EventId} does not exist.");
+            throw new KeyNotFoundException("Event with the provided ID does not exist.");
+        }
+
         // Tạo đối tượng Promotion từ DTO
         var promotion = new Promotion
         {
@@ -66,7 +74,7 @@ public class PromotionService : IPromotionService
             DiscountValue = dto.DiscountValue,
             Detail = dto.Detail,
             Image = dto.Image,
-            IsDeleted = dto.IsDeleted,
+            IsDeleted = false,
             EventId = dto.EventId
         };
 

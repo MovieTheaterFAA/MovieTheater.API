@@ -32,13 +32,7 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("Event with this name already exists.");
             }
 
-            // Kiểm tra PromotionId có hợp lệ hay không (sử dụng IUnitOfWork)
-            var existingPromotion = await _unitOfWork.Promotions.GetByIdAsync(dto.PromotionId);
-            if (existingPromotion == null)
-            {
-                _loggerService.Warn($"[AddEventAsync] Promotion with ID {dto.PromotionId} does not exist.");
-                throw new KeyNotFoundException("Promotion with the provided ID does not exist.");
-            }
+            
 
             // Tạo đối tượng Event từ DTO
             var newEvent = new Event
