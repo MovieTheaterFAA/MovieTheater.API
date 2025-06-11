@@ -2,6 +2,7 @@
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
@@ -9,10 +10,10 @@ namespace MovieTheater.Application.Services
 {
     public class MovieService : IMovieService
     {
-
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+
         public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
         {
             _unitOfWork = unitOfWork;
@@ -20,7 +21,7 @@ namespace MovieTheater.Application.Services
             _claimsService = claimsService;
         }
 
-        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, List<string>? genres)
         {
             try
             {
@@ -29,6 +30,8 @@ namespace MovieTheater.Application.Services
                 var movies = await _unitOfWork.Movies.GetAllAsync();
 
                 var query = movies.AsQueryable();
+
+                query = query.Where(m => !m.IsDeleted);
 
                 // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
@@ -39,6 +42,11 @@ namespace MovieTheater.Application.Services
                         (!string.IsNullOrEmpty(m.Director) && m.Director.ToLower().Contains(lowerSearch)) ||
                         (m.Actors != null && m.Actors.Any(a => a.ToLower().Contains(lowerSearch)))
                     );
+                }
+                // Filter by genres
+                if (genres != null && genres.Any())
+                {
+                    query = query.Where(m => m.Genres != null && m.Genres.Any(g => genres.Contains(g)));
                 }
 
                 var totalMovies = query.Count();
@@ -69,7 +77,10 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    BackgroundImage = m.BackgroundImage,
+                    Rating = m.Rating,
+                    Status = m.Status
                 }).ToList();
 
                 _loggerService.Success($"Retrieved {result.Count} movies on page {page} successfully.");
@@ -103,6 +114,7 @@ namespace MovieTheater.Application.Services
                     FromDate = movie.FromDate,
                     ToDate = movie.ToDate,
                     Actors = movie.Actors,
+                    ActorsUrl = movie.ActorsUrl,
                     Director = movie.Director,
                     RunningTime = movie.RunningTime,
                     TrailerUrl = movie.TrailerUrl,
@@ -128,6 +140,7 @@ namespace MovieTheater.Application.Services
             {
                 var movies = await _unitOfWork.Movies.GetAllAsync();
                 var movieQuery = movies.AsQueryable();
+                movieQuery = movieQuery.Where(m => !m.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(Name))
                 {
@@ -150,7 +163,10 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    Status = m.Status,
+                    Rating = m.Rating,
+                    BackgroundImage = m.BackgroundImage,
                 }).ToList();
 
                 return movieList;
@@ -161,7 +177,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-
 
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
@@ -189,6 +204,8 @@ namespace MovieTheater.Application.Services
                 Description = movieRequestDto.Description,
                 PosterImage = movieRequestDto.PosterImage,
                 BackgroundImage = movieRequestDto.BackgroundImage,
+                Rating = movieRequestDto.Rating,
+                Status = Domain.Enums.MovieStatus.ComingSoon,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _claimsService.GetCurrentUserId // Gán giá trị CreatedBy từ service của Claims
             };
@@ -213,6 +230,8 @@ namespace MovieTheater.Application.Services
                 Description = movie.Description,
                 PosterImage = movie.PosterImage,
                 BackgroundImage = movie.BackgroundImage,
+                Rating = movie.Rating,
+                Status = movie.Status,
             };
 
             return responseDto;
@@ -308,6 +327,17 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
+                if (movieUpdateDto.Rating >= 0 && movieUpdateDto.Rating <= 10 && movie.Rating != movieUpdateDto.Rating)
+                {
+                    movie.Rating = movieUpdateDto.Rating.Value;
+                    isUpdated = true;
+                }
+
+                if (Enum.IsDefined(typeof(MovieStatus), movieUpdateDto.Status) && movie.Status != movieUpdateDto.Status)
+                {
+                    movie.Status = movieUpdateDto.Status.Value;
+                    isUpdated = true;
+                }
 
                 if (!isUpdated)
                 {
@@ -324,7 +354,9 @@ namespace MovieTheater.Application.Services
                         TrailerUrl = movie.TrailerUrl,
                         Genres = movie.Genres,
                         Description = movie.Description,
-                        PosterImage = movie.PosterImage
+                        PosterImage = movie.PosterImage,
+                        Rating = movie.Rating,
+                        Status = movie.Status,
                     };
                 }
 
@@ -344,7 +376,9 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = movie.TrailerUrl,
                     Genres = movie.Genres,
                     Description = movie.Description,
-                    PosterImage = movie.PosterImage
+                    PosterImage = movie.PosterImage,
+                    Rating = movie.Rating,
+                    Status = movie.Status,
                 };
             }
             catch (Exception ex)
@@ -353,6 +387,30 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
+
+        public async Task<bool> DeleteMovieAsync(Guid movieId)
+        {
+            try
+            {
+                var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"Movie with ID {movieId} not found.");
+                    return false;
+                }
+
+                await _unitOfWork.Movies.SoftRemove(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Info($"Successfully deleted movie with {movieId}.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"An error occurred while deleting movie : {ex.Message}");
+                return false;
+            }
+        }
     }
 }
-
