@@ -163,5 +163,30 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+               Summary = "Delete movie",
+               Description = "Delete movie by its ID."
+        )]
+        [ProducesResponseType(typeof(ApiResult<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> DeleteMovie(Guid id)
+        {
+            try
+            {
+                var result = await _movieService.DeleteMovieAsync(id);
+
+                return Ok(ApiResult<bool>.Success(result, "200", "Movie updated successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }

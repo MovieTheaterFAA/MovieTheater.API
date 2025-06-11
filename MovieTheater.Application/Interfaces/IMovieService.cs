@@ -16,5 +16,6 @@ namespace MovieTheater.Application.Interfaces
             );
         Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId);
         Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name);
+        Task<bool> DeleteMovieAsync(Guid movieId);
     }
 }
