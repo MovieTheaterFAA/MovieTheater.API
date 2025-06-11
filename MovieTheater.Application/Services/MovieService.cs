@@ -384,5 +384,30 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
+
+        public async Task<bool> DeleteMovieAsync(Guid movieId)
+        {
+            try
+            {
+                var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"Movie with ID {movieId} not found.");
+                    return false;
+                }
+
+                await _unitOfWork.Movies.SoftRemove(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Info($"Successfully deleted movie with {movieId}.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"An error occurred while deleting movie : {ex.Message}");
+                return false;
+            }
+        }
     }
 }
