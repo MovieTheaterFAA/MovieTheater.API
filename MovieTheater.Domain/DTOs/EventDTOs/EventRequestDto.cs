@@ -22,8 +22,6 @@ namespace MovieTheater.Domain.DTOs.EventDTOs
         [Url(ErrorMessage = "Invalid URL format for Image.")]
         public string Image { get; set; }
 
-        [Required(ErrorMessage = "Promotion ID is required.")]
-        public Guid PromotionId { get; set; }
     }
 
     public class DateGreaterThanAttribute : ValidationAttribute

@@ -18,7 +18,6 @@ namespace MovieTheater.Domain.DTOs.PromotionDTOs
         [Url(ErrorMessage = "Invalid URL format for Image.")]
         public string Image { get; set; }
 
-        public bool IsDeleted { get; set; } = false;
         public Guid EventId { get; set; }
     }
 }
