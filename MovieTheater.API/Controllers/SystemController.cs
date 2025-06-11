@@ -174,6 +174,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
+
     private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
@@ -317,7 +318,9 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Tony Todd", "New Cast" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>{
+            "",
+            "" },
         Director = "Zach Lipovsky",
         RunningTime = 110,
         TrailerUrl = "",
@@ -342,7 +345,6 @@ public class SystemController : ControllerBase
         Description = "Disney’s new live‑action Snow White adaptation.",
         PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
     },
-
         };
 
         _logger.Info("Seeding movie...");
@@ -350,6 +352,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -409,9 +412,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Cinema rooms and seats seeded successfully.");
     }
-
-
-
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {

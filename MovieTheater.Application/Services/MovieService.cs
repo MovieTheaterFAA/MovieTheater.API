@@ -9,10 +9,10 @@ namespace MovieTheater.Application.Services
 {
     public class MovieService : IMovieService
     {
-
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+
         public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
         {
             _unitOfWork = unitOfWork;
@@ -103,6 +103,7 @@ namespace MovieTheater.Application.Services
                     FromDate = movie.FromDate,
                     ToDate = movie.ToDate,
                     Actors = movie.Actors,
+                    ActorsUrl = movie.ActorsUrl,
                     Director = movie.Director,
                     RunningTime = movie.RunningTime,
                     TrailerUrl = movie.TrailerUrl,
@@ -161,7 +162,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-
 
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
@@ -308,7 +308,6 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-
                 if (!isUpdated)
                 {
                     _loggerService.Warn($"[UpdateMovieInfo] No changes detected for MovieId: {movieId}");
@@ -355,4 +354,3 @@ namespace MovieTheater.Application.Services
         }
     }
 }
-
