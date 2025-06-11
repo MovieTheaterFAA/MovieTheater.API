@@ -13,8 +13,5 @@
         public string Detail { get; set; }
 
         public string Image { get; set; }
-
-        public Guid PromotionId { get; set; }
-
     }
 }

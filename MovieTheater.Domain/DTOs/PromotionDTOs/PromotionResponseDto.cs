@@ -10,6 +10,6 @@
         public string Detail { get; set; }
 
         public string Image { get; set; }
-
+        public Guid EventId { get; set; }
     }
 }

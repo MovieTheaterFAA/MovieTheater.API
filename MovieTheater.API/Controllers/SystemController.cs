@@ -436,6 +436,9 @@ public class SystemController : ControllerBase
                 () => context.Movies.ExecuteDeleteAsync(),
                 () => context.Seats.ExecuteDeleteAsync(),
                 () => context.CinemaRooms.ExecuteDeleteAsync(),
+                () => context.FoodAndDrinks.ExecuteDeleteAsync(),
+                () => context.Events.ExecuteDeleteAsync(),
+                () => context.Promotions.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();

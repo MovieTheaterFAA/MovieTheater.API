@@ -48,7 +48,6 @@ namespace MovieTheater.Application.Services
                 EndTime = dto.EndTime,
                 Detail = dto.Detail,
                 Image = dto.Image,
-                PromotionId = dto.PromotionId,
             };
 
             // Thêm sự kiện vào cơ sở dữ liệu
@@ -75,9 +74,7 @@ namespace MovieTheater.Application.Services
                 EndTime = newEvent.EndTime,
                 Detail = newEvent.Detail,
                 Image = newEvent.Image,
-                PromotionId = newEvent.PromotionId,
             };
         }
     }
 }
-

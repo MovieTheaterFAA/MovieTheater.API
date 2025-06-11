@@ -1,13 +1,9 @@
-﻿using System.Threading.Tasks;
-using System;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace MovieTheater.Application.Services;
 
@@ -16,12 +12,14 @@ public class PromotionService : IPromotionService
     private readonly ILoggerService _loggerService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClaimsService _claimsService;
+
     public PromotionService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _claimsService = claimsService;
     }
+
     public async Task<List<PromotionResponseDto>> GetAllPromotionListAsync()
     {
         try
@@ -69,6 +67,7 @@ public class PromotionService : IPromotionService
             Detail = dto.Detail,
             Image = dto.Image,
             IsDeleted = dto.IsDeleted,
+            EventId = dto.EventId
         };
 
         // Thêm chương trình khuyến mãi vào cơ sở dữ liệu
@@ -94,6 +93,7 @@ public class PromotionService : IPromotionService
             DiscountValue = promotion.DiscountValue,
             Detail = promotion.Detail,
             Image = promotion.Image,
+            EventId = promotion.EventId
         };
     }
 }

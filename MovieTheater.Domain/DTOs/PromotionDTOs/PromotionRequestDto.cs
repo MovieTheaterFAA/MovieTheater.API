@@ -19,8 +19,6 @@ namespace MovieTheater.Domain.DTOs.PromotionDTOs
         public string Image { get; set; }
 
         public bool IsDeleted { get; set; } = false;
-
+        public Guid EventId { get; set; }
     }
-
-
 }

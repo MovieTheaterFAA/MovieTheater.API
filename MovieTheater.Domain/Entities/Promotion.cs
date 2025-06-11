@@ -8,9 +8,8 @@
         public string Image { get; set; }
 
         // Navigation
-        public ICollection<Event> Events { get; set; }
-        // Navigation
         public Guid EventId { get; set; }
+
         public Event Event { get; set; }
     }
 }
