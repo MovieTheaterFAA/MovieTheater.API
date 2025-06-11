@@ -11,7 +11,6 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;
 
-// test
 [Route("api/admin")]
 [ApiController]
 public class AdminController : ControllerBase

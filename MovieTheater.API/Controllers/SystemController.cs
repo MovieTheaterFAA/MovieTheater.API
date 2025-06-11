@@ -187,7 +187,7 @@ public class SystemController : ControllerBase
         Actors = new List<string>{ "Lü Yanting", "Han Mo" },
         ActorsUrl = new List<string>
         { "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fyanting-lu.jpg&version_id=null",
-          "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fmo-han.jpg&version_id=null"
+          "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fmo-han.jpg&version_id=null",
         },
         Director = "Jiaozi",
         RunningTime = 144,
@@ -205,8 +205,11 @@ public class SystemController : ControllerBase
         Name = "A Minecraft Movie",
         FromDate = new DateTime(2025, 4, 4, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 6, 30, 0, 0, 0, DateTimeKind.Utc),
-        Actors = new List<string>{ "Jason Momoa", "Emma Myers" },
-        ActorsUrl = new List<string>{ "", "" },
+        Actors = new List<string>{ "Jason Momoa", "Jack Black" },
+        ActorsUrl = new List<string>{
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fjason-momoa.jpg&version_id=null",
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fjack-black.jpg&version_id=null"
+        },
         Director = "Jared Hess",
         RunningTime = 100,
         TrailerUrl = "8B1EtVPBSMw",
@@ -256,10 +259,12 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 5, 23, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 15, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Tom Cruise", "Hayley Atwell" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>{
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Ftom-cruise.jpg&version_id=null",
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fhayley.jpg&version_id=null" },
         Director = "Christopher McQuarrie",
         RunningTime = 150,
-        TrailerUrl = "",
+        TrailerUrl = "fsQgc9pCyDU",
         Rating = 8,
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
@@ -274,10 +279,13 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 5, 2, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 30, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Anthony Mackie", "Liv Tyler" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>{
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fanthony-mackie.jpg&version_id=null",
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fliv-tyler.jpg&version_id=null"
+        },
         Director = "Julius Onah",
         RunningTime = 130,
-        TrailerUrl = "",
+        TrailerUrl = "1pHDWnXmK7Y",
         Rating = 8.5f,
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
@@ -292,10 +300,13 @@ public class SystemController : ControllerBase
         FromDate = new DateTime(2025, 4, 25, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Sebastian Stan", "Florence Pugh" },
-        ActorsUrl = new List<string>{ "", "" },
+        ActorsUrl = new List<string>{
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fsebastian-stan.jpg&version_id=null",
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fflorence-pugh.jpg&version_id=null"
+        },
         Director = "Jake Schreier",
         RunningTime = 120,
-        TrailerUrl = "",
+        TrailerUrl = "-sAOWhvheK8",
         Rating = 6.5f,
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
@@ -325,13 +336,14 @@ public class SystemController : ControllerBase
         Name = "Final Destination Bloodlines",
         FromDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
         ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
-        Actors = new List<string>{ "Tony Todd", "New Cast" },
+        Actors = new List<string>{ "Tony Todd", "Brec Bassinger" },
         ActorsUrl = new List<string>{
-            "",
-            "" },
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Ftony-todd.jpg&version_id=null",
+            "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fbrec-bassinger.jpg&version_id=null"
+        },
         Director = "Zach Lipovsky",
         RunningTime = 110,
-        TrailerUrl = "",
+        TrailerUrl = "UWMzKXsY9A4",
         Rating = 7.5f,
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
