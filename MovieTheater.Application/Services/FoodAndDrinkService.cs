@@ -1,12 +1,11 @@
-﻿using System.Threading.Tasks;
-using System;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using MovieTheater.Domain.Entities;
 
 namespace MovieTheater.Application.Services
 {
@@ -79,8 +78,9 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"Failed to retrieve food and drinks. Exception: {ex.Message}");
                 throw new Exception("An error occurred while retrieving food and drink items. Please try again later.");
             }
+        }
 
-        public async Task<FoodAndDrinkResponseDTO> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto)
+        public async Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto)
         {
             _loggerService.Info($"[AddFoodAndDrinkAsync] Start adding food and drink: {dto.Name}");
 
@@ -100,8 +100,6 @@ namespace MovieTheater.Application.Services
                 Type = dto.Type,
                 ImageUrl = dto.ImageUrl,
                 IsAvailable = dto.IsAvailable,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _claimsService.GetCurrentUserId // Hoặc Guid.Empty nếu không có
             };
 
             // Thêm món ăn/thức uống vào cơ sở dữ liệu
@@ -119,8 +117,7 @@ namespace MovieTheater.Application.Services
 
             _loggerService.Success($"[AddFoodAndDrinkAsync] Food and drink {foodAndDrink.Name} added successfully.");
 
-            // Trả về DTO response
-            return new FoodAndDrinkResponseDTO
+            return new FoodAndDrinkResponseDto
             {
                 Id = foodAndDrink.Id,
                 Name = foodAndDrink.Name,
@@ -129,12 +126,6 @@ namespace MovieTheater.Application.Services
                 Type = foodAndDrink.Type,
                 ImageUrl = foodAndDrink.ImageUrl,
                 IsAvailable = foodAndDrink.IsAvailable,
-                CreatedAt = foodAndDrink.CreatedAt,
-                CreatedBy = foodAndDrink.CreatedBy,
-                UpdatedAt = foodAndDrink.UpdatedAt,
-                UpdatedBy = foodAndDrink.UpdatedBy,
-                DeletedAt = foodAndDrink.DeletedAt,
-                DeletedBy = foodAndDrink.DeletedBy
             };
         }
 

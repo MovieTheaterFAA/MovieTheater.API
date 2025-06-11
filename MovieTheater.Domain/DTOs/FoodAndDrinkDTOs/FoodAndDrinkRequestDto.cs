@@ -1,8 +1,8 @@
 ﻿using MovieTheater.Domain.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Runtime.Remoting.Activation;
 using System.Text;
 using System.Threading.Tasks;
 

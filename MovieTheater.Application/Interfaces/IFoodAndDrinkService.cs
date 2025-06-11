@@ -12,6 +12,6 @@ namespace MovieTheater.Application.Interfaces
             bool isDescending,
             int page,
             int pageSize);
-        Task<FoodAndDrinkResponseDTO> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
+        Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
     }
 }

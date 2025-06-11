@@ -27,7 +27,7 @@ namespace MovieTheater.API.Controllers
             _claimsService = claimsService;
             _loggerService = loggerService;
         }
-        [HttpGet()]
+        [HttpGet]
         [Authorize]
         [SwaggerOperation(Summary = "Get all food and drinks", Description = "Get paginated list of food and drinks with optional filters.")]
         [ProducesResponseType(typeof(ApiResult<Pagination<FoodAndDrinkResponseDto>>), 200)]
@@ -57,13 +57,12 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        // API to add a new food and drink item
         [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
             Summary = "Add a new food and drink item",
             Description = "Creates a new food and drink item with the provided information. Requires Admin privileges.")]
-        [ProducesResponseType(typeof(ApiResult<FoodAndDrinkResponseDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResult<FoodAndDrinkResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> AddFoodAndDrinkAsync([FromBody] FoodAndDrinkRequestDto foodAndDrinkDto)
@@ -71,12 +70,12 @@ namespace MovieTheater.API.Controllers
             try
             {
                 var result = await _foodAndDrinkService.AddFoodAndDrinkAsync(foodAndDrinkDto);
-                return Ok(ApiResult<FoodAndDrinkResponseDTO>.Success(result!, "200", "Added food and drink item successfully."));
+                return Ok(ApiResult<FoodAndDrinkResponseDto>.Success(result!, "200", "Added food and drink item successfully."));
             }
             catch (Exception ex)
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<FoodAndDrinkResponseDTO>(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<FoodAndDrinkResponseDto>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }

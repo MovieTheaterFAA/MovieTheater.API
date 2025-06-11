@@ -7,6 +7,7 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace MovieTheater.Application.Services;
 
@@ -53,6 +54,7 @@ public class PromotionService : IPromotionService
 
         // Kiểm tra nếu chương trình khuyến mãi đã tồn tại
         var existingPromotion = await _unitOfWork.Promotions.FirstOrDefaultAsync(p => p.Title == dto.Title);
+
         if (existingPromotion != null)
         {
             _loggerService.Warn($"[AddPromotionAsync] Promotion with title {dto.Title} already exists.");
@@ -67,8 +69,6 @@ public class PromotionService : IPromotionService
             Detail = dto.Detail,
             Image = dto.Image,
             IsDeleted = dto.IsDeleted,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = _claimsService.GetCurrentUserId // ID của người dùng tạo
         };
 
         // Thêm chương trình khuyến mãi vào cơ sở dữ liệu
@@ -94,13 +94,6 @@ public class PromotionService : IPromotionService
             DiscountValue = promotion.DiscountValue,
             Detail = promotion.Detail,
             Image = promotion.Image,
-            IsDeleted = promotion.IsDeleted,
-            CreatedAt = promotion.CreatedAt,
-            CreatedBy = promotion.CreatedBy,
-            UpdatedAt = promotion.UpdatedAt,
-            UpdatedBy = promotion.UpdatedBy,
-            DeletedAt = promotion.DeletedAt,
-            DeletedBy = promotion.DeletedBy
         };
     }
 }

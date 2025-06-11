@@ -49,8 +49,6 @@ namespace MovieTheater.Application.Services
                 Detail = dto.Detail,
                 Image = dto.Image,
                 PromotionId = dto.PromotionId,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _claimsService.GetCurrentUserId
             };
 
             // Thêm sự kiện vào cơ sở dữ liệu
@@ -78,12 +76,6 @@ namespace MovieTheater.Application.Services
                 Detail = newEvent.Detail,
                 Image = newEvent.Image,
                 PromotionId = newEvent.PromotionId,
-                CreatedAt = newEvent.CreatedAt,
-                CreatedBy = newEvent.CreatedBy,
-                UpdatedAt = newEvent.UpdatedAt,
-                UpdatedBy = newEvent.UpdatedBy,
-                DeletedAt = newEvent.DeletedAt,
-                DeletedBy = newEvent.DeletedBy
             };
         }
     }
