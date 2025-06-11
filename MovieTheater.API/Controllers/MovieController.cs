@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.MovieDTOs;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
@@ -28,24 +29,25 @@ namespace MovieTheater.API.Controllers
         [HttpGet]
         [SwaggerOperation(
             Summary = "Get all movies",
-            Description = "Retrieve a paginated list of movies with optional search and sorting.")]
+            Description = "Retrieve a paginated list of movies with optional search, genre, and status filtering.")]
         [ProducesResponseType(typeof(ApiResult<Pagination<MovieResponseDto>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> GetAllMoviesAsync(
         [FromQuery, SwaggerParameter(Description = "Search by name, director, or actors (optional)")] string? search,
-        [FromQuery, SwaggerParameter(Description = "Sort by field: name, fromDate, toDate (optional)")] string? sortBy,
+        [FromQuery, SwaggerParameter(Description = "Sort by field: name, fromDate, toDate, status (optional)")] string? sortBy,
         [FromQuery, SwaggerParameter(Description = "Sort in descending order? Default: false")] bool isDescending = false,
         [FromQuery, SwaggerParameter(Description = "Page number, starting from 1")] int page = 1,
         [FromQuery, SwaggerParameter(Description = "Number of items per page")] int pageSize = 10,
-        [FromQuery(Name = "genres")] List<string>? genres = null)
+        [FromQuery(Name = "genres")] List<string>? genres = null,
+        [FromQuery, SwaggerParameter(Description = "Filter by movie status")] MovieStatus? status = null)
         {
             try
             {
                 if (page < 1 || pageSize < 1)
                     return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameters."));
 
-                var movies = await _movieService.GetAllMoviesAsync(search, sortBy, isDescending, page, pageSize, genres);
+                var movies = await _movieService.GetAllMoviesAsync(search, sortBy, isDescending, page, pageSize, genres, status);
 
                 return Ok(ApiResult<Pagination<MovieResponseDto>>.Success(movies, "200", "Movies retrieved successfully."));
             }
@@ -56,6 +58,7 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
 
         [HttpGet("{id}")]
         [SwaggerOperation(
