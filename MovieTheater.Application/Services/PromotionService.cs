@@ -104,4 +104,27 @@ public class PromotionService : IPromotionService
             EventId = promotion.EventId
         };
     }
+    public async Task<bool> DeletePromotionAsync(Guid promotionId)
+    {
+        try
+        {
+            var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId);
+            if (promotion == null)
+            {
+                _loggerService.Warn($"Promotion with ID {promotionId} not found.");
+                return false;
+            }
+
+            await _unitOfWork.Promotions.SoftRemove(promotion);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Info($"Successfully deleted promotion with ID {promotionId}.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"An error occurred while deleting promotion: {ex.Message}");
+            return false;
+        }
+    }
 }
