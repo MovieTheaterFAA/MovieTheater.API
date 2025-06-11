@@ -1,4 +1,6 @@
-﻿namespace MovieTheater.Domain.DTOs.MovieDTOs
+﻿using MovieTheater.Domain.Enums;
+
+namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
     public class MovieUpdateDto
     {
@@ -21,5 +23,8 @@
         public string? Description { get; set; }
 
         public string? PosterImage { get; set; }
+
+        public MovieStatus? Status { get; set; }       
+        public float? Rating { get; set; }
     }
 }

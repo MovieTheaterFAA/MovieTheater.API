@@ -2,6 +2,7 @@
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
@@ -69,7 +70,10 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    BackgroundImage = m.BackgroundImage,
+                    Rating = m.Rating,
+                    Status = m.Status
                 }).ToList();
 
                 _loggerService.Success($"Retrieved {result.Count} movies on page {page} successfully.");
@@ -151,7 +155,10 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = m.TrailerUrl,
                     Genres = m.Genres,
                     Description = m.Description,
-                    PosterImage = m.PosterImage
+                    PosterImage = m.PosterImage,
+                    Status = m.Status,
+                    Rating = m.Rating,
+                    BackgroundImage = m.BackgroundImage,
                 }).ToList();
 
                 return movieList;
@@ -189,6 +196,8 @@ namespace MovieTheater.Application.Services
                 Description = movieRequestDto.Description,
                 PosterImage = movieRequestDto.PosterImage,
                 BackgroundImage = movieRequestDto.BackgroundImage,
+                Rating = movieRequestDto.Rating,
+                Status = Domain.Enums.MovieStatus.ComingSoon,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = _claimsService.GetCurrentUserId // Gán giá trị CreatedBy từ service của Claims
             };
@@ -213,6 +222,8 @@ namespace MovieTheater.Application.Services
                 Description = movie.Description,
                 PosterImage = movie.PosterImage,
                 BackgroundImage = movie.BackgroundImage,
+                Rating = movie.Rating,
+                Status = movie.Status,
             };
 
             return responseDto;
@@ -308,6 +319,18 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
+                if (movieUpdateDto.Rating >= 0 && movieUpdateDto.Rating <= 10 && movie.Rating != movieUpdateDto.Rating)
+                {
+                    movie.Rating = movieUpdateDto.Rating.Value;
+                    isUpdated = true;
+                }
+
+                if (Enum.IsDefined(typeof(MovieStatus), movieUpdateDto.Status) && movie.Status != movieUpdateDto.Status)
+                {
+                    movie.Status = movieUpdateDto.Status.Value;
+                    isUpdated = true;
+                }
+
                 if (!isUpdated)
                 {
                     _loggerService.Warn($"[UpdateMovieInfo] No changes detected for MovieId: {movieId}");
@@ -323,7 +346,9 @@ namespace MovieTheater.Application.Services
                         TrailerUrl = movie.TrailerUrl,
                         Genres = movie.Genres,
                         Description = movie.Description,
-                        PosterImage = movie.PosterImage
+                        PosterImage = movie.PosterImage,
+                        Rating = movie.Rating,
+                        Status = movie.Status,
                     };
                 }
 
@@ -343,7 +368,9 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = movie.TrailerUrl,
                     Genres = movie.Genres,
                     Description = movie.Description,
-                    PosterImage = movie.PosterImage
+                    PosterImage = movie.PosterImage,
+                    Rating = movie.Rating,
+                    Status = movie.Status,
                 };
             }
             catch (Exception ex)
