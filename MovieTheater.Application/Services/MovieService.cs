@@ -21,7 +21,7 @@ namespace MovieTheater.Application.Services
             _claimsService = claimsService;
         }
 
-        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, List<string>? genres)
         {
             try
             {
@@ -30,6 +30,8 @@ namespace MovieTheater.Application.Services
                 var movies = await _unitOfWork.Movies.GetAllAsync();
 
                 var query = movies.AsQueryable();
+
+                query = query.Where(m => !m.IsDeleted);
 
                 // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
@@ -40,6 +42,11 @@ namespace MovieTheater.Application.Services
                         (!string.IsNullOrEmpty(m.Director) && m.Director.ToLower().Contains(lowerSearch)) ||
                         (m.Actors != null && m.Actors.Any(a => a.ToLower().Contains(lowerSearch)))
                     );
+                }
+                // Filter by genres
+                if (genres != null && genres.Any())
+                {
+                    query = query.Where(m => m.Genres != null && m.Genres.Any(g => genres.Contains(g)));
                 }
 
                 var totalMovies = query.Count();
@@ -133,6 +140,7 @@ namespace MovieTheater.Application.Services
             {
                 var movies = await _unitOfWork.Movies.GetAllAsync();
                 var movieQuery = movies.AsQueryable();
+                movieQuery = movieQuery.Where(m => !m.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(Name))
                 {
@@ -377,6 +385,31 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Error($"[UpdateMovieInfo] Error updating movie info for MovieId: {movieId}. Exception: {ex.Message}");
                 throw;
+            }
+        }
+
+        public async Task<bool> DeleteMovieAsync(Guid movieId)
+        {
+            try
+            {
+                var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"Movie with ID {movieId} not found.");
+                    return false;
+                }
+
+                await _unitOfWork.Movies.SoftRemove(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Info($"Successfully deleted movie with {movieId}.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"An error occurred while deleting movie : {ex.Message}");
+                return false;
             }
         }
     }

@@ -1,6 +1,11 @@
-﻿namespace MovieTheater.Application.Interfaces
+﻿using System.Threading.Tasks;
+using MovieTheater.Domain.DTOs.PromotionDTOs;
+
+namespace MovieTheater.Application.Interfaces
 {
-    internal interface IPromotionService
+    public interface IPromotionService
     {
+        Task<List<PromotionResponseDto>> GetAllPromotionListAsync();
+        Task<PromotionResponseDto?> AddPromotionAsync(PromotionRequestDto dto);
     }
 }

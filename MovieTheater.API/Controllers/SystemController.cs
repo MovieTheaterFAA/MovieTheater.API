@@ -193,6 +193,7 @@ public class SystemController : ControllerBase
         RunningTime = 144,
         TrailerUrl = "gsiAYjyiIBM",
         Genres = new List<string>{ "Animation", "Fantasy", "Action" },
+        Rating = 8.5f,
         Description = "After a great catastrophe, the souls of Nezha and Aobing are saved, but their bodies face ruin. To give them new life, Taiyi Zhenren turns to the mystical seven-colored lotus in a daring bid to rebuild them and change their fate.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fnatra.jpg&version_id=null",
         BackgroundImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-background%2Fnatra.jpg&version_id=null",
@@ -209,6 +210,7 @@ public class SystemController : ControllerBase
         Director = "Jared Hess",
         RunningTime = 100,
         TrailerUrl = "8B1EtVPBSMw",
+        Rating = 7.2f,
         Genres = new List<string>{ "Adventure", "Fantasy" },
         Description = "Four misfits are suddenly pulled through a mysterious portal into a bizarre cubic wonderland that thrives on imagination. To get back home they'll have to master this world while embarking on a quest with an unexpected expert crafter.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fminecraft.jpg&version_id=null",
@@ -226,6 +228,7 @@ public class SystemController : ControllerBase
         Director = "Dean Fleischer Camp",
         RunningTime = 95,
         TrailerUrl = "",
+        Rating = 7.2f,
         Genres = new List<string>{ "Family", "Adventure", "Comedy" },
         Description = "Live‑action remake of Disney classic.",
         PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
@@ -241,6 +244,7 @@ public class SystemController : ControllerBase
         Director = "Chen Sicheng",
         RunningTime = 120,
         TrailerUrl = "",
+        Rating = 7.2f,
         Genres = new List<string>{ "Comedy", "Mystery" },
         Description = "Chinese detective comedy set in early 1900s.",
         PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
@@ -256,6 +260,7 @@ public class SystemController : ControllerBase
         Director = "Christopher McQuarrie",
         RunningTime = 150,
         TrailerUrl = "",
+        Rating = 8,
         Genres = new List<string>{ "Action", "Thriller" },
         Description = "The eighth installment of M:I franchise.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fmission-impossible.jpg&version_id=null",
@@ -273,6 +278,7 @@ public class SystemController : ControllerBase
         Director = "Julius Onah",
         RunningTime = 130,
         TrailerUrl = "",
+        Rating = 8.5f,
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel's Captain America continues with Sam Wilson.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fcaptain-america.jpg&version_id=null",
@@ -290,6 +296,7 @@ public class SystemController : ControllerBase
         Director = "Jake Schreier",
         RunningTime = 120,
         TrailerUrl = "",
+        Rating = 6.5f,
         Genres = new List<string>{ "Superhero", "Action" },
         Description = "Marvel anti‑hero team-up film.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Fthunderbolts.jpg&version_id=null",
@@ -307,6 +314,7 @@ public class SystemController : ControllerBase
         Director = "Ryan Coogler",
         RunningTime = 115,
         TrailerUrl = "",
+        Rating = 7.8f,
         Genres = new List<string>{ "Horror", "Original" },
         Description = "Original vampire horror film by Ryan Coogler.",
         PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
@@ -324,6 +332,7 @@ public class SystemController : ControllerBase
         Director = "Zach Lipovsky",
         RunningTime = 110,
         TrailerUrl = "",
+        Rating = 7.5f,
         Genres = new List<string>{ "Horror", "Thriller" },
         Description = "Reboot/sequel to the Final Destination franchise.",
         PosterImage = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=poster-film%2Ffinal-destination.jpg&version_id=null",
@@ -341,6 +350,7 @@ public class SystemController : ControllerBase
         Director = "Marc Webb",
         RunningTime = 110,
         TrailerUrl = "",
+        Rating = 7.0f,
         Genres = new List<string>{ "Fantasy", "Musical" },
         Description = "Disney’s new live‑action Snow White adaptation.",
         PosterImage = "", BackgroundImage = "", Status = MovieStatus.ComingSoon
@@ -426,6 +436,9 @@ public class SystemController : ControllerBase
                 () => context.Movies.ExecuteDeleteAsync(),
                 () => context.Seats.ExecuteDeleteAsync(),
                 () => context.CinemaRooms.ExecuteDeleteAsync(),
+                () => context.FoodAndDrinks.ExecuteDeleteAsync(),
+                () => context.Events.ExecuteDeleteAsync(),
+                () => context.Promotions.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();

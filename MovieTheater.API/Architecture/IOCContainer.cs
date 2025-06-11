@@ -112,8 +112,13 @@ public static class IocContainer
         services.AddScoped<IBlobService, BlobService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IMovieService, MovieService>();
+        services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<IShowTimeService, ShowTimeService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IFoodAndDrinkService, FoodAndDrinkService>();
+        services.AddScoped<IEventService, EventService>();
+        services.AddScoped<IPromotionService, PromotionService>();
+
 
         services.AddHttpContextAccessor();
 

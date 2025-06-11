@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieTheater.Domain;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    partial class MovieTheaterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250611031230_FixMovie")]
+    partial class FixMovie
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -275,6 +278,9 @@ namespace MovieTheater.Domain.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("PromotionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -285,6 +291,8 @@ namespace MovieTheater.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PromotionId");
 
                     b.ToTable("Events");
                 });
@@ -602,9 +610,6 @@ namespace MovieTheater.Domain.Migrations
                     b.Property<decimal>("DiscountValue")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Image")
                         .IsRequired()
                         .HasColumnType("text");
@@ -623,8 +628,6 @@ namespace MovieTheater.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("EventId");
 
                     b.ToTable("Promotions");
                 });
@@ -1006,6 +1009,17 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Seat");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.Event", b =>
+                {
+                    b.HasOne("MovieTheater.Domain.Entities.Promotion", "Promotion")
+                        .WithMany("Events")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Promotion");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("MovieTheater.Domain.Entities.Booking", "Booking")
@@ -1026,17 +1040,6 @@ namespace MovieTheater.Domain.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
-                });
-
-            modelBuilder.Entity("MovieTheater.Domain.Entities.Promotion", b =>
-                {
-                    b.HasOne("MovieTheater.Domain.Entities.Event", "Event")
-                        .WithMany("Promotions")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.ScoreHistory", b =>
@@ -1138,11 +1141,6 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Showtimes");
                 });
 
-            modelBuilder.Entity("MovieTheater.Domain.Entities.Event", b =>
-                {
-                    b.Navigation("Promotions");
-                });
-
             modelBuilder.Entity("MovieTheater.Domain.Entities.FoodAndDrink", b =>
                 {
                     b.Navigation("BookingFoods");
@@ -1156,6 +1154,11 @@ namespace MovieTheater.Domain.Migrations
             modelBuilder.Entity("MovieTheater.Domain.Entities.Movie", b =>
                 {
                     b.Navigation("Showtimes");
+                });
+
+            modelBuilder.Entity("MovieTheater.Domain.Entities.Promotion", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Seat", b =>

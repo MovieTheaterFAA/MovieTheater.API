@@ -9,7 +9,6 @@
         public string Image { get; set; }
 
         // Navigation
-        public Guid PromotionId { get; set; }
-        public Promotion Promotion { get; set; }
+        public ICollection<Promotion> Promotions { get; set; }
     }
 }

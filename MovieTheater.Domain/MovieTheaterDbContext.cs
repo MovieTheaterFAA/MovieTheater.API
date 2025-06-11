@@ -141,10 +141,10 @@ namespace MovieTheater.Domain
                 .HasForeignKey(bf => bf.FoodAndDrinkId);
 
             // Promotion ↔ Event (one-to-many)
-            modelBuilder.Entity<Event>()
-            .HasOne(e => e.Promotion)
-            .WithMany(p => p.Events)
-            .HasForeignKey(e => e.PromotionId);
+            modelBuilder.Entity<Promotion>()
+            .HasOne(p => p.Event)
+            .WithMany(p => p.Promotions)
+            .HasForeignKey(p => p.EventId);
 
             // Promotions, Otp: standalone, no relationships with other entities
         }
