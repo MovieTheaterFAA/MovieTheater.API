@@ -3,7 +3,6 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
@@ -134,7 +133,9 @@ namespace MovieTheater.Application.Services
                     Genres = movie.Genres,
                     Description = movie.Description,
                     PosterImage = movie.PosterImage,
-                    BackgroundImage = movie.BackgroundImage
+                    BackgroundImage = movie.BackgroundImage,
+                    Status = movie.Status,
+                    Rating = movie.Rating,
                 };
 
                 _loggerService.Success($"[GetMovieDetailAsync] Movie details fetched successfully for MovieId: {movieId}");
