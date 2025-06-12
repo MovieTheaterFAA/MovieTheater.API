@@ -31,6 +31,7 @@ namespace MovieTheater.Domain
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<FoodAndDrink> FoodAndDrinks { get; set; }
         public DbSet<BookingFood> BookingFoods { get; set; }
+        public DbSet<ShowTimeSeat> ShowTimeSeats { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
