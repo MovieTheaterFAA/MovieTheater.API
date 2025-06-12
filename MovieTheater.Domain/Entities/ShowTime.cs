@@ -16,9 +16,11 @@ namespace MovieTheater.Domain.Entities
 
         public DateTime ShowDate { get; set; }     // Ngày công chiếu
 
-        public TimeSpan Duration { get; set; }  
+        public TimeSpan Duration { get; set; }
 
         // Navigation
         public ICollection<Booking> Bookings { get; set; }
+        public ICollection<ShowTimeSeat> ShowTimeSeats { get; set; }
+
     }
 }
