@@ -44,7 +44,6 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        // API to add a new promotion
         [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(

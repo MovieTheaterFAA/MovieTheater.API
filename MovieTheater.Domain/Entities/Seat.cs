@@ -12,10 +12,11 @@ namespace MovieTheater.Domain.Entities
         public string Row { get; set; }          // E.g. "A", "B"
         public int Number { get; set; }          // E.g. 1, 2, 3
         public SeatType Type { get; set; }
-        public SeatStatus Status { get; set; }
 
         // Navigation
         public ICollection<BookingSeat> BookingSeats { get; set; }
         public ICollection<TicketSeat> TicketSeats { get; set; }
+        public ICollection<ShowTimeSeat> ShowTimeSeats { get; set; }
+
     }
 }
