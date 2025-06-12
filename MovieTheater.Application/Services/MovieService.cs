@@ -21,7 +21,14 @@ namespace MovieTheater.Application.Services
             _claimsService = claimsService;
         }
 
-        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, List<string>? genres)
+        public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
+            string? search,
+            string? sortBy,
+            bool isDescending,
+            int page,
+            int pageSize,
+            List<string>? genres = null,
+            MovieStatus? status = null)
         {
             try
             {
@@ -47,6 +54,12 @@ namespace MovieTheater.Application.Services
                 if (genres != null && genres.Any())
                 {
                     query = query.Where(m => m.Genres != null && m.Genres.Any(g => genres.Contains(g)));
+                }
+
+                // Filter by status
+                if (status.HasValue)
+                {
+                    query = query.Where(m => m.Status == status.Value);
                 }
 
                 var totalMovies = query.Count();
