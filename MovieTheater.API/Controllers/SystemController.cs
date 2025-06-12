@@ -33,8 +33,11 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             //Seed movie data
             await SeedMovieAsync();
+            //Seed showtime data
+            await SeedShowTimeAsync();
             //Seed cinema rooms and seats
             await SeedCinemaRoomAsync();
+
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -375,6 +378,32 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
+    private async Task SeedShowTimeAsync()
+    {
+        var showtimes = await _context.Showtimes.ToListAsync();
+        var allSeats = await _context.Seats.ToListAsync();
+
+        var showTimeSeats = new List<ShowTimeSeat>();
+        foreach (var showtime in showtimes)
+        {
+            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
+
+            foreach (var seat in seatsInRoom)
+            {
+                showTimeSeats.Add(new ShowTimeSeat
+                {
+                    ShowTimeId = showtime.Id,
+                    SeatId = seat.Id,
+                    Status = SeatStatus.Available
+                });
+            }
+        }
+
+        await _context.AddRangeAsync(showTimeSeats);
+        await _context.SaveChangesAsync();
+        _logger.Success("ShowTimeSeats seeded successfully.");
+    }
+
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -405,11 +434,12 @@ public class SystemController : ControllerBase
             for (int r = 0; r < rows; r++)
             {
                 char rowLabel = (char)('A' + r);
-                SeatType seatType;
-
-                if (r == 0) seatType = SeatType.Couple;                  // Row A
-                else if (r >= 1 && r <= 3) seatType = SeatType.VIP;      // Rows B, C, D
-                else seatType = SeatType.Normal;                         // Rows E, F
+                SeatType seatType = r switch
+                {
+                    0 => SeatType.Couple,
+                    <= 3 => SeatType.VIP,
+                    _ => SeatType.Normal
+                };
 
                 for (int c = 1; c <= cols; c++)
                 {
@@ -418,8 +448,7 @@ public class SystemController : ControllerBase
                         CinemaRoom = room,
                         Row = rowLabel.ToString(),
                         Number = c,
-                        Type = seatType,
-                        Status = SeatStatus.Available
+                        Type = seatType
                     });
                     seatCounter++;
                 }
@@ -433,7 +462,9 @@ public class SystemController : ControllerBase
         await _context.Seats.AddRangeAsync(seats);
         await _context.SaveChangesAsync();
         _logger.Success("Cinema rooms and seats seeded successfully.");
+
     }
+
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {

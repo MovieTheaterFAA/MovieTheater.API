@@ -146,6 +146,21 @@ namespace MovieTheater.Domain
             .WithMany(p => p.Promotions)
             .HasForeignKey(p => p.EventId);
 
+
+            modelBuilder.Entity<ShowTimeSeat>()
+                .HasKey(sts => new { sts.ShowTimeId, sts.SeatId });
+
+            modelBuilder.Entity<ShowTimeSeat>()
+                .HasOne(sts => sts.ShowTime)
+                .WithMany(st => st.ShowTimeSeats)
+                .HasForeignKey(sts => sts.ShowTimeId);
+
+            modelBuilder.Entity<ShowTimeSeat>()
+                .HasOne(sts => sts.Seat)
+                .WithMany(seat => seat.ShowTimeSeats)
+                .HasForeignKey(sts => sts.SeatId);
+
+
             // Promotions, Otp: standalone, no relationships with other entities
         }
     }
