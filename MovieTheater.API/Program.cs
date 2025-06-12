@@ -1,9 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using MovieTheater.API.Architecture;
+﻿using MovieTheater.API.Architecture;
+using MovieTheater.API.Hubs;
 using MovieTheater.Application.Interfaces;
 using SwaggerThemes;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +38,10 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
 builder.Services.AddEndpointsApiExplorer();
-
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true; // Bật chi tiết lỗi cho SignalR
+});
 var app = builder.Build();
 
 // Check chắc chắn MinIO bucket đã tồn tại sau khi project build
@@ -75,5 +79,6 @@ catch (Exception e)
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<SeatHub>("/seatHub");
 
 app.Run();
