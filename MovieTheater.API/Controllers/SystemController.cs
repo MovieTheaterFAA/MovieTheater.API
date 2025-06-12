@@ -33,10 +33,10 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             //Seed movie data
             await SeedMovieAsync();
-            //Seed showtime data
-            await SeedShowTimeAsync();
             //Seed cinema rooms and seats
             await SeedCinemaRoomAsync();
+            //Seed showtimes
+            await SeedShowTimeAsync();
 
 
             return Ok(ApiResult<object>.Success(new
@@ -378,31 +378,31 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-    private async Task SeedShowTimeAsync()
-    {
-        var showtimes = await _context.Showtimes.ToListAsync();
-        var allSeats = await _context.Seats.ToListAsync();
+    //private async Task SeedShowTimeAsync()
+    //{
+    //    var showtimes = await _context.Showtimes.ToListAsync();
+    //    var allSeats = await _context.Seats.ToListAsync();
 
-        var showTimeSeats = new List<ShowTimeSeat>();
-        foreach (var showtime in showtimes)
-        {
-            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
+    //    var showTimeSeats = new List<ShowTimeSeat>();
+    //    foreach (var showtime in showtimes)
+    //    {
+    //        var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
 
-            foreach (var seat in seatsInRoom)
-            {
-                showTimeSeats.Add(new ShowTimeSeat
-                {
-                    ShowTimeId = showtime.Id,
-                    SeatId = seat.Id,
-                    Status = SeatStatus.Available
-                });
-            }
-        }
+    //        foreach (var seat in seatsInRoom)
+    //        {
+    //            showTimeSeats.Add(new ShowTimeSeat
+    //            {
+    //                ShowTimeId = showtime.Id,
+    //                SeatId = seat.Id,
+    //                Status = SeatStatus.Available
+    //            });
+    //        }
+    //    }
 
-        await _context.AddRangeAsync(showTimeSeats);
-        await _context.SaveChangesAsync();
-        _logger.Success("ShowTimeSeats seeded successfully.");
-    }
+    //    await _context.AddRangeAsync(showTimeSeats);
+    //    await _context.SaveChangesAsync();
+    //    _logger.Success("ShowTimeSeats seeded successfully.");
+    //}
 
     private async Task SeedCinemaRoomAsync()
     {
@@ -463,6 +463,40 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Cinema rooms and seats seeded successfully.");
 
+    }
+    private async Task SeedShowTimeAsync()
+    {
+        var movies = await _context.Movies.ToListAsync();
+        var rooms = await _context.CinemaRooms.ToListAsync();
+
+        if (!movies.Any() || !rooms.Any())
+        {
+            _logger.Warn("No movies or cinema rooms found. Seed movies and rooms first.");
+            return;
+        }
+
+        var showTimes = new List<ShowTime>();
+
+        // Example: Each movie gets a showtime in each room, on different days
+        int dayOffset = 0;
+        foreach (var movie in movies)
+        {
+            foreach (var room in rooms)
+            {
+                showTimes.Add(new ShowTime
+                {
+                    MovieId = movie.Id,
+                    CinemaRoomId = room.Id,
+                    ShowDate = DateTime.UtcNow.Date.AddDays(dayOffset),
+                    Duration = TimeSpan.FromMinutes(movie.RunningTime ?? 120)
+                });
+                dayOffset++;
+            }
+        }
+
+        await _context.Showtimes.AddRangeAsync(showTimes);
+        await _context.SaveChangesAsync();
+        _logger.Success("ShowTimes seeded successfully.");
     }
 
 
