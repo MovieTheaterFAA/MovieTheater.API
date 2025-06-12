@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieTheater.Domain;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    partial class MovieTheaterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250612042825_FixSeat")]
+    partial class FixSeat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -814,7 +817,7 @@ namespace MovieTheater.Domain.Migrations
 
                     b.HasIndex("SeatId");
 
-                    b.ToTable("ShowTimeSeats");
+                    b.ToTable("ShowTimeSeat");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Ticket", b =>

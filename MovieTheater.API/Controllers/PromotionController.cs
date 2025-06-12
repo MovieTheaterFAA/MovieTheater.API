@@ -1,12 +1,9 @@
-﻿using System.Threading.Tasks;
-using System;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.PromotionDTOs;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -47,7 +44,6 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        // API to add a new promotion
         [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
