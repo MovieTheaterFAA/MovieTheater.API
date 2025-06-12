@@ -49,5 +49,28 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpPut("{eventId}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Update an event",
+            Description = "Update an existing event. Requires Admin privileges.")]
+        [ProducesResponseType(typeof(EventResponseDto), 200)]
+        [ProducesResponseType(typeof(object), 400)]
+        [ProducesResponseType(typeof(object), 500)]
+        public async Task<IActionResult> UpdateEventAsync([FromRoute] Guid eventId, [FromBody] EventUpdateDto dto)
+        {
+            try
+            {
+                var result = await _eventService.UpdateEventAsync(eventId, dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<EventResponseDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }
