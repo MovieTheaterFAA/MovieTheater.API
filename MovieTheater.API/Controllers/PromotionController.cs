@@ -67,7 +67,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPut("{promotionId}")]
+        [HttpPut("{Id}")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
             Summary = "Update a promotion",
@@ -75,18 +75,46 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> UpdatePromotionAsync([FromRoute] Guid promotionId, [FromBody] PromotionUpdateDto dto)
+        public async Task<IActionResult> UpdatePromotionAsync([FromRoute] Guid Id, [FromBody] PromotionUpdateDto dto)
         {
             try
             {
 
-                var result = await _promotionService.UpdatePromotionAsync(promotionId, dto);
+                var result = await _promotionService.UpdatePromotionAsync(Id, dto);
                 return Ok(ApiResult<PromotionResponseDto>.Success(result!, "200", "Updated promotion successfully."));
             }
             catch (Exception ex)
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
                 var errorResponse = ExceptionUtils.CreateErrorResponse<PromotionResponseDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Delete promotion",
+            Description = "Delete a promotion by its ID.")]
+        [ProducesResponseType(typeof(ApiResult<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> DeletePromotion(Guid id)
+        {
+            try
+            {
+                var result = await _promotionService.DeletePromotionAsync(id);
+                if (!result)
+                {
+                    return BadRequest(ApiResult<object>.Failure("400", "Promotion not found or could not be deleted."));
+                }
+
+                return Ok(ApiResult<bool>.Success(true, "200", "Promotion deleted successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }
