@@ -37,6 +37,8 @@ public class SystemController : ControllerBase
             await SeedCinemaRoomAsync();
             //Seed showtime data
             await SeedShowTimeAsync();
+            //Seed food and drinks data
+            await SeedFoodAndDrinkAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -377,7 +379,6 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -467,6 +468,109 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.Success("Showtimes seeded successfully.");
+    }
+
+    private async Task SeedFoodAndDrinkAsync()
+    {
+        var foodanddrinks = new List<FoodAndDrink>
+        {
+            new()
+    {
+        Name = "Bắp rang bơ",
+        Description = "Bắp rang thơm lừng, giòn rụm, vị mặn vừa ăn.",
+        Price = 45000m, // 45,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Pepsi lon",
+        Description = "Nước ngọt có gas, dùng kèm với bắp rang.",
+        Price = 25000m, // 25,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 1: Bắp rang + Pepsi",
+        Description = "Combo tiết kiệm gồm 1 phần bắp rang bơ và 1 lon Pepsi.",
+        Price = 65000m, // 65,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Xúc xích phô mai",
+        Description = "Xúc xích nóng hổi, nhân phô mai tan chảy hấp dẫn.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Trà đào cam sả",
+        Description = "Thức uống thanh mát, thơm vị đào, sả và cam.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Khoai tây chiên",
+        Description = "Miếng khoai giòn tan, chấm cùng tương cà hoặc sốt phô mai.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Nước suối Aquafina",
+        Description = "Chai nước suối 500ml, tinh khiết và tiện lợi.",
+        Price = 15000m, // 15,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 2: Bắp lớn + 2 Pepsi",
+        Description = "Combo cho 2 người gồm 1 bắp lớn và 2 lon Pepsi.",
+        Price = 90000m, // 90,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Hotdog xúc xích",
+        Description = "Bánh mì mềm, kẹp xúc xích nóng, sốt mayonnaise và tương cà.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Coca-Cola chai nhựa",
+        Description = "Nước ngọt có gas, vị truyền thống, chai 390ml.",
+        Price = 27000m, // 27,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    }
+        };
+
+        _logger.Info("Seeding food and drinks...");
+
+        await _context.FoodAndDrinks.AddRangeAsync(foodanddrinks);
+        await _context.SaveChangesAsync();
+        _logger.Success("Food and Drink seeded successfully.");
     }
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
