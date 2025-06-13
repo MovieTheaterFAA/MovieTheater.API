@@ -6,6 +6,8 @@ using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Domain.Entities;
+using System.Text.Json;
+using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Application.Services
 {
@@ -14,12 +16,14 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+        private readonly IAuditLogService _auditLogService;
 
-        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
+        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
@@ -102,6 +106,27 @@ namespace MovieTheater.Application.Services
                 IsAvailable = dto.IsAvailable,
             };
 
+            var adminId = _claimsService.GetCurrentUserId;
+
+            var newData = new
+            {
+                foodAndDrink.Name,
+                foodAndDrink.Description,
+                foodAndDrink.Price,
+                foodAndDrink.Type,
+                foodAndDrink.ImageUrl,
+                foodAndDrink.IsAvailable,
+            };
+
+            var changedFields = JsonSerializer.Serialize(new
+            {
+                foodAndDrink.Name,
+                foodAndDrink.Description,
+                foodAndDrink.Price,
+                foodAndDrink.Type,
+                foodAndDrink.ImageUrl,
+                foodAndDrink.IsAvailable,
+            });
             // Thêm món ăn/thức uống vào cơ sở dữ liệu
             await _unitOfWork.FoodAndDrinks.AddAsync(foodAndDrink);
 
@@ -114,7 +139,17 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
                 throw;
             }
-
+            await _auditLogService.LogAsync
+                    (
+                    adminId,
+                    AuditActionType.Create,
+                    "FoodAndDrink",
+                    foodAndDrink.Id,
+                    null,
+                    newData,
+                    changedFields,
+                    "Admin created new food and drink."
+                    );
             _loggerService.Success($"[AddFoodAndDrinkAsync] Food and drink {foodAndDrink.Name} added successfully.");
 
             return new FoodAndDrinkResponseDto
@@ -146,8 +181,37 @@ namespace MovieTheater.Application.Services
                     return false;
                 }
 
+                var oldValue = new
+                {
+                    foodAndDrink.IsDeleted
+                };
+          
                 await _unitOfWork.FoodAndDrinks.SoftRemove(foodAndDrink);
                 await _unitOfWork.SaveChangesAsync();
+
+                var newValue = new
+                {
+                    foodAndDrink.IsDeleted
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+                    foodAndDrink.IsDeleted
+                });
+
+                var adminId = _claimsService.GetCurrentUserId;
+
+                await _auditLogService.LogAsync
+                        (
+                        adminId,
+                        AuditActionType.Delete,
+                        "FoodAndDrink",
+                        foodAndDrinkId,
+                        oldValue,
+                        newValue,
+                        changedFields,
+                        "Admin deleted food and drink."
+                        );
 
                 _loggerService.Info($"Successfully deleted FoodAndDrink with ID {foodAndDrinkId}.");
                 return true;

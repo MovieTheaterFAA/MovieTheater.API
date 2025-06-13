@@ -37,6 +37,8 @@ public class SystemController : ControllerBase
             await SeedCinemaRoomAsync();
             //Seed showtime data
             await SeedShowTimeAsync();
+            //Seed food and drinks data
+            await SeedFoodAndDrinkAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -377,7 +379,6 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -467,6 +468,110 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.Success("Showtimes seeded successfully.");
+    }
+
+    private async Task SeedFoodAndDrinkAsync()
+    {
+        var foodanddrinks = new List<FoodAndDrink>
+        {
+    new()
+    {
+        Name = "Butter Popcorn",
+        Description = "Aromatic, crispy popcorn with a savory butter flavor.",
+        Price = 45000m, // 45,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Pepsi Can",
+        Description = "Carbonated soft drink, perfect with popcorn.",
+        Price = 25000m, // 25,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 1: Popcorn + Pepsi",
+        Description = "Value combo including a serving of butter popcorn and one Pepsi can.",
+        Price = 65000m, // 65,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Cheese Sausage",
+        Description = "Hot sausage filled with melted cheese, delicious and satisfying.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Peach Citrus Lemongrass Tea",
+        Description = "Refreshing drink with the aroma of peach, citrus, and lemongrass.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "French Fries",
+        Description = "Crispy potato fries, served with ketchup or cheese sauce.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Aquafina Water",
+        Description = "500ml purified bottled water, convenient and refreshing.",
+        Price = 15000m, // 15,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 2: Large Popcorn + 2 Pepsi",
+        Description = "Perfect for two: 1 large popcorn and 2 Pepsi cans.",
+        Price = 90000m, // 90,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Hotdog Sausage",
+        Description = "Soft bun with hot sausage, mayonnaise, and ketchup.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Coca-Cola Bottle",
+        Description = "Classic carbonated drink, 390ml plastic bottle.",
+        Price = 27000m, // 27,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+        }
+
+    };
+
+        _logger.Info("Seeding food and drinks...");
+
+        await _context.FoodAndDrinks.AddRangeAsync(foodanddrinks);
+        await _context.SaveChangesAsync();
+        _logger.Success("Food and Drink seeded successfully.");
     }
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
