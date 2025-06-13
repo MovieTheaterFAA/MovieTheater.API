@@ -118,7 +118,7 @@ public static class IocContainer
         services.AddScoped<IFoodAndDrinkService, FoodAndDrinkService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IPromotionService, PromotionService>();
-
+        services.AddScoped<IImpersonationService, ImpersonationService>();
 
         services.AddHttpContextAccessor();
 
