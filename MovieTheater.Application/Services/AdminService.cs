@@ -1,8 +1,4 @@
-﻿using System.Data;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -10,8 +6,10 @@ using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Data;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MovieTheater.Application.Services;
 
@@ -361,6 +359,20 @@ public class AdminService : IAdminService
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
+            // Notify employee about the update
+            await _emailService.SendUpdateEmployeeCredentialsEmailAsync(new Domain.DTOs.EmailDTOs.UpdateEmployeeCredentialsEmailDto
+            {
+                To = user.Email,
+                UserName = user.Email,
+                Password = !string.IsNullOrWhiteSpace(editEmployeeDto.Password) ? editEmployeeDto.Password : "Your password was not changed",
+                FullName = user.FullName,
+                DateOfBirth = user.DateOfBirth,
+                Sex = user.Sex,
+                CCCD = user.CCCD,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            });
+
             var newData = new
             {
                 user.FullName,
@@ -388,7 +400,7 @@ public class AdminService : IAdminService
                 adminId,
                 AuditActionType.Update,
                 "Employee",
-                userId  ,
+                userId,
                 oldData,
                 newData,
                 changedFields,
@@ -460,6 +472,58 @@ public class AdminService : IAdminService
                "Deleted employee account"
                );
 
+        return true;
+    }
+
+    public async Task<bool> BanUserAsync(Guid userId, Guid adminId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+        {
+            _loggerService.Warn($"[BanUserAsync] User with ID {userId} not found or already deleted.");
+            return false;
+        }
+
+        if (user.UserStatus == UserStatus.Banned)
+        {
+            _loggerService.Warn($"[BanUserAsync] User with ID {userId} is already banned.");
+            return false;
+        }
+
+        var oldValue = new
+        {
+            user.UserStatus,
+        };
+
+        user.UserStatus = UserStatus.Banned;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = adminId;
+
+        var newValue = new
+        {
+            user.UserStatus,
+        };
+
+        var changedFields = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            UserStatus = UserStatus.Banned,
+        });
+
+        await _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditLogService.LogAsync(
+            adminId,
+            AuditActionType.Update,
+            "User",
+            userId,
+            oldValue,
+            newValue,
+            changedFields,
+            "User was banned by admin"
+        );
+
+        _loggerService.Success($"[BanUserAsync] User with ID {userId} has been banned.");
         return true;
     }
 

@@ -87,6 +87,9 @@ namespace MovieTheater.Application.Services
             if (user.UserStatus != UserStatus.Active)
                 throw ErrorHelper.Forbidden("Account have not verified yet.");
 
+            if (user.UserStatus == UserStatus.Banned)
+                throw new UnauthorizedAccessException("Your account has been banned. Please contact support for more information.");
+
             _loggerService.Success($"User {loginDto.Email} authenticated successfully.");
 
             // Generate JWT token and refresh token

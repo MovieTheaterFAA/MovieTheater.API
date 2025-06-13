@@ -5,7 +5,6 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -173,6 +172,38 @@ public class AdminController : ControllerBase
         {
             var statusCode = ExceptionUtils.ExtractStatusCode(ex);
             var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
+    [HttpPost("user/{id}/ban")]
+    [Authorize(Policy = "AdminPolicy")]
+    [SwaggerOperation(
+    Summary = "Ban a user or employee",
+    Description = "Ban a user or employee by their unique ID. Prevents them from logging in."
+)]
+    [ProducesResponseType(typeof(ApiResult<object>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> BanUser([SwaggerParameter("The unique identifier of the user to be banned.")] Guid id)
+    {
+        if (id == Guid.Empty)
+            return BadRequest(ApiResult<object>.Failure("400", "Invalid ban request. User ID is required."));
+
+        try
+        {
+            var adminId = _claimsService.GetCurrentUserId;
+            var result = await _adminService.BanUserAsync(id, adminId);
+
+            if (!result)
+                return BadRequest(ApiResult<object>.Failure("400", "Ban failed. No user found with the provided ID or user already banned."));
+
+            return Ok(ApiResult<object>.Success(result, "200", "User banned successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
             return StatusCode(statusCode, errorResponse);
         }
     }

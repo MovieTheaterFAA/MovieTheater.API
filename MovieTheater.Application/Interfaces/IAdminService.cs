@@ -1,7 +1,6 @@
 ﻿using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -28,5 +27,6 @@ namespace MovieTheater.Application.Interfaces
         Task<EditEmployeeDto> EditEmployeeAsync(Guid userId, EditEmployeeDto editEmployeeDto);
 
         Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
+        Task<bool> BanUserAsync(Guid userId, Guid adminId);
     }
 }

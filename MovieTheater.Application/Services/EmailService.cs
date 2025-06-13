@@ -192,28 +192,130 @@ namespace MovieTheater.Application.Services
         public async Task SendEmployeeCredentialsEmailAsync(EmployeeCredentialsEmailDto request)
         {
             var html = $@"
-<html style=""background-color:#000000;margin:0;padding:0;"">
-  <body style=""font-family:Arial,sans-serif;color:#000000;padding:20px;background-color:#000000;"">
-    <div style=""max-width:600px;margin:auto;background:#ffffff;border:1px solid #f8c439;border-radius:6px;padding:20px;"">
-      <div style=""text-align:center;margin-bottom:20px;"">
-        <img src=""https://placeholder.com/logo.png"" alt=""MovieTheater Logo"" style=""max-width:150px;height:auto;"">
+<html style=""background-color:#0d0d0d;margin:0;padding:0;"">
+  <body style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#ffffff;padding:40px 20px;background-color:#0d0d0d;line-height:1.6;"">
+    <div style=""max-width:600px;margin:auto;background:linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);border:1px solid #f8c439;border-radius:16px;padding:40px;box-shadow:0 20px 40px rgba(248,196,57,0.1);"">
+
+      <div style=""text-align:center;margin-bottom:32px;"">
+        <img src=""https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=logo%2Flogo.png&version_id=null"" alt=""MovieTheater Logo"" style=""max-width:180px;height:auto;filter:brightness(0) invert(1);"">
       </div>
-      <h1 style=""color:#f8c439;font-size:22px;"">Welcome {request.UserName}!</h1>
-      <p>Your account has been created successfully.</p>
-      <p>Here are your login credentials:</p>
-      <ul>
-        <li><strong>Email:</strong> {request.To}</li>
-        <li><strong>Password:</strong> {request.Password}</li>
-      </ul>
-      <p>Please change your password after your first login to keep your account secure.</p>
-      <div style=""text-align:center;margin:25px 0;"">
-        <a href=""https://placeholder.com/login"" style=""background-color:#f8c439;color:#000000;padding:10px 20px;text-decoration:none;border-radius:4px;font-weight:bold;"">Login Now</a>
+
+      <div style=""text-align:center;margin-bottom:32px;"">
+        <h1 style=""color:#f8c439;font-size:32px;font-weight:bold;margin:0 0 8px 0;letter-spacing:-0.5px;"">Welcome {request.UserName}!</h1>
+        <div style=""width:60px;height:3px;background:linear-gradient(90deg, #f8c439, #ffd700);margin:16px auto;border-radius:2px;""></div>
       </div>
-      <p style=""margin-top:30px;"">Best regards,<br/>MovieTheater Team</p>
+
+      <div style=""margin-bottom:32px;"">
+        <p style=""color:#e5e5e5;font-size:18px;margin:0 0 16px 0;text-align:center;"">Your account has been created successfully.</p>
+        <p style=""color:#b3b3b3;font-size:16px;margin:0 0 24px 0;text-align:center;"">Here are your login credentials:</p>
+        
+        <div style=""background:rgba(0,0,0,0.2);border-radius:12px;padding:24px;margin:24px 0;border-left:3px solid #f8c439;"">
+          <div style=""margin-bottom:16px;"">
+            <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email:</p>
+            <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.To}</p>
+          </div>
+          <div>
+            <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Password:</p>
+            <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;font-family:monospace;background:rgba(248,196,57,0.1);padding:8px 12px;border-radius:6px;display:inline-block;"">{request.Password}</p>
+          </div>
+        </div>
+        
+        <p style=""color:#e5e5e5;font-size:16px;margin:24px 0;text-align:center;background:rgba(248,196,57,0.1);padding:12px;border-radius:8px;border-left:3px solid #f8c439;"">Please change your password after your first login to keep your account secure.</p>
+      </div>
+
+      <div style=""text-align:center;margin:40px 0;"">
+        <a href=""https://movietheater.ae-tao-fullstack-api.com/login"" style=""display:inline-block;background:linear-gradient(135deg, #f8c439 0%, #ffd700 100%);color:#000000;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:bold;font-size:16px;box-shadow:0 8px 24px rgba(248,196,57,0.3);transition:all 0.3s ease;"">Login Now</a>
+      </div>
+
+      <div style=""border-top:1px solid #333333;padding-top:24px;margin-top:40px;"">
+        <p style=""color:#888888;font-size:14px;margin:0;text-align:center;"">Best regards,<br/><span style=""color:#f8c439;font-weight:600;"">MovieTheater Team</span></p>
+      </div>
+
     </div>
   </body>
 </html>";
             await SendEmailAsync(request.To, "Your Account Credentials", html);
+        }
+
+        public async Task SendUpdateEmployeeCredentialsEmailAsync(UpdateEmployeeCredentialsEmailDto request)
+        {
+            var html = $@"
+<html style=""background-color:#0d0d0d;margin:0;padding:0;"">
+  <body style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#ffffff;padding:40px 20px;background-color:#0d0d0d;line-height:1.6;"">
+    <div style=""max-width:600px;margin:auto;background:linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);border:1px solid #f8c439;border-radius:16px;padding:40px;box-shadow:0 20px 40px rgba(248,196,57,0.1);"">
+
+      <div style=""text-align:center;margin-bottom:32px;"">
+        <img src=""https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=logo%2Flogo.png&version_id=null"" alt=""MovieTheater Logo"" style=""max-width:180px;height:auto;filter:brightness(0) invert(1);"">
+      </div>
+
+      <div style=""text-align:center;margin-bottom:32px;"">
+        <h1 style=""color:#f8c439;font-size:32px;font-weight:bold;margin:0 0 8px 0;letter-spacing:-0.5px;"">Account Updated</h1>
+        <div style=""width:60px;height:3px;background:linear-gradient(90deg, #f8c439, #ffd700);margin:16px auto;border-radius:2px;""></div>
+      </div>
+
+      <div style=""margin-bottom:32px;"">
+        <p style=""color:#e5e5e5;font-size:18px;margin:0 0 16px 0;text-align:center;"">Your account information has been updated.</p>
+        <p style=""color:#b3b3b3;font-size:16px;margin:0 0 24px 0;text-align:center;"">Here is your updated account information:</p>
+        
+        <div style=""background:rgba(0,0,0,0.2);border-radius:12px;padding:24px;margin:24px 0;border-left:3px solid #f8c439;"">
+          <div style=""display:grid;grid-template-columns:1fr;gap:16px;"">
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Full Name:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.FullName}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Date of Birth:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.DateOfBirth:yyyy-MM-dd}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Gender:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.Sex}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">CCCD:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.CCCD}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Phone Number:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.PhoneNumber}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Address:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.Address}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.UserName}</p>
+            </div>
+            
+            <div>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Password:</p>
+              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;font-family:monospace;background:rgba(248,196,57,0.1);padding:8px 12px;border-radius:6px;display:inline-block;"">{request.Password}</p>
+            </div>
+          </div>
+        </div>
+        
+        <p style=""color:#e5e5e5;font-size:16px;margin:24px 0;text-align:center;background:rgba(248,196,57,0.1);padding:12px;border-radius:8px;border-left:3px solid #f8c439;"">Please change your password after your first login to keep your account secure.</p>
+      </div>
+
+      <div style=""text-align:center;margin:40px 0;"">
+        <a href=""https://movietheater.ae-tao-fullstack-api.com/login"" style=""display:inline-block;background:linear-gradient(135deg, #f8c439 0%, #ffd700 100%);color:#000000;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:bold;font-size:16px;box-shadow:0 8px 24px rgba(248,196,57,0.3);transition:all 0.3s ease;"">Login Now</a>
+      </div>
+
+      <div style=""border-top:1px solid #333333;padding-top:24px;margin-top:40px;"">
+        <p style=""color:#888888;font-size:14px;margin:0;text-align:center;"">Best regards,<br/><span style=""color:#f8c439;font-weight:600;"">MovieTheater Team</span></p>
+      </div>
+
+    </div>
+  </body>
+</html>";
+            await SendEmailAsync(request.To, "Your Account Has Been Update Credentials", html);
         }
     }
 }

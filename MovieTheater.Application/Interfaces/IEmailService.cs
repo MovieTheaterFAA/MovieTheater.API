@@ -13,4 +13,5 @@ public interface IEmailService
     Task SendPasswordChangeSuccessAsync(EmailRequestDto request);
 
     Task SendEmployeeCredentialsEmailAsync(EmployeeCredentialsEmailDto request);
+    Task SendUpdateEmployeeCredentialsEmailAsync(UpdateEmployeeCredentialsEmailDto request);
 }
