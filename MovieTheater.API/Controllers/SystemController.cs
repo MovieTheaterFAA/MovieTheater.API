@@ -474,10 +474,10 @@ public class SystemController : ControllerBase
     {
         var foodanddrinks = new List<FoodAndDrink>
         {
-            new()
+    new()
     {
-        Name = "Bắp rang bơ",
-        Description = "Bắp rang thơm lừng, giòn rụm, vị mặn vừa ăn.",
+        Name = "Butter Popcorn",
+        Description = "Aromatic, crispy popcorn with a savory butter flavor.",
         Price = 45000m, // 45,000₫
         Type = FoodType.Food,
         ImageUrl = null,
@@ -485,8 +485,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Pepsi lon",
-        Description = "Nước ngọt có gas, dùng kèm với bắp rang.",
+        Name = "Pepsi Can",
+        Description = "Carbonated soft drink, perfect with popcorn.",
         Price = 25000m, // 25,000₫
         Type = FoodType.Drink,
         ImageUrl = null,
@@ -494,8 +494,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Combo 1: Bắp rang + Pepsi",
-        Description = "Combo tiết kiệm gồm 1 phần bắp rang bơ và 1 lon Pepsi.",
+        Name = "Combo 1: Popcorn + Pepsi",
+        Description = "Value combo including a serving of butter popcorn and one Pepsi can.",
         Price = 65000m, // 65,000₫
         Type = FoodType.Combo,
         ImageUrl = null,
@@ -503,8 +503,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Xúc xích phô mai",
-        Description = "Xúc xích nóng hổi, nhân phô mai tan chảy hấp dẫn.",
+        Name = "Cheese Sausage",
+        Description = "Hot sausage filled with melted cheese, delicious and satisfying.",
         Price = 30000m, // 30,000₫
         Type = FoodType.Food,
         ImageUrl = null,
@@ -512,8 +512,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Trà đào cam sả",
-        Description = "Thức uống thanh mát, thơm vị đào, sả và cam.",
+        Name = "Peach Citrus Lemongrass Tea",
+        Description = "Refreshing drink with the aroma of peach, citrus, and lemongrass.",
         Price = 35000m, // 35,000₫
         Type = FoodType.Drink,
         ImageUrl = null,
@@ -521,8 +521,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Khoai tây chiên",
-        Description = "Miếng khoai giòn tan, chấm cùng tương cà hoặc sốt phô mai.",
+        Name = "French Fries",
+        Description = "Crispy potato fries, served with ketchup or cheese sauce.",
         Price = 30000m, // 30,000₫
         Type = FoodType.Food,
         ImageUrl = null,
@@ -530,8 +530,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Nước suối Aquafina",
-        Description = "Chai nước suối 500ml, tinh khiết và tiện lợi.",
+        Name = "Aquafina Water",
+        Description = "500ml purified bottled water, convenient and refreshing.",
         Price = 15000m, // 15,000₫
         Type = FoodType.Drink,
         ImageUrl = null,
@@ -539,8 +539,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Combo 2: Bắp lớn + 2 Pepsi",
-        Description = "Combo cho 2 người gồm 1 bắp lớn và 2 lon Pepsi.",
+        Name = "Combo 2: Large Popcorn + 2 Pepsi",
+        Description = "Perfect for two: 1 large popcorn and 2 Pepsi cans.",
         Price = 90000m, // 90,000₫
         Type = FoodType.Combo,
         ImageUrl = null,
@@ -548,8 +548,8 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Hotdog xúc xích",
-        Description = "Bánh mì mềm, kẹp xúc xích nóng, sốt mayonnaise và tương cà.",
+        Name = "Hotdog Sausage",
+        Description = "Soft bun with hot sausage, mayonnaise, and ketchup.",
         Price = 35000m, // 35,000₫
         Type = FoodType.Food,
         ImageUrl = null,
@@ -557,14 +557,15 @@ public class SystemController : ControllerBase
     },
     new()
     {
-        Name = "Coca-Cola chai nhựa",
-        Description = "Nước ngọt có gas, vị truyền thống, chai 390ml.",
+        Name = "Coca-Cola Bottle",
+        Description = "Classic carbonated drink, 390ml plastic bottle.",
         Price = 27000m, // 27,000₫
         Type = FoodType.Drink,
         ImageUrl = null,
         IsAvailable = true
-    }
-        };
+        }
+
+    };
 
         _logger.Info("Seeding food and drinks...");
 
