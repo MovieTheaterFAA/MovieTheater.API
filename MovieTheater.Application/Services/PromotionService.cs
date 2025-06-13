@@ -4,7 +4,9 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
 
@@ -13,12 +15,14 @@ public class PromotionService : IPromotionService
     private readonly ILoggerService _loggerService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClaimsService _claimsService;
+    private readonly IAuditLogService _auditLogService;
 
-    public PromotionService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
+    public PromotionService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _claimsService = claimsService;
+        _auditLogService = auditLogService;
     }
 
     public async Task<List<PromotionResponseDto>> GetAllPromotionListAsync()
@@ -49,7 +53,9 @@ public class PromotionService : IPromotionService
 
     public async Task<PromotionResponseDto?> AddPromotionAsync(PromotionRequestDto dto)
     {
-        _loggerService.Info($"[AddPromotionAsync] Start adding promotion: {dto.Title}");
+        try
+            {
+            _loggerService.Info($"[AddPromotionAsync] Start adding promotion: {dto.Title}");
 
         // Kiểm tra nếu chương trình khuyến mãi đã tồn tại
         var existingPromotion = await _unitOfWork.Promotions.FirstOrDefaultAsync(p => p.Title == dto.Title);
@@ -79,22 +85,45 @@ public class PromotionService : IPromotionService
             EventId = dto.EventId
         };
 
+        var adminId = _claimsService.GetCurrentUserId;
+
+        var newData = new
+        {
+            promotion.Title,
+            promotion.DiscountValue,
+            promotion.Detail,
+            promotion.Image,
+            promotion.EventId
+        };
+
+        var changedFields = JsonSerializer.Serialize(new
+        {
+            promotion.Title,
+            promotion.DiscountValue,
+            promotion.Detail,
+            promotion.Image,
+            promotion.EventId
+        });
         // Thêm chương trình khuyến mãi vào cơ sở dữ liệu
         await _unitOfWork.Promotions.AddAsync(promotion);
+        await _unitOfWork.SaveChangesAsync();
 
-        try
-        {
-            await _unitOfWork.SaveChangesAsync();
-        }
-        catch (DbUpdateException dbEx)
-        {
-            _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
-            throw;
-        }
+        await _auditLogService.LogAsync
+        (
+        adminId,
+        AuditActionType.Create,
+        "Promotion",
+        promotion.Id,
+        null,
+        newData,
+        changedFields,
+        "Admin created new promotion."
+        );
+
 
         _loggerService.Success($"[AddPromotionAsync] Promotion {promotion.Title} added successfully.");
 
-        // Trả về PromotionResponseDto
+         // Trả về PromotionResponseDto
         return new PromotionResponseDto
         {
             Id = promotion.Id,
@@ -104,6 +133,14 @@ public class PromotionService : IPromotionService
             Image = promotion.Image,
             EventId = promotion.EventId
         };
+    }
+        catch (DbUpdateException dbEx)
+        {
+            _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            throw;
+        }
+
+        
     }
     public async Task<bool> DeletePromotionAsync(Guid promotionId)
     {
@@ -116,8 +153,37 @@ public class PromotionService : IPromotionService
                 return false;
             }
 
+            var oldData = new
+            {
+                promotion.IsDeleted
+            };
+
             await _unitOfWork.Promotions.SoftRemove(promotion);
             await _unitOfWork.SaveChangesAsync();
+
+            var newData = new
+            {
+                promotion.IsDeleted
+            };
+
+            var changedFields = JsonSerializer.Serialize(new
+            {
+                promotion.IsDeleted
+            });
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            await _auditLogService.LogAsync
+                        (
+                        adminId,
+                        AuditActionType.Delete,
+                        "Promotion",
+                        promotionId,
+                        oldData,
+                        newData,
+                        changedFields,
+                        "Admin deleted promotion."
+                        );
 
             _loggerService.Info($"Successfully deleted promotion with ID {promotionId}.");
             return true;
@@ -142,6 +208,14 @@ public class PromotionService : IPromotionService
                 throw ErrorHelper.NotFound("Promotion not found.");
             }
 
+            var oldData = new
+            {
+                promotion.Title,
+                promotion.DiscountValue,
+                promotion.Detail,
+                promotion.Image,
+                promotion.EventId
+            };
             bool isUpdated = false;
 
             if (!string.IsNullOrWhiteSpace(dto.Title) && promotion.Title != dto.Title)
@@ -205,6 +279,38 @@ public class PromotionService : IPromotionService
 
             await _unitOfWork.Promotions.Update(promotion);
             await _unitOfWork.SaveChangesAsync();
+
+            var newData = new
+            {
+                promotion.Title,
+                promotion.DiscountValue,
+                promotion.Detail,
+                promotion.Image,
+                promotion.EventId
+            };
+
+            var changedFields = JsonSerializer.Serialize(new
+            {
+                promotion.Title,
+                promotion.DiscountValue,
+                promotion.Detail,
+                promotion.Image,
+                promotion.EventId
+            });
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            await _auditLogService.LogAsync
+                (
+                adminId,
+                AuditActionType.Update,
+                "Promotion",
+                promotionId,
+                oldData,
+                newData,
+                changedFields,
+                "Admin updated promotion information."
+                );
 
             _loggerService.Success($"[UpdatePromotionAsync] Promotion '{promotion.Title}' updated successfully.");
 

@@ -226,6 +226,7 @@ namespace MovieTheater.Application.Services
                     Rating = movieRequestDto.Rating,
                     Status = Domain.Enums.MovieStatus.ComingSoon,
                 };
+
                 var adminId = _claimsService.GetCurrentUserId;
 
                 var newData = new
@@ -265,6 +266,12 @@ namespace MovieTheater.Application.Services
                     movie.Status
                 });
 
+                
+
+                // Thêm bộ phim vào cơ sở dữ liệu
+                await _unitOfWork.Movies.AddAsync(movie);
+                await _unitOfWork.SaveChangesAsync();
+
                 await _auditLogService.LogAsync
                     (
                     adminId,
@@ -274,12 +281,8 @@ namespace MovieTheater.Application.Services
                     null,
                     newData,
                     changedFields,
-                    "Admin created new movie"
+                    "Admin created new movie."
                     );
-
-                // Thêm bộ phim vào cơ sở dữ liệu
-                await _unitOfWork.Movies.AddAsync(movie);
-                await _unitOfWork.SaveChangesAsync();
 
                 _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
                 // Trả về MovieResponseDto
@@ -498,7 +501,7 @@ namespace MovieTheater.Application.Services
                     oldData,
                     newData,
                     changedFields,
-                    "Admin updated movie information"
+                    "Admin updated movie information."
                     );
 
                 _loggerService.Success($"[UpdateMovieInfo] Movie info updated successfully for MovieId: {movieId}");
@@ -554,7 +557,9 @@ namespace MovieTheater.Application.Services
                 {
                     movie.IsDeleted
                 });
+
                 var adminId = _claimsService.GetCurrentUserId;
+
                 await _auditLogService.LogAsync
                         (
                         adminId,
@@ -564,7 +569,7 @@ namespace MovieTheater.Application.Services
                         oldValue,
                         newValue,
                         changedFields,
-                        "Deleted movie"
+                        "Admin deleted movie."
                         );
 
                 _loggerService.Info($"Successfully deleted movie with {movieId}.");

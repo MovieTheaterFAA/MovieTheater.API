@@ -4,7 +4,9 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.EventDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -13,12 +15,14 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+        private readonly IAuditLogService _auditLogService;
 
-        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
+        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
+            _auditLogService = auditLogService;
         }
 
         public async Task<EventResponseDto?> AddEventAsync(EventRequestDto dto)
@@ -33,7 +37,7 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("Event with this name already exists.");
             }
 
-
+            var adminId = _claimsService.GetCurrentUserId;
 
             // Tạo đối tượng Event từ DTO
             var newEvent = new Event
@@ -44,6 +48,26 @@ namespace MovieTheater.Application.Services
                 Detail = dto.Detail,
                 Image = dto.Image,
             };
+
+            var newData = new
+            {
+                newEvent.Name,
+                newEvent.StartTime,
+                newEvent.EndTime,
+                newEvent.Detail,
+                newEvent.Image,
+            };
+
+            var changgedFields = JsonSerializer.Serialize(new
+            {
+                newEvent.Name,
+                newEvent.StartTime,
+                newEvent.EndTime,
+                newEvent.Detail,
+                newEvent.Image,
+            });
+
+
 
             // Thêm sự kiện vào cơ sở dữ liệu
             await _unitOfWork.Events.AddAsync(newEvent);
@@ -57,6 +81,18 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
                 throw;
             }
+
+            await _auditLogService.LogAsync
+                (
+                adminId,
+                AuditActionType.Create,
+                "Event",
+                newEvent.Id,
+                null,
+                newData,
+                changgedFields,
+                "Admin created new event."
+                );
 
             _loggerService.Success($"[AddEventAsync] Event {newEvent.Name} added successfully.");
 
@@ -84,6 +120,15 @@ namespace MovieTheater.Application.Services
                     _loggerService.Warn($"[UpdateEventAsync] Event with ID {eventId} not found.");
                     throw ErrorHelper.NotFound("Event not found.");
                 }
+
+                var oldData = new
+                {
+                    eventEntity.Name,
+                    eventEntity.StartTime,
+                    eventEntity.EndTime,
+                    eventEntity.Detail,
+                    eventEntity.Image,
+                };
 
                 bool isUpdated = false;
 
@@ -149,6 +194,38 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Events.Update(eventEntity);
                 await _unitOfWork.SaveChangesAsync();
+
+                var newData = new
+                {
+                    eventEntity.Name,
+                    eventEntity.StartTime,
+                    eventEntity.EndTime,
+                    eventEntity.Detail,
+                    eventEntity.Image
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+                    eventEntity.Name,
+                    eventEntity.StartTime,
+                    eventEntity.EndTime,
+                    eventEntity.Detail,
+                    eventEntity.Image
+                });
+
+                var adminId = _claimsService.GetCurrentUserId;
+
+                await _auditLogService.LogAsync
+                    (
+                    adminId,
+                    AuditActionType.Update,
+                    "Event",
+                    eventId,
+                    oldData,
+                    newData,
+                    changedFields,
+                    "Admin updated event information."
+                    );
 
                 _loggerService.Success($"[UpdateEventAsync] Event '{eventEntity.Name}' updated successfully.");
 

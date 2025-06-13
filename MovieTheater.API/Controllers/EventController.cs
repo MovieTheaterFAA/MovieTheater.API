@@ -63,7 +63,7 @@ namespace MovieTheater.API.Controllers
             try
             {
                 var result = await _eventService.UpdateEventAsync(eventId, dto);
-                return Ok(result);
+                return Ok(ApiResult<EventResponseDto>.Success(result!, "200", "updated event successfully."));
             }
             catch (Exception ex)
             {
