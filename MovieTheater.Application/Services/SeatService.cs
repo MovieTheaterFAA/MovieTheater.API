@@ -12,14 +12,12 @@ namespace MovieTheater.Application.Services
     {
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ISeatNotificationService _seatNotificationService;
         private static readonly ConcurrentDictionary<(Guid seatId, Guid showTimeId), (Guid userId, DateTime expireAt)> _holdingSeats = new();
 
-        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, ISeatNotificationService seatNotificationService)
+        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork)
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
-            _seatNotificationService = seatNotificationService;
         }
 
         private void CleanupExpiredHolds()
@@ -145,10 +143,6 @@ namespace MovieTheater.Application.Services
                 foreach (var seatId in seatIds)
                     _holdingSeats[(seatId, showTimeId)] = (userId, expireAt);
 
-                await _seatNotificationService.NotifySeatsUpdated(
-                    showTimeId,
-                    seatIds.Select(id => new { SeatId = id, Status = "Held" })
-                );
                 _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", seatIds)}");
 
                 return true;

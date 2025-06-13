@@ -119,8 +119,6 @@ public static class IocContainer
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<ISeatService, SeatService>();
-        services.AddScoped<ISeatNotificationService, SeatNotificationService>();
-
         services.AddHttpContextAccessor();
 
         return services;
