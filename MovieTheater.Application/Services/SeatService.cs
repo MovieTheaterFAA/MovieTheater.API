@@ -51,21 +51,21 @@ namespace MovieTheater.Application.Services
                     .Where(s => s.CinemaRoomId == showTime.CinemaRoomId)
                     .ToListAsync();
 
-                //// Get all ShowTimeSeat for this showtime
-                //List<ShowTimeSeat>? showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
-                //    .Where(sts => sts.ShowTimeId == showTimeId)
-                //    .ToListAsync();
+                // Get all ShowTimeSeat for this showtime
+                var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
+                    .Where(sts => sts.ShowTimeId == showTimeId)
+                    .ToListAsync();
 
                 var result = seats.Select(seat =>
                 {
-                    //var sts = showTimeSeats.FirstOrDefault(x => x.SeatId == seat.Id);
+                    var sts = showTimeSeats.FirstOrDefault(x => x.SeatId == seat.Id);
                     return new ShowTimeSeatDto
                     {
                         SeatId = seat.Id,
                         Row = seat.Row,
                         Number = seat.Number,
                         Type = seat.Type,
-                        Status = SeatStatus.Available
+                        Status = sts?.Status ?? SeatStatus.Available
                     };
                 }).ToList();
 
@@ -93,52 +93,53 @@ namespace MovieTheater.Application.Services
                 var showExist = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
                 if (showExist == null)
                 {
-                    _loggerService.Warn($"Showtime not found for showTimeId: {showTimeId}");
+                    _loggerService.Warn($"Showtime not found: {showTimeId}");
                     throw new KeyNotFoundException("Showtime not found.");
                 }
 
-                var roomSeatIds = await _unitOfWork.Seats.GetQueryable()
+                // Lấy danh sách ghế của phòng chiếu
+                var allSeatsInRoom = await _unitOfWork.Seats.GetQueryable()
                     .Where(s => s.CinemaRoomId == showExist.CinemaRoomId)
-                    .Select(s => s.Id)
                     .ToListAsync();
 
-                var roomSeatSet = new HashSet<Guid>(roomSeatIds);
-
-                foreach (var seatId in seatIds)
+                if (!allSeatsInRoom.Any())
                 {
-                    if (!roomSeatSet.Contains(seatId))
-                    {
-                        _loggerService.Warn($"Seat {seatId} does not exist in cinema room {showExist.CinemaRoomId}.");
-                        throw new ArgumentException($"Seat {seatId} does not exist in the specified cinema room.");
-                    }
+                    _loggerService.Warn($"No seats found for cinema room {showExist.CinemaRoomId}.");
+                    throw new KeyNotFoundException("No seats found for the specified cinema room.");
                 }
 
+                var seatSet = allSeatsInRoom.Select(s => s.Id).ToHashSet();
+
+                // Lấy toàn bộ ShowTimeSeats liên quan trong 1 query
+                var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
+                    .Where(sts => sts.ShowTimeId == showTimeId)
+                    .ToDictionaryAsync(sts => sts.SeatId, sts => sts);
+
+                // Kiểm tra từng seatId được gửi lên
                 foreach (var seatId in seatIds)
                 {
-                    var key = (seatId, showTimeId);
+                    if (!seatSet.Contains(seatId))
+                    {
+                        _loggerService.Warn($"Seat {seatId} is not in cinema room {showExist.CinemaRoomId}.");
+                        throw new ArgumentException($"Seat {seatId} does not exist in the specified cinema room.");
+                    }
 
-                    if (_holdingSeats.TryGetValue(key, out var holdInfo) && holdInfo.expireAt > now && holdInfo.userId != userId)
+                    // Nếu seat đang bị giữ bởi user khác
+                    var key = (seatId, showTimeId);
+                    if (_holdingSeats.TryGetValue(key, out var holdInfo) &&
+                        holdInfo.expireAt > now && holdInfo.userId != userId)
                     {
                         _loggerService.Warn($"Seat {seatId} is already held by another user.");
                         return false;
                     }
 
-                    //var showTimeSeat = await _unitOfWork.ShowTimes.GetQueryable()
-                    //    .Where(st => st.Id == showTimeId)
-                    //    .SelectMany(st => st.ShowTimeSeats)
-                    //    .FirstOrDefaultAsync(sts => sts.SeatId == seatId);
-
-                    //if (showTimeSeat == null)
-                    //{
-                    //    _loggerService.Warn($"Seat {seatId} does not exist for showtime {showTimeId}.");
-                    //    return false;
-                    //}
-
-                    //if (showTimeSeat.Status != SeatStatus.Available)
-                    //{
-                    //    _loggerService.Warn($"Seat {seatId} is not available for holding. Current status: {showTimeSeat.Status}.");
-                    //    return false;
-                    //}
+                    // Kiểm tra trạng thái nếu đã có ShowTimeSeat
+                    if (showTimeSeats.TryGetValue(seatId, out var sts) &&
+                        (sts.Status == SeatStatus.Booked || sts.Status == SeatStatus.Sold))
+                    {
+                        _loggerService.Warn($"Seat {seatId} is already {sts.Status}.");
+                        return false;
+                    }
                 }
 
                 foreach (var seatId in seatIds)
