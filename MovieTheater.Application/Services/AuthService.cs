@@ -84,11 +84,12 @@ namespace MovieTheater.Application.Services
             if (!new PasswordHasher().VerifyPassword(loginDto.Password!, user.Password))
                 throw ErrorHelper.Unauthorized("Password is incorrect.");
 
-            if (user.UserStatus != UserStatus.Active)
-                throw ErrorHelper.Forbidden("Account have not verified yet.");
 
             if (user.UserStatus == UserStatus.Banned)
                 throw new UnauthorizedAccessException("Your account has been banned. Please contact support for more information.");
+
+            if (user.UserStatus != UserStatus.Active)
+                throw ErrorHelper.Forbidden("Account have not verified yet.");
 
             _loggerService.Success($"User {loginDto.Email} authenticated successfully.");
 

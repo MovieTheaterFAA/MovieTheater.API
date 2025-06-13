@@ -207,4 +207,35 @@ public class AdminController : ControllerBase
             return StatusCode(statusCode, errorResponse);
         }
     }
+
+    [HttpPost("user/{id}/unban")]
+    [Authorize(Policy = "AdminPolicy")]
+    [SwaggerOperation(
+    Summary = "Unban a user or employee",
+    Description = "Unban a user or employee by their unique ID. Restores their ability to log in.")]
+    [ProducesResponseType(typeof(ApiResult<object>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> UnbanUser([SwaggerParameter("The unique identifier of the user to be unbanned.")] Guid id)
+    {
+        if (id == Guid.Empty)
+            return BadRequest(ApiResult<object>.Failure("400", "Invalid unban request. User ID is required."));
+
+        try
+        {
+            var adminId = _claimsService.GetCurrentUserId;
+            var result = await _adminService.UnbanUserAsync(id, adminId);
+
+            if (!result)
+                return BadRequest(ApiResult<object>.Failure("400", "Unban failed. No user found with the provided ID or user is not banned."));
+
+            return Ok(ApiResult<object>.Success(result, "200", "User unbanned successfully."));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
 }

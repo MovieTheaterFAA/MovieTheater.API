@@ -527,6 +527,58 @@ public class AdminService : IAdminService
         return true;
     }
 
+    public async Task<bool> UnbanUserAsync(Guid userId, Guid adminId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+        {
+            _loggerService.Warn($"[UnbanUserAsync] User with ID {userId} not found or already deleted.");
+            return false;
+        }
+
+        if (user.UserStatus != UserStatus.Banned)
+        {
+            _loggerService.Warn($"[UnbanUserAsync] User with ID {userId} is not banned.");
+            return false;
+        }
+
+        var oldValue = new
+        {
+            user.UserStatus,
+        };
+
+        user.UserStatus = UserStatus.Active;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = adminId;
+
+        var newValue = new
+        {
+            user.UserStatus,
+        };
+
+        var changedFields = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            UserStatus = UserStatus.Active,
+        });
+
+        await _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditLogService.LogAsync(
+            adminId,
+            AuditActionType.Update,
+            "User",
+            userId,
+            oldValue,
+            newValue,
+            changedFields,
+            "User was unbanned by admin"
+        );
+
+        _loggerService.Success($"[UnbanUserAsync] User with ID {userId} has been unbanned.");
+        return true;
+    }
+
     //========================= PRIVATE HELPER METHODS ============================
 
     /// <summary>
