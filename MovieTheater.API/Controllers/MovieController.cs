@@ -59,7 +59,6 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-
         [HttpGet("{id}")]
         [SwaggerOperation(
             Summary = "Get movie details",

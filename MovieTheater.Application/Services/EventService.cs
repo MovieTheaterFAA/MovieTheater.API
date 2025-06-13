@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.EventDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
@@ -32,7 +33,7 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("Event with this name already exists.");
             }
 
-            
+
 
             // Tạo đối tượng Event từ DTO
             var newEvent = new Event
@@ -69,6 +70,103 @@ namespace MovieTheater.Application.Services
                 Detail = newEvent.Detail,
                 Image = newEvent.Image,
             };
+        }
+
+        public async Task<EventResponseDto?> UpdateEventAsync(Guid eventId, EventUpdateDto dto)
+        {
+            try
+            {
+                _loggerService.Info($"[UpdateEventAsync] Start updating event: {eventId}");
+
+                var eventEntity = await _unitOfWork.Events.GetByIdAsync(eventId);
+                if (eventEntity == null || eventEntity.IsDeleted)
+                {
+                    _loggerService.Warn($"[UpdateEventAsync] Event with ID {eventId} not found.");
+                    throw ErrorHelper.NotFound("Event not found.");
+                }
+
+                bool isUpdated = false;
+
+                if (!string.IsNullOrWhiteSpace(dto.Name) && eventEntity.Name != dto.Name)
+                {
+                    var existing = await _unitOfWork.Events.FirstOrDefaultAsync(
+                        e => e.Name == dto.Name && e.Id != eventId && !e.IsDeleted);
+                    if (existing != null)
+                    {
+                        _loggerService.Warn($"[UpdateEventAsync] Event with name '{dto.Name}' already exists.");
+                        throw ErrorHelper.Conflict("Event with the same name already exists.");
+                    }
+                    eventEntity.Name = dto.Name;
+                    isUpdated = true;
+                }
+
+                if (dto.StartTime.HasValue && eventEntity.StartTime != dto.StartTime.Value)
+                {
+                    if (dto.StartTime.Value <= DateTime.UtcNow)
+                    {
+                        _loggerService.Warn($"[UpdateEventAsync] Start time cannot be in the past for EventId: {eventId}");
+                        throw ErrorHelper.BadRequest("Start time cannot be in the past.");
+                    }
+                    eventEntity.StartTime = dto.StartTime.Value;
+                    isUpdated = true;
+                }
+
+                if (dto.EndTime.HasValue && eventEntity.EndTime != dto.EndTime.Value)
+                {
+                    if (dto.StartTime.HasValue && dto.EndTime.Value <= dto.StartTime.Value)
+                        throw ErrorHelper.BadRequest("End time must be greater than start time.");
+                    if (!dto.StartTime.HasValue && dto.EndTime.Value <= eventEntity.StartTime)
+                        throw ErrorHelper.BadRequest("End time must be greater than start time.");
+                    eventEntity.EndTime = dto.EndTime.Value;
+                    isUpdated = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.Detail) && eventEntity.Detail != dto.Detail)
+                {
+                    eventEntity.Detail = dto.Detail;
+                    isUpdated = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.Image) && eventEntity.Image != dto.Image)
+                {
+                    eventEntity.Image = dto.Image;
+                    isUpdated = true;
+                }
+
+                if (!isUpdated)
+                {
+                    _loggerService.Warn($"[UpdateEventAsync] No changes detected for EventId: {eventId}");
+                    return new EventResponseDto
+                    {
+                        Id = eventEntity.Id,
+                        Name = eventEntity.Name,
+                        StartTime = eventEntity.StartTime,
+                        EndTime = eventEntity.EndTime,
+                        Detail = eventEntity.Detail,
+                        Image = eventEntity.Image
+                    };
+                }
+
+                await _unitOfWork.Events.Update(eventEntity);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Success($"[UpdateEventAsync] Event '{eventEntity.Name}' updated successfully.");
+
+                return new EventResponseDto
+                {
+                    Id = eventEntity.Id,
+                    Name = eventEntity.Name,
+                    StartTime = eventEntity.StartTime,
+                    EndTime = eventEntity.EndTime,
+                    Detail = eventEntity.Detail,
+                    Image = eventEntity.Image
+                };
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[UpdateEventAsync] Error updating event{eventId}: {ex.Message}");
+                throw;
+            }
         }
     }
 }

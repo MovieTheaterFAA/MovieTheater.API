@@ -35,9 +35,8 @@ public class SystemController : ControllerBase
             await SeedMovieAsync();
             //Seed cinema rooms and seats
             await SeedCinemaRoomAsync();
-            //Seed showtimes
+            //Seed showtime data
             await SeedShowTimeAsync();
-
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -378,31 +377,6 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-    //private async Task SeedShowTimeAsync()
-    //{
-    //    var showtimes = await _context.Showtimes.ToListAsync();
-    //    var allSeats = await _context.Seats.ToListAsync();
-
-    //    var showTimeSeats = new List<ShowTimeSeat>();
-    //    foreach (var showtime in showtimes)
-    //    {
-    //        var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
-
-    //        foreach (var seat in seatsInRoom)
-    //        {
-    //            showTimeSeats.Add(new ShowTimeSeat
-    //            {
-    //                ShowTimeId = showtime.Id,
-    //                SeatId = seat.Id,
-    //                Status = SeatStatus.Available
-    //            });
-    //        }
-    //    }
-
-    //    await _context.AddRangeAsync(showTimeSeats);
-    //    await _context.SaveChangesAsync();
-    //    _logger.Success("ShowTimeSeats seeded successfully.");
-    //}
 
     private async Task SeedCinemaRoomAsync()
     {
@@ -464,41 +438,36 @@ public class SystemController : ControllerBase
         _logger.Success("Cinema rooms and seats seeded successfully.");
 
     }
+
     private async Task SeedShowTimeAsync()
     {
-        var movies = await _context.Movies.ToListAsync();
         var rooms = await _context.CinemaRooms.ToListAsync();
+        var movies = await _context.Movies.Take(3).ToListAsync();
+        var showtimes = new List<ShowTime>();
+        var startDate = DateTime.UtcNow.Date;
 
-        if (!movies.Any() || !rooms.Any())
+        foreach (var room in rooms)
         {
-            _logger.Warn("No movies or cinema rooms found. Seed movies and rooms first.");
-            return;
-        }
-
-        var showTimes = new List<ShowTime>();
-
-        // Example: Each movie gets a showtime in each room, on different days
-        int dayOffset = 0;
-        foreach (var movie in movies)
-        {
-            foreach (var room in rooms)
+            foreach (var movie in movies)
             {
-                showTimes.Add(new ShowTime
+                if (movie.RunningTime.HasValue)
                 {
-                    MovieId = movie.Id,
-                    CinemaRoomId = room.Id,
-                    ShowDate = DateTime.UtcNow.Date.AddDays(dayOffset),
-                    Duration = TimeSpan.FromMinutes(movie.RunningTime ?? 120)
-                });
-                dayOffset++;
+                    showtimes.Add(new ShowTime
+                    {
+                        CinemaRoomId = room.Id,
+                        MovieId = movie.Id,
+                        ShowDate = startDate,
+                        Duration = TimeSpan.FromMinutes(movie.RunningTime.Value)
+                    });
+                    startDate = startDate.AddDays(1);
+                }
             }
         }
-
-        await _context.Showtimes.AddRangeAsync(showTimes);
+        await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
-        _logger.Success("ShowTimes seeded successfully.");
-    }
 
+        _logger.Success("Showtimes seeded successfully.");
+    }
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
@@ -516,6 +485,9 @@ public class SystemController : ControllerBase
                 () => context.FoodAndDrinks.ExecuteDeleteAsync(),
                 () => context.Events.ExecuteDeleteAsync(),
                 () => context.Promotions.ExecuteDeleteAsync(),
+                () => context.ShowTimeSeats.ExecuteDeleteAsync(),
+                () => context.Showtimes.ExecuteDeleteAsync(),
+                () => context.AuditLogs.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();

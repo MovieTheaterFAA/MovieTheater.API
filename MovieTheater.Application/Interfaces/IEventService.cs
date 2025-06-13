@@ -5,6 +5,6 @@ namespace MovieTheater.Application.Interfaces
     public interface IEventService
     {
         Task<EventResponseDto?> AddEventAsync(EventRequestDto dto);
-
+        Task<EventResponseDto?> UpdateEventAsync(Guid eventId, EventUpdateDto dto);
     }
 }

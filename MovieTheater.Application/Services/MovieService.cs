@@ -1,10 +1,11 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
+using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -13,12 +14,14 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+        private readonly IAuditLogService _auditLogService;
 
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService)
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService,IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
@@ -134,7 +137,9 @@ namespace MovieTheater.Application.Services
                     Genres = movie.Genres,
                     Description = movie.Description,
                     PosterImage = movie.PosterImage,
-                    BackgroundImage = movie.BackgroundImage
+                    BackgroundImage = movie.BackgroundImage,
+                    Status = movie.Status,
+                    Rating = movie.Rating,
                 };
 
                 _loggerService.Success($"[GetMovieDetailAsync] Movie details fetched successfully for MovieId: {movieId}");
@@ -194,60 +199,115 @@ namespace MovieTheater.Application.Services
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
             _loggerService.Info($"[AddMovieAsync] Start adding movie {movieRequestDto.Name}");
-
-            // Kiểm tra xem ngày `ToDate` có nhỏ hơn `FromDate` không
-            if (movieRequestDto.FromDate > movieRequestDto.ToDate)
+            try
             {
-                _loggerService.Warn($"[AddMovieAsync] ToDate cannot be earlier than FromDate for movie {movieRequestDto.Name}");
-                throw new InvalidOperationException("ToDate cannot be earlier than FromDate.");
+                // Kiểm tra xem ngày `ToDate` có nhỏ hơn `FromDate` không
+                if (movieRequestDto.FromDate > movieRequestDto.ToDate)
+                {
+                    _loggerService.Warn($"[AddMovieAsync] ToDate cannot be earlier than FromDate for movie {movieRequestDto.Name}");
+                    throw new InvalidOperationException("ToDate cannot be earlier than FromDate.");
+                }
+
+                // Tạo mới đối tượng Movie từ MovieRequestDTO
+                var movie = new Movie
+                {
+                    Name = movieRequestDto.Name,
+                    FromDate = movieRequestDto.FromDate,
+                    ToDate = movieRequestDto.ToDate,
+                    Actors = movieRequestDto.Actors,
+                    ActorsUrl = movieRequestDto.ActorsUrl,
+                    Director = movieRequestDto.Director,
+                    RunningTime = movieRequestDto.RunningTime,
+                    TrailerUrl = movieRequestDto.TrailerUrl,
+                    Genres = movieRequestDto.Genres,
+                    Description = movieRequestDto.Description,
+                    PosterImage = movieRequestDto.PosterImage,
+                    BackgroundImage = movieRequestDto.BackgroundImage,
+                    Rating = movieRequestDto.Rating,
+                    Status = Domain.Enums.MovieStatus.ComingSoon,
+                };
+                var adminId = _claimsService.GetCurrentUserId;
+
+                var newData = new
+                {
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Genres,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.BackgroundImage,
+                    movie.Rating,
+                    movie.Status
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Genres,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.BackgroundImage,
+                    movie.Rating,
+                    movie.Status
+                });
+
+                await _auditLogService.LogAsync
+                    (
+                    adminId,
+                    AuditActionType.Create,
+                    "Movie",
+                    movie.Id,
+                    null,
+                    newData,
+                    changedFields,
+                    "Admin created new movie"
+                    );
+
+                // Thêm bộ phim vào cơ sở dữ liệu
+                await _unitOfWork.Movies.AddAsync(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
+                // Trả về MovieResponseDto
+                var responseDto = new MovieResponseDto
+                {
+                    Id = movie.Id,
+                    Name = movie.Name,
+                    FromDate = movie.FromDate,
+                    ToDate = movie.ToDate,
+                    Actors = movie.Actors,
+                    Director = movie.Director,
+                    RunningTime = movie.RunningTime,
+                    TrailerUrl = movie.TrailerUrl,
+                    Genres = movie.Genres,
+                    Description = movie.Description,
+                    PosterImage = movie.PosterImage,
+                    BackgroundImage = movie.BackgroundImage,
+                    Rating = movie.Rating,
+                    Status = movie.Status,
+                };
+
+                return responseDto;
             }
-
-            // Tạo mới đối tượng Movie từ MovieRequestDTO
-            var movie = new Movie
+            catch(Exception ex)
             {
-                Name = movieRequestDto.Name,
-                FromDate = movieRequestDto.FromDate,
-                ToDate = movieRequestDto.ToDate,
-                Actors = movieRequestDto.Actors,
-                ActorsUrl = movieRequestDto.ActorsUrl,
-                Director = movieRequestDto.Director,
-                RunningTime = movieRequestDto.RunningTime,
-                TrailerUrl = movieRequestDto.TrailerUrl,
-                Genres = movieRequestDto.Genres,
-                Description = movieRequestDto.Description,
-                PosterImage = movieRequestDto.PosterImage,
-                BackgroundImage = movieRequestDto.BackgroundImage,
-                Rating = movieRequestDto.Rating,
-                Status = Domain.Enums.MovieStatus.ComingSoon,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = _claimsService.GetCurrentUserId // Gán giá trị CreatedBy từ service của Claims
-            };
-
-            // Thêm bộ phim vào cơ sở dữ liệu
-            await _unitOfWork.Movies.AddAsync(movie);
-            await _unitOfWork.SaveChangesAsync();
-
-            _loggerService.Success($"[AddMovieAsync] Movie {movie.Name} added successfully.");
-            // Trả về MovieResponseDto
-            var responseDto = new MovieResponseDto
-            {
-                Id = movie.Id,
-                Name = movie.Name,
-                FromDate = movie.FromDate,
-                ToDate = movie.ToDate,
-                Actors = movie.Actors,
-                Director = movie.Director,
-                RunningTime = movie.RunningTime,
-                TrailerUrl = movie.TrailerUrl,
-                Genres = movie.Genres,
-                Description = movie.Description,
-                PosterImage = movie.PosterImage,
-                BackgroundImage = movie.BackgroundImage,
-                Rating = movie.Rating,
-                Status = movie.Status,
-            };
-
-            return responseDto;
+                _loggerService.Error($"[AddMovie] Error add movie. Exception: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
@@ -262,6 +322,23 @@ namespace MovieTheater.Application.Services
                     _loggerService.Warn($"[UpdateMovieInfo] Movie with ID {movieId} not found.");
                     throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
                 }
+
+                var oldData = new
+                {
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Genres,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.Status,
+                    movie.Rating,
+                };
 
                 bool isUpdated = false;
 
@@ -376,6 +453,54 @@ namespace MovieTheater.Application.Services
                 await _unitOfWork.Movies.Update(movie);
                 await _unitOfWork.SaveChangesAsync();
 
+                var newData = new
+                {
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Genres,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.Status,
+                    movie.Rating,
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Genres,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.Status,
+                    movie.Rating,
+                });
+
+                var adminId = _claimsService.GetCurrentUserId;
+
+                await _auditLogService.LogAsync
+                    (
+                    adminId,
+                    AuditActionType.Update,
+                    "Movie",
+                    movieId,
+                    oldData,
+                    newData,
+                    changedFields,
+                    "Admin updated movie information"
+                    );
+
                 _loggerService.Success($"[UpdateMovieInfo] Movie info updated successfully for MovieId: {movieId}");
                 return new MovieUpdateDto
                 {
@@ -412,8 +537,35 @@ namespace MovieTheater.Application.Services
                     return false;
                 }
 
+                var oldValue = new
+                {
+                    movie.IsDeleted
+                };
+
                 await _unitOfWork.Movies.SoftRemove(movie);
                 await _unitOfWork.SaveChangesAsync();
+
+                var newValue = new
+                {
+                    movie.IsDeleted
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+                    movie.IsDeleted
+                });
+                var adminId = _claimsService.GetCurrentUserId;
+                await _auditLogService.LogAsync
+                        (
+                        adminId,
+                        AuditActionType.Delete,
+                        "Movie",
+                        movieId,
+                        oldValue,
+                        newValue,
+                        changedFields,
+                        "Deleted movie"
+                        );
 
                 _loggerService.Info($"Successfully deleted movie with {movieId}.");
 

@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using MovieTheater.Domain.DTOs.PromotionDTOs;
+﻿using MovieTheater.Domain.DTOs.PromotionDTOs;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -7,6 +6,7 @@ namespace MovieTheater.Application.Interfaces
     {
         Task<List<PromotionResponseDto>> GetAllPromotionListAsync();
         Task<PromotionResponseDto?> AddPromotionAsync(PromotionRequestDto dto);
+        Task<PromotionResponseDto?> UpdatePromotionAsync(Guid promotionId, PromotionUpdateDto dto);
         Task<bool> DeletePromotionAsync(Guid promotionId);
 
     }
