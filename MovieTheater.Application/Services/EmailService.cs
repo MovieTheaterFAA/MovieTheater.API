@@ -201,7 +201,7 @@ namespace MovieTheater.Application.Services
       </div>
 
       <div style=""text-align:center;margin-bottom:32px;"">
-        <h1 style=""color:#f8c439;font-size:32px;font-weight:bold;margin:0 0 8px 0;letter-spacing:-0.5px;"">Welcome {request.UserName}!</h1>
+        <h1 style=""color:#f8c439;font-size:32px;font-weight:bold;margin:0 0 8px 0;letter-spacing:-0.5px;"">Welcome {request.UserName}</h1>
         <div style=""width:60px;height:3px;background:linear-gradient(90deg, #f8c439, #ffd700);margin:16px auto;border-radius:2px;""></div>
       </div>
 
@@ -211,8 +211,7 @@ namespace MovieTheater.Application.Services
         
         <div style=""background:rgba(0,0,0,0.2);border-radius:12px;padding:24px;margin:24px 0;border-left:3px solid #f8c439;"">
           <div style=""margin-bottom:16px;"">
-            <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email:</p>
-            <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.To}</p>
+            <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email: {request.To}</p>
           </div>
           <div>
             <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Password:</p>
@@ -260,38 +259,31 @@ namespace MovieTheater.Application.Services
         <div style=""background:rgba(0,0,0,0.2);border-radius:12px;padding:24px;margin:24px 0;border-left:3px solid #f8c439;"">
           <div style=""display:grid;grid-template-columns:1fr;gap:16px;"">
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Full Name:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.FullName}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Full Name: {request.FullName}</p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Date of Birth:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.DateOfBirth:yyyy-MM-dd}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Date of Birth: {request.DateOfBirth:yyyy-MM-dd} </p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Gender:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.Sex}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Gender: {request.Sex}</p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">CCCD:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.CCCD}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">CCCD: {request.CCCD}</p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Phone Number:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.PhoneNumber}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Phone Number: {request.PhoneNumber}</p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Address:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.Address}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Address: {request.Address}</p>
             </div>
             
             <div>
-              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email:</p>
-              <p style=""color:#ffffff;font-size:16px;margin:0;font-weight:500;"">{request.UserName}</p>
+              <p style=""color:#b3b3b3;font-size:14px;margin:0 0 4px 0;"">Email: {request.UserName}</p>
             </div>
             
             <div>
@@ -300,14 +292,7 @@ namespace MovieTheater.Application.Services
             </div>
           </div>
         </div>
-        
-        <p style=""color:#e5e5e5;font-size:16px;margin:24px 0;text-align:center;background:rgba(248,196,57,0.1);padding:12px;border-radius:8px;border-left:3px solid #f8c439;"">Please change your password after your first login to keep your account secure.</p>
       </div>
-
-      <div style=""text-align:center;margin:40px 0;"">
-        <a href=""https://movietheater.ae-tao-fullstack-api.com/login"" style=""display:inline-block;background:linear-gradient(135deg, #f8c439 0%, #ffd700 100%);color:#000000;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:bold;font-size:16px;box-shadow:0 8px 24px rgba(248,196,57,0.3);transition:all 0.3s ease;"">Login Now</a>
-      </div>
-
       <div style=""border-top:1px solid #333333;padding-top:24px;margin-top:40px;"">
         <p style=""color:#888888;font-size:14px;margin:0;text-align:center;"">Best regards,<br/><span style=""color:#f8c439;font-weight:600;"">MovieTheater Team</span></p>
       </div>
