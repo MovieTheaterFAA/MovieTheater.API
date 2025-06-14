@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MovieTheater.API.Architecture;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Services;
 using SwaggerThemes;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,6 +45,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
 
 var app = builder.Build();
 

@@ -1,8 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.EventDTOs;
+using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
@@ -106,6 +110,137 @@ namespace MovieTheater.Application.Services
                 Detail = newEvent.Detail,
                 Image = newEvent.Image,
             };
+        }
+
+        public async Task<bool> DeleteEventByIdAsync(Guid eventId)
+        {
+            _loggerService.Info($"Attempting to delete Event with ID: {eventId}");
+
+            try
+            {
+                var eventEntity = await _unitOfWork.Events.GetByIdAsync(
+                    eventId,
+                    e => e.Promotions
+                );
+
+                if (eventEntity == null)
+                {
+                    _loggerService.Warn($"Event with ID {eventId} not found.");
+                    return false;
+                }
+
+                var oldValue = new
+                {
+                    eventEntity.IsDeleted
+                };
+
+                if (eventEntity.Promotions != null && eventEntity.Promotions.Any())
+                {
+                   await _unitOfWork.Promotions.SoftRemoveRange(eventEntity.Promotions.ToList());
+                }
+
+                await _unitOfWork.Events.SoftRemove(eventEntity);
+
+                await _unitOfWork.SaveChangesAsync();
+
+                var newValue = new
+                {
+                    eventEntity.IsDeleted
+                };
+
+                var changedFields = JsonSerializer.Serialize(new
+                {
+                    eventEntity.IsDeleted
+                });
+
+                var adminId = _claimsService.GetCurrentUserId;
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    AuditActionType.Delete,
+                    "Event",
+                    eventId,
+                    oldValue,
+                    newValue,
+                    changedFields,
+                    "Admin deleted event."
+                );
+
+                _loggerService.Info($"Successfully deleted Event with ID: {eventId}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Error deleting Event with ID {eventId}: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<Pagination<EventResponseDto>> GetAllEventsAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+        {
+            try
+            {
+                _loggerService.Info($"Fetching events - Page {page}, PageSize {pageSize}, Search: {search}");
+
+                var events = await _unitOfWork.Events.GetAllAsync(null, e => e.Promotions);
+
+                var query = events.AsQueryable();
+
+                query = query.Where(e => !e.IsDeleted);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var lowerSearch = search.ToLower();
+                    query = query.Where(e =>
+                        (!string.IsNullOrEmpty(e.Name) && e.Name.ToLower().Contains(lowerSearch))
+                    );
+                }
+
+                var totalEvents = query.Count();
+
+                query = sortBy?.ToLower() switch
+                {
+                    "name" => isDescending ? query.OrderByDescending(e => e.Name) : query.OrderBy(e => e.Name),
+                    "starttime" => isDescending ? query.OrderByDescending(e => e.StartTime) : query.OrderBy(e => e.StartTime),
+                    "endtime" => isDescending ? query.OrderByDescending(e => e.EndTime) : query.OrderBy(e => e.EndTime),
+                    _ => query.OrderBy(e => e.Id)
+                };
+
+                var pagedEvents = query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var result = pagedEvents.Select(e => new EventResponseDto
+                {
+                    Id = e.Id,
+                    Name = e.Name,
+                    StartTime = e.StartTime,
+                    EndTime = e.EndTime,
+                    Detail = e.Detail,
+                    Image = e.Image,
+                    Promotions = e.Promotions?
+                        .Where(p => !p.IsDeleted)
+                        .Select(p => new PromotionResponseDto
+                        {
+                            Id = p.Id,
+                            Title = p.Title,
+                            DiscountValue = p.DiscountValue,
+                            Detail = p.Detail,
+                            Image = p.Image,
+                            EventId = p.EventId
+                        }).ToList() ?? new List<PromotionResponseDto>()
+                }).ToList();
+
+                _loggerService.Success($"Retrieved {result.Count} events on page {page} successfully.");
+
+                return new Pagination<EventResponseDto>(result, totalEvents, page, pageSize);
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Failed to retrieve events. Exception: {ex.Message}");
+                throw new Exception("An error occurred while retrieving events. Please try again later.");
+            }
         }
 
         public async Task<EventResponseDto?> UpdateEventAsync(Guid eventId, EventUpdateDto dto)
@@ -243,6 +378,85 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Error($"[UpdateEventAsync] Error updating event{eventId}: {ex.Message}");
                 throw;
+            }
+        }
+
+        public async Task CleanUpExpiredEventsAsync()
+        {
+            _loggerService.Info("[AutoCleanup] Checking for expired events...");
+
+            try
+            {
+                var now = DateTime.UtcNow;
+                var expiredEvents = await _unitOfWork.Events.GetAllAsync(
+                    e => e.EndTime < now && !e.IsDeleted,
+                    e => e.Promotions
+                );
+
+                foreach (var evt in expiredEvents)
+                {
+                    var oldValue = new { evt.IsDeleted };
+
+                    if (evt.Promotions.Any())
+                         await _unitOfWork.Promotions.SoftRemoveRange(evt.Promotions.ToList());
+
+                    await _unitOfWork.Events.SoftRemove(evt);
+
+                    var newValue = new { evt.IsDeleted };
+                    var changedFields = JsonSerializer.Serialize(new { evt.IsDeleted });
+
+                    await _auditLogService.LogAsync(
+                        Guid.Empty,
+                        AuditActionType.Delete,
+                        "Event",
+                        evt.Id,
+                        oldValue,
+                        newValue,
+                        changedFields,
+                        "System auto-deleted expired event."
+                    );
+
+                    _loggerService.Info($"[AutoCleanup] Deleted expired event: {evt.Name}");
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[AutoCleanup] Error while cleaning up expired events: {ex.Message}");
+            }
+        }
+    }
+    public class EventAutoCleanupBackgroundService : BackgroundService
+    {
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<EventAutoCleanupBackgroundService> _logger;
+
+        public EventAutoCleanupBackgroundService(IServiceProvider serviceProvider, ILogger<EventAutoCleanupBackgroundService> logger)
+        {
+            _serviceProvider = serviceProvider;
+            _logger = logger;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("[EventAutoCleanup] Background service is running.");
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
+
+                    await eventService.CleanUpExpiredEventsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[EventAutoCleanup] Error while executing cleanup.");
+                }
+
+                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
             }
         }
     }
