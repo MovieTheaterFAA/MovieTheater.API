@@ -86,6 +86,29 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpGet("user/{id}")]
+    [SwaggerOperation(Summary = "Get user detail", Description = "Get detailed information of a user by ID.")]
+    [ProducesResponseType(typeof(ApiResult<GetUserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 404)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> GetUserDetailAsync([FromRoute] Guid id)
+    {
+        try
+        {
+            var user = await _adminService.GetUserDetailAsync(id);
+            if (user == null)
+                return NotFound(ApiResult<object>.Failure("404", "User not found"));
+
+            return Ok(ApiResult<GetUserDto>.Success(user, "200", "Get user detail successfully"));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
     [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
     [SwaggerOperation(

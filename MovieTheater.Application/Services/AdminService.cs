@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Data;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -7,9 +10,6 @@ using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Data;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace MovieTheater.Application.Services;
 
@@ -114,7 +114,6 @@ public class AdminService : IAdminService
                 "Admin created new employee"
                 );
 
-
         _loggerService.Success($"[AddEmployeeAsync] Employee {user.Email} created successfully.");
 
         // Gửi email thông tin đăng nhập cho nhân viên
@@ -192,6 +191,8 @@ public class AdminService : IAdminService
                 ScoreBalance = u.ScoreBalance,
                 CreatedAt = u.CreatedAt,
                 AvatarUrl = u.AvatarUrl ?? string.Empty,
+                IsDeleted = u.IsDeleted,
+                Status = u.UserStatus
             }).ToList();
 
             _loggerService.Success($"Retrieved {userDtos.Count} users on page {page}");
@@ -441,7 +442,6 @@ public class AdminService : IAdminService
             user.UserStatus,
         };
 
-
         user.UserStatus = UserStatus.Deleted;
         user.IsDeleted = true;
         user.DeletedAt = DateTime.UtcNow;
@@ -579,6 +579,30 @@ public class AdminService : IAdminService
         return true;
     }
 
+    public async Task<GetUserDto?> GetUserDetailAsync(Guid userId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+            return null;
+
+        return new GetUserDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Sex = user.Sex,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            CCCD = user.CCCD,
+            Address = user.Address,
+            Role = user.Role,
+            ScoreBalance = user.ScoreBalance,
+            CreatedAt = user.CreatedAt,
+            AvatarUrl = user.AvatarUrl ?? string.Empty,
+            IsDeleted = user.IsDeleted,
+            Status = user.UserStatus
+        };
+    }
+
     //========================= PRIVATE HELPER METHODS ============================
 
     /// <summary>
@@ -644,6 +668,4 @@ public class AdminService : IAdminService
         // Note: Password, UserStatus, Role, IsEmailVerified, CreatedBy are set above
         return user;
     }
-
-
 }

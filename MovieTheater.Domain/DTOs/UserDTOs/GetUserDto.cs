@@ -1,9 +1,4 @@
 ﻿using MovieTheater.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MovieTheater.Domain.DTOs.UserDTOs
 {
@@ -31,5 +26,6 @@ namespace MovieTheater.Domain.DTOs.UserDTOs
         public string AvatarUrl { get; set; }
 
         public bool IsDeleted { get; set; }
+        public UserStatus Status { get; set; }
     }
 }
