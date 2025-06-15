@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Domain.Enums;
+using MovieTheater.Application.Utils;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers
@@ -15,43 +15,77 @@ namespace MovieTheater.API.Controllers
         private readonly IClaimsService _claimsService;
 
         public ImpersonationController(
-       IImpersonationService impersonationService,
-       IUnitOfWork unitOfWork,
-       IClaimsService claimsService)
+            IImpersonationService impersonationService,
+            IUnitOfWork unitOfWork,
+            IClaimsService claimsService)
         {
             _impersonationService = impersonationService;
             _unitOfWork = unitOfWork;
             _claimsService = claimsService;
         }
+
         [HttpPost("start")]
+        [Authorize(Policy = "AdminPolicy")]
         public async Task<IActionResult> Start([FromQuery] Guid targetUserId, [FromQuery] string reason)
         {
-            var currentUserId = _claimsService.GetCurrentUserId;
-            var currentUser = await _unitOfWork.Users.GetByIdAsync(currentUserId);
-
-            if (currentUser == null || currentUser.Role != RoleType.Admin)
-                return Forbid("Only admins can impersonate other users.");
-
-            var result = await _impersonationService.StartImpersonationAsync(targetUserId, reason);
-            return result ? Ok("Impersonation started.") : BadRequest("Failed to impersonate.");
+            try
+            {
+                var currentUserId = _claimsService.GetCurrentUserId;
+                var currentUser = await _unitOfWork.Users.GetByIdAsync(currentUserId);
+                var result = await _impersonationService.StartImpersonationAsync(targetUserId, reason);
+                if (result)
+                    return Ok(ApiResult<object>.Success(null, "200", "Impersonation started."));
+                else
+                    return BadRequest(ApiResult<object>.Failure("400", "Failed to impersonate."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
         }
 
         [HttpPost("stop")]
+        [Authorize(Policy = "AdminPolicy")]
         public async Task<IActionResult> Stop()
         {
-            var result = await _impersonationService.StopImpersonationAsync();
-            return result ? Ok("Impersonation stopped.") : BadRequest("Not impersonating.");
+            try
+            {
+                var result = await _impersonationService.StopImpersonationAsync();
+                if (result)
+                    return Ok(ApiResult<object>.Success(null, "200", "Impersonation stopped."));
+                else
+                    return BadRequest(ApiResult<object>.Failure("400", "Not impersonating."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
         }
 
         [HttpGet("status")]
+        [Authorize(Policy = "AdminPolicy")]
         public IActionResult Status()
         {
-            return Ok(new
+            try
             {
-                isImpersonating = _impersonationService.IsImpersonating(),
-                effectiveUserId = _impersonationService.GetEffectiveUserId(),
-                impersonatedBy = _impersonationService.GetImpersonatedBy()
-            });
+                var status = new
+                {
+                    isImpersonating = _impersonationService.IsImpersonating(),
+                    effectiveUserId = _impersonationService.GetEffectiveUserId(),
+                    impersonatedBy = _impersonationService.GetImpersonatedBy()
+                };
+                return Ok(ApiResult<object>.Success(status, "200", "Impersonation status retrieved."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
         }
     }
 }
