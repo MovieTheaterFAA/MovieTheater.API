@@ -79,6 +79,21 @@ public class SystemController : ControllerBase
             CCCD = "11000000000",
             AvatarUrl = "https://avatar.iran.liara.run/public"
         },
+            new()
+        {
+            FullName = "System Owner User",
+            Email = "system@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-30),
+            PhoneNumber = "0944000000",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.SystemOwner,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000000",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
         // Employees
         new()
         {
