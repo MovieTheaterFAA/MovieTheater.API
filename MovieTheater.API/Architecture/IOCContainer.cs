@@ -218,6 +218,9 @@ public static class IocContainer
 
             options.AddPolicy("AdminPolicy", policy =>
                 policy.RequireRole("Admin"));
+
+            options.AddPolicy("SystemOwnerPolicy", policy =>
+                policy.RequireRole("SystemOwner"));
         });
 
         return services;

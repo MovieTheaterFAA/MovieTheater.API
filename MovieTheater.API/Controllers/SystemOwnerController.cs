@@ -22,6 +22,7 @@ public class SystemOwnerController : ControllerBase
     }
 
     [HttpGet("audit-logs")]
+    [Authorize(Policy = "SystemOwnerPolicy")]
     [SwaggerOperation(Summary = "View audit logs", Description = "Get paginated list of audit logs with optional search and filters.")]
     [ProducesResponseType(typeof(ApiResult<Pagination<AuditLogDto>>), 200)]
     [ProducesResponseType(typeof(ApiResult<object>), 400)]
