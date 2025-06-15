@@ -5,6 +5,7 @@
         public Guid Id { get; set; }
 
         public string Title { get; set; }
+
         public decimal DiscountValue { get; set; }
 
         public string Detail { get; set; }
