@@ -78,7 +78,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPut("{eventId}")]
+        [HttpPut("{id}")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
             Summary = "Update an event",
@@ -86,11 +86,11 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(EventResponseDto), 200)]
         [ProducesResponseType(typeof(object), 400)]
         [ProducesResponseType(typeof(object), 500)]
-        public async Task<IActionResult> UpdateEventAsync([FromRoute] Guid eventId, [FromBody] EventUpdateDto dto)
+        public async Task<IActionResult> UpdateEventAsync([FromRoute] Guid id, [FromBody] EventUpdateDto dto)
         {
             try
             {
-                var result = await _eventService.UpdateEventAsync(eventId, dto);
+                var result = await _eventService.UpdateEventAsync(id, dto);
                 return Ok(ApiResult<EventResponseDto>.Success(result!, "200", "updated event successfully."));
             }
             catch (Exception ex)
@@ -101,23 +101,23 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpDelete("{eventId}")]
+        [HttpDelete("{id}")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
-            Summary = "Delete event", 
+            Summary = "Delete event",
             Description = "Delete an event and its associated promotions by ID.")]
         [ProducesResponseType(typeof(ApiResult<bool>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> DeleteEventAsync([FromRoute, SwaggerParameter(Description = "ID of the event to delete")] Guid eventId)
+        public async Task<IActionResult> DeleteEventAsync([FromRoute, SwaggerParameter(Description = "ID of the event to delete")] Guid id)
         {
             try
             {
-                var result = await _eventService.DeleteEventByIdAsync(eventId);
+                var result = await _eventService.DeleteEventByIdAsync(id);
 
                 if (!result)
                 {
-                    return NotFound(ApiResult<object>.Failure("404", $"Event with ID {eventId} not found."));
+                    return NotFound(ApiResult<object>.Failure("404", $"Event with ID {id} not found."));
                 }
 
                 return Ok(ApiResult<bool>.Success(true, "200", "Event deleted successfully"));

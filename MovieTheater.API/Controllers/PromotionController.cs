@@ -67,7 +67,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPut("{Id}")]
+        [HttpPut("{id}")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
             Summary = "Update a promotion",
@@ -75,12 +75,12 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> UpdatePromotionAsync([FromRoute] Guid Id, [FromBody] PromotionUpdateDto dto)
+        public async Task<IActionResult> UpdatePromotionAsync([FromRoute] Guid id, [FromBody] PromotionUpdateDto dto)
         {
             try
             {
 
-                var result = await _promotionService.UpdatePromotionAsync(Id, dto);
+                var result = await _promotionService.UpdatePromotionAsync(id, dto);
                 return Ok(ApiResult<PromotionResponseDto>.Success(result!, "200", "Updated promotion successfully."));
             }
             catch (Exception ex)

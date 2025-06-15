@@ -71,8 +71,6 @@ namespace MovieTheater.Application.Services
                 newEvent.Image,
             });
 
-
-
             // Thêm sự kiện vào cơ sở dữ liệu
             await _unitOfWork.Events.AddAsync(newEvent);
 
@@ -118,10 +116,7 @@ namespace MovieTheater.Application.Services
 
             try
             {
-                var eventEntity = await _unitOfWork.Events.GetByIdAsync(
-                    eventId,
-                    e => e.Promotions
-                );
+                var eventEntity = await _unitOfWork.Events.GetByIdAsync(eventId, e => e.Promotions);
 
                 if (eventEntity == null)
                 {
@@ -136,7 +131,7 @@ namespace MovieTheater.Application.Services
 
                 if (eventEntity.Promotions != null && eventEntity.Promotions.Any())
                 {
-                   await _unitOfWork.Promotions.SoftRemoveRange(eventEntity.Promotions.ToList());
+                    await _unitOfWork.Promotions.SoftRemoveRange(eventEntity.Promotions.ToList());
                 }
 
                 await _unitOfWork.Events.SoftRemove(eventEntity);
@@ -398,7 +393,7 @@ namespace MovieTheater.Application.Services
                     var oldValue = new { evt.IsDeleted };
 
                     if (evt.Promotions.Any())
-                         await _unitOfWork.Promotions.SoftRemoveRange(evt.Promotions.ToList());
+                        await _unitOfWork.Promotions.SoftRemoveRange(evt.Promotions.ToList());
 
                     await _unitOfWork.Events.SoftRemove(evt);
 
@@ -427,6 +422,7 @@ namespace MovieTheater.Application.Services
             }
         }
     }
+
     public class EventAutoCleanupBackgroundService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
