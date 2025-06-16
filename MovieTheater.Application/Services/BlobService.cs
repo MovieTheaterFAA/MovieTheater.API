@@ -120,8 +120,8 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public Task<string> GetPreviewUrlAsync(string fileName)
         {
-            var minioHost = Environment.GetEnvironmentVariable("MINIO_HOST")
-                            ?? "https://minio.fpt-devteam.fun/";
+            // Always use the HTTPS MinIO host for FE compatibility
+            var minioHost = "https://minio.fpt-devteam.fun";
 
             _loggerService.Info($"Generating preview URL for: {fileName}");
             var previewUrl = $"{minioHost}/api/v1/buckets/{_bucketName}/objects/download?"
