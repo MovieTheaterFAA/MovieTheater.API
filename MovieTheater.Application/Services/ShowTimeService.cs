@@ -81,6 +81,57 @@ namespace MovieTheater.Application.Services
 
             return responseDto;
         }
-    }
 
+        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime date)
+        {
+            _loggerService.Info($"[GetShowTimesByMovieAndDateAsync] movieId: {movieId}, date: {date:yyyy-MM-dd}");
+
+            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.MovieId == movieId && st.ShowDate.Date == date.Date && !st.IsDeleted)
+                .ToListAsync();
+            if (showTimes == null || !showTimes.Any())
+            {
+                _loggerService.Warn($"[GetShowTimesByMovieAndDateAsync] No showtimes found for MovieId {movieId} on date {date:yyyy-MM-dd}.");
+                return new List<ShowtimeResponseDTO>();
+            }
+            var result = showTimes.Select(st => new ShowtimeResponseDTO
+            {
+                Id = st.Id,
+                MovieId = st.MovieId,
+                CinemaRoomId = st.CinemaRoomId,
+                ShowDate = st.ShowDate,
+                Duration = st.Duration
+            }).ToList();
+
+            _loggerService.Success($"[GetShowTimesByMovieAndDateAsync] Found {result.Count} showtimes.");
+            return result;
+        }
+
+        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime date)
+        {
+            _loggerService.Info($"[GetShowTimesByDateAsync] date: {date:yyyy-MM-dd}");
+
+            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.ShowDate.Date == date.Date && !st.IsDeleted)
+                .ToListAsync();
+
+            if (showTimes == null || !showTimes.Any())
+            {
+                _loggerService.Warn($"[GetShowTimesByDateAsync] No showtimes found on date {date:yyyy-MM-dd}.");
+                return new List<ShowtimeResponseDTO>();
+            }
+
+            var result = showTimes.Select(st => new ShowtimeResponseDTO
+            {
+                Id = st.Id,
+                MovieId = st.MovieId,
+                CinemaRoomId = st.CinemaRoomId,
+                ShowDate = st.ShowDate,
+                Duration = st.Duration
+            }).ToList();
+
+            _loggerService.Success($"[GetShowTimesByDateAsync] Found {result.Count} showtimes.");
+            return result;
+        }
+    }
 }

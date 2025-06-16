@@ -41,6 +41,26 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("employee-add-customer")]
+        [Authorize(Roles = "Employee,Admin")]
+        [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
+        public async Task<IActionResult> EmployeeCreateCustomer([FromBody] AddCustomerDto customer)
+        {
+            try
+            {
+                var employeeId = _claimsService.GetCurrentUserId;
+                var result = await _authService.EmployeeCreateCustomerAsync(customer, employeeId);
+                return Ok(ApiResult<UserDto>.Success(result, "200", "Customer account created successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
         [HttpPost("login")]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 400)]
