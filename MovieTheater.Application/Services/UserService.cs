@@ -1,17 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using MovieTheater.Application.Interfaces;
+﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
-using MovieTheater.Domain.Entities;
-using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MovieTheater.Application.Services
 {
@@ -38,11 +29,11 @@ namespace MovieTheater.Application.Services
             {
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
 
-                if (user == null) 
-                    {
-                        _loggerService.Warn($"No user found with ID: {userId}");
-                        throw new KeyNotFoundException($"User with ID {userId} not found.");
-                    }
+                if (user == null)
+                {
+                    _loggerService.Warn($"No user found with ID: {userId}");
+                    throw new KeyNotFoundException($"User with ID {userId} not found.");
+                }
 
                 _loggerService.Info($"Successfully fetched user with ID: {userId}");
 

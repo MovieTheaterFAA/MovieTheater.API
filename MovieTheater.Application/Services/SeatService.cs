@@ -20,7 +20,7 @@ namespace MovieTheater.Application.Services
             _unitOfWork = unitOfWork;
         }
 
-        private void CleanupExpiredHolds()
+        private static void CleanupExpiredHolds()
         {
             var now = DateTime.UtcNow;
             foreach (var entry in _holdingSeats)
@@ -37,6 +37,8 @@ namespace MovieTheater.Application.Services
             try
             {
                 _loggerService.Info($"Retrieving seats for showtime {showTimeId}");
+
+                CleanupExpiredHolds();
                 var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
                 if (showTime == null)
                 {
@@ -63,7 +65,13 @@ namespace MovieTheater.Application.Services
                         Row = seat.Row,
                         Number = seat.Number,
                         Type = seat.Type,
-                        Status = sts?.Status ?? SeatStatus.Available
+                        Status = sts?.Status ?? (_holdingSeats.Any(h =>
+                                                h.Key.seatId == seat.Id &&
+                                                h.Key.showTimeId == showTimeId &&
+                                                h.Value.expireAt > DateTime.UtcNow)
+                                                ? SeatStatus.Holding : SeatStatus.Available)
+
+
                     };
                 }).ToList();
 
@@ -95,7 +103,6 @@ namespace MovieTheater.Application.Services
                     throw new KeyNotFoundException("Showtime not found.");
                 }
 
-                // Lấy danh sách ghế của phòng chiếu
                 var allSeatsInRoom = await _unitOfWork.Seats.GetQueryable()
                     .Where(s => s.CinemaRoomId == showExist.CinemaRoomId)
                     .ToListAsync();
@@ -108,12 +115,10 @@ namespace MovieTheater.Application.Services
 
                 var seatSet = allSeatsInRoom.Select(s => s.Id).ToHashSet();
 
-                // Lấy toàn bộ ShowTimeSeats liên quan trong 1 query
                 var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
                     .Where(sts => sts.ShowTimeId == showTimeId)
                     .ToDictionaryAsync(sts => sts.SeatId, sts => sts);
 
-                // Kiểm tra từng seatId được gửi lên
                 foreach (var seatId in seatIds)
                 {
                     if (!seatSet.Contains(seatId))
