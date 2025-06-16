@@ -263,10 +263,11 @@ namespace MovieTheater.API.Controllers
                     return NotFound(ApiResult<string>.Failure("404", "Movie not found."));
 
                 var folder = $"movies/{id}/poster";
-                var objectName = $"{folder}/{Guid.NewGuid()}_{file.FileName}";
+                var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                var objectName = $"{folder}/{uniqueFileName}";
 
                 using var stream = file.OpenReadStream();
-                await _blobService.UploadFileAsync(file.FileName, stream, folder, ct);
+                await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
                 var url = await _blobService.GetFileUrlAsync(objectName, ct);
                 if (url == null)
@@ -315,10 +316,11 @@ namespace MovieTheater.API.Controllers
                     return NotFound(ApiResult<string>.Failure("404", "Movie not found."));
 
                 var folder = $"movies/{id}/background";
-                var objectName = $"{folder}/{Guid.NewGuid()}_{file.FileName}";
+                var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                var objectName = $"{folder}/{uniqueFileName}";
 
                 using var stream = file.OpenReadStream();
-                await _blobService.UploadFileAsync(file.FileName, stream, folder, ct);
+                await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
                 var url = await _blobService.GetFileUrlAsync(objectName, ct);
                 if (url == null)
@@ -353,8 +355,8 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<string>), 404)]
         [ProducesResponseType(typeof(ApiResult<string>), 500)]
         public async Task<IActionResult> UploadMovieCastImage(
-        Guid id,
-        [FromForm] MovieCastUploadDto request)
+            Guid id,
+            [FromForm] MovieCastUploadDto request)
         {
             var file = request.File;
             var actorName = request.ActorName;
@@ -375,10 +377,11 @@ namespace MovieTheater.API.Controllers
 
                 var safeActor = actorName.Trim().Replace(" ", "_").ToLowerInvariant();
                 var folder = $"movies/{id}/cast/{safeActor}";
-                var objectName = $"{folder}/{Guid.NewGuid()}_{file.FileName}";
+                var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+                var objectName = $"{folder}/{uniqueFileName}";
 
                 using var stream = file.OpenReadStream();
-                await _blobService.UploadFileAsync(file.FileName, stream, folder, ct);
+                await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
                 var url = await _blobService.GetFileUrlAsync(objectName, ct);
                 if (url == null)
