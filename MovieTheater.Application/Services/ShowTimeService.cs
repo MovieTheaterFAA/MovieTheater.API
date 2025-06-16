@@ -84,54 +84,82 @@ namespace MovieTheater.Application.Services
 
         public async Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime date)
         {
-            _loggerService.Info($"[GetShowTimesByMovieAndDateAsync] movieId: {movieId}, date: {date:yyyy-MM-dd}");
-
-            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
-                .Where(st => st.MovieId == movieId && st.ShowDate.Date == date.Date && !st.IsDeleted)
-                .ToListAsync();
-            if (showTimes == null || !showTimes.Any())
+            try
             {
-                _loggerService.Warn($"[GetShowTimesByMovieAndDateAsync] No showtimes found for MovieId {movieId} on date {date:yyyy-MM-dd}.");
-                return new List<ShowtimeResponseDTO>();
+                _loggerService.Info($"[GetShowTimesByMovieAndDateAsync] movieId: {movieId}, date: {date:yyyy-MM-dd}");
+
+                var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                    .Where(st => st.MovieId == movieId && st.ShowDate.Date == date.Date && !st.IsDeleted)
+                    .ToListAsync();
+                if (showTimes == null || !showTimes.Any())
+                {
+                    _loggerService.Warn($"[GetShowTimesByMovieAndDateAsync] No showtimes found for MovieId {movieId} on date {date:yyyy-MM-dd}.");
+                    return new List<ShowtimeResponseDTO>();
+                }
+                var result = showTimes.Select(st => new ShowtimeResponseDTO
+                {
+                    Id = st.Id,
+                    MovieId = st.MovieId,
+                    CinemaRoomId = st.CinemaRoomId,
+                    ShowDate = st.ShowDate,
+                    Duration = st.Duration
+                }).ToList();
+
+                _loggerService.Success($"[GetShowTimesByMovieAndDateAsync] Found {result.Count} showtimes.");
+                return result;
             }
-            var result = showTimes.Select(st => new ShowtimeResponseDTO
+            catch (Exception ex)
             {
-                Id = st.Id,
-                MovieId = st.MovieId,
-                CinemaRoomId = st.CinemaRoomId,
-                ShowDate = st.ShowDate,
-                Duration = st.Duration
-            }).ToList();
-
-            _loggerService.Success($"[GetShowTimesByMovieAndDateAsync] Found {result.Count} showtimes.");
-            return result;
+                _loggerService.Error($"[GetShowTimesByMovieAndDateAsync] Error: {ex.Message}");
+                throw new InvalidOperationException("An error occurred while retrieving showtimes.", ex);
+            }
         }
 
-        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime date)
+        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime date, Guid? movieId, Guid? roomId)
         {
-            _loggerService.Info($"[GetShowTimesByDateAsync] date: {date:yyyy-MM-dd}");
-
-            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
-                .Where(st => st.ShowDate.Date == date.Date && !st.IsDeleted)
-                .ToListAsync();
-
-            if (showTimes == null || !showTimes.Any())
+            try
             {
-                _loggerService.Warn($"[GetShowTimesByDateAsync] No showtimes found on date {date:yyyy-MM-dd}.");
-                return new List<ShowtimeResponseDTO>();
+                _loggerService.Info($"[GetShowTimesByDateAsync] date: {date:yyyy-MM-dd}");
+
+                var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                    .Where(st => st.ShowDate.Date == date.Date && !st.IsDeleted)
+                    .ToListAsync();
+                if (movieId.HasValue)
+                {
+                    showTimes = showTimes.Where(st => st.MovieId == movieId.Value).ToList();
+                    _loggerService.Info($"[GetShowTimesByDateAsync] Filtering by MovieId: {movieId.Value}");
+                }
+                if (roomId.HasValue)
+                {
+                    showTimes = showTimes.Where(st => st.CinemaRoomId == roomId.Value).ToList();
+                    _loggerService.Info($"[GetShowTimesByDateAsync] Filtering by CinemaRoomId: {roomId.Value}");
+                }
+
+                showTimes = showTimes.OrderBy(st => st.ShowDate).ToList();
+
+                if (showTimes == null || !showTimes.Any())
+                {
+                    _loggerService.Warn($"[GetShowTimesByDateAsync] No showtimes found on date {date:yyyy-MM-dd}.");
+                    return new List<ShowtimeResponseDTO>();
+                }
+
+                var result = showTimes.Select(st => new ShowtimeResponseDTO
+                {
+                    Id = st.Id,
+                    MovieId = st.MovieId,
+                    CinemaRoomId = st.CinemaRoomId,
+                    ShowDate = st.ShowDate,
+                    Duration = st.Duration
+                }).ToList();
+
+                _loggerService.Success($"[GetShowTimesByDateAsync] Found {result.Count} showtimes.");
+                return result;
             }
-
-            var result = showTimes.Select(st => new ShowtimeResponseDTO
+            catch (Exception ex)
             {
-                Id = st.Id,
-                MovieId = st.MovieId,
-                CinemaRoomId = st.CinemaRoomId,
-                ShowDate = st.ShowDate,
-                Duration = st.Duration
-            }).ToList();
-
-            _loggerService.Success($"[GetShowTimesByDateAsync] Found {result.Count} showtimes.");
-            return result;
+                _loggerService.Error($"[GetShowTimesByDateAsync] Error: {ex.Message}");
+                throw new InvalidOperationException("An error occurred while retrieving showtimes.", ex);
+            }
         }
     }
 }

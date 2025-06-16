@@ -76,20 +76,22 @@ namespace MovieTheater.API.Controllers
         [HttpGet("by-date")]
         [SwaggerOperation(
         Summary = "Get showtimes by date",
-        Description = "Retrieve all showtimes for a specific date."
-        )]
+        Description = "Retrieve all showtimes for a specific date.")]
         [ProducesResponseType(typeof(ApiResult<List<ShowtimeResponseDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> GetShowTimesByDate(
-        [FromQuery, SwaggerParameter("Show date (yyyy-MM-dd)")] DateTime date)
+        [FromQuery, SwaggerParameter("Show date (yyyy-MM-dd)")] DateTime date,
+        [FromQuery, SwaggerParameter("Optional Movie ID to filter showtimes by movie")] Guid? movieId = null,
+        [FromQuery, SwaggerParameter("Optional Cinema Room ID to filter showtimes by room")] Guid? roomId = null)
         {
             try
             {
                 if (date.Kind == DateTimeKind.Unspecified)
                     date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
 
-                var result = await _showTimeService.GetShowTimesByDateAsync(date);
+                var result = await _showTimeService.GetShowTimesByDateAsync(date, movieId, roomId);
+
                 return Ok(ApiResult<List<ShowtimeResponseDTO>>.Success(result, "200", "Showtimes retrieved successfully."));
             }
             catch (Exception ex)
@@ -99,5 +101,6 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
     }
 }
