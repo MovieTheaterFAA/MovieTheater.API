@@ -148,16 +148,16 @@ namespace MovieTheater.Application.Services
                     .WithObject(fileName)
                     .WithExpiry(7 * 24 * 60 * 60);
 
-                // Kick off the presign task
                 var presignTask = _minioClient.PresignedGetObjectAsync(args);
 
-                // Await with cancellation support
                 string url = cancellationToken == default
                     ? await presignTask
                     : await presignTask.WaitAsync(cancellationToken);
 
-                // Rewrite to use the public HTTPS domain
-                url = url.Replace("http://103.211.201.162:9000", "https://minio.fpt-devteam.fun");
+                // Replace both http and https with the public domain
+                var minioHost = Environment.GetEnvironmentVariable("MINIO_HOST") ?? "https://minio.fpt-devteam.fun";
+                url = url.Replace("http://103.211.201.162:9000", minioHost)
+                         .Replace("https://103.211.201.162:9000", minioHost);
 
                 _loggerService.Success($"Presigned URL: {url}");
                 return url;
