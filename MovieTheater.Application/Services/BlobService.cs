@@ -31,7 +31,7 @@ namespace MovieTheater.Application.Services
                 _minioClient = new MinioClient()
                     .WithEndpoint(endpoint)
                     .WithCredentials(accessKey, secretKey)
-                    .WithSSL(true)
+                    .WithSSL(false)
                     .Build();
 
                 _loggerService.Success("MinIO client initialized successfully.");
@@ -120,8 +120,8 @@ namespace MovieTheater.Application.Services
         /// <returns></returns>
         public Task<string> GetPreviewUrlAsync(string fileName)
         {
-            // Always use the HTTPS MinIO host for FE compatibility
-            var minioHost = "https://minio.fpt-devteam.fun";
+            var minioHost = Environment.GetEnvironmentVariable("MINIO_HOST")
+                            ?? "https://minio.fpt-devteam.fun/";
 
             _loggerService.Info($"Generating preview URL for: {fileName}");
             var previewUrl = $"{minioHost}/api/v1/buckets/{_bucketName}/objects/download?"
@@ -148,16 +148,13 @@ namespace MovieTheater.Application.Services
                     .WithObject(fileName)
                     .WithExpiry(7 * 24 * 60 * 60);
 
+                // Kick off the presign task
                 var presignTask = _minioClient.PresignedGetObjectAsync(args);
 
+                // Await with cancellation support
                 string url = cancellationToken == default
                     ? await presignTask
                     : await presignTask.WaitAsync(cancellationToken);
-
-                // Replace both http and https with the public domain
-                var minioHost = Environment.GetEnvironmentVariable("MINIO_HOST") ?? "https://minio.fpt-devteam.fun";
-                url = url.Replace("http://103.211.201.162:9000", minioHost)
-                         .Replace("https://103.211.201.162:9000", minioHost);
 
                 _loggerService.Success($"Presigned URL: {url}");
                 return url;
