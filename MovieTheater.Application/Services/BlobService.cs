@@ -31,7 +31,7 @@ namespace MovieTheater.Application.Services
                 _minioClient = new MinioClient()
                     .WithEndpoint(endpoint)
                     .WithCredentials(accessKey, secretKey)
-                    .WithSSL(false)
+                    .WithSSL(true)
                     .Build();
 
                 _loggerService.Success("MinIO client initialized successfully.");
@@ -155,6 +155,9 @@ namespace MovieTheater.Application.Services
                 string url = cancellationToken == default
                     ? await presignTask
                     : await presignTask.WaitAsync(cancellationToken);
+
+                // Rewrite to use the public HTTPS domain
+                url = url.Replace("http://103.211.201.162:9000", "https://minio.fpt-devteam.fun");
 
                 _loggerService.Success($"Presigned URL: {url}");
                 return url;
