@@ -128,7 +128,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("upload-event-image/{id}")]
+        [HttpPost("upload-event-img/{id}")]
         [Consumes("multipart/form-data")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResult<string>), 200)]
@@ -182,7 +182,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("upload-food-drink-combo-image/{id}")]
+        [HttpPost("upload-food-img/{id}")]
         [Consumes("multipart/form-data")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResult<string>), 200)]
@@ -347,14 +347,14 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("upload-movie-cast-image/{id}")]
+        [HttpPost("upload-cast-img/{id}")]
         [Consumes("multipart/form-data")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResult<string>), 200)]
         [ProducesResponseType(typeof(ApiResult<string>), 400)]
         [ProducesResponseType(typeof(ApiResult<string>), 404)]
         [ProducesResponseType(typeof(ApiResult<string>), 500)]
-        public async Task<IActionResult> UploadMovieCastImage(
+        public async Task<IActionResult> UploadCastImage(
             Guid id,
             [FromForm] MovieCastUploadDto request)
         {
