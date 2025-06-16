@@ -14,14 +14,6 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
         [Required(ErrorMessage = "End date is required.")]
         public DateTime ToDate { get; set; }
 
-        [Required(ErrorMessage = "Actor list is required.")]
-        [MinLength(1, ErrorMessage = "At least one actor is required.")]
-        public List<string> Actors { get; set; }
-
-        [Required(ErrorMessage = "Actors URL list is required.")]
-        [MinLength(1, ErrorMessage = "At least one actor's URL is required.")]
-        public List<string> ActorsUrl { get; set; }
-
         [Required(ErrorMessage = "Director is required.")]
         [StringLength(255, ErrorMessage = "Director's name cannot be longer than 255 characters.")]
         public string Director { get; set; }

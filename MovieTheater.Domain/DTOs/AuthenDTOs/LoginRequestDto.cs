@@ -5,10 +5,10 @@ namespace MovieTheater.Domain.DTOs.AuthenDTOs
 {
     public class LoginRequestDto
     {
-        [DefaultValue("ch1mple@gmail.com")]
+        [DefaultValue("admin@gmail.com")]
         public required string? Email { get; set; }
 
-        [DefaultValue("Ch1mple@")] 
+        [DefaultValue("1@")] 
         public required string? Password { get; set; }
     }
 }
