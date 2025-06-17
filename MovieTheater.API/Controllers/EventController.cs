@@ -13,12 +13,10 @@ namespace MovieTheater.API.Controllers
     public class EventController : ControllerBase
     {
         private readonly IEventService _eventService;
-        private readonly IClaimsService _claimsService;
 
         public EventController(IEventService eventService, IClaimsService claimsService)
         {
             _eventService = eventService;
-            _claimsService = claimsService;
         }
 
         [HttpGet]

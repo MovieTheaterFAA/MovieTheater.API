@@ -34,7 +34,7 @@ namespace MovieTheater.Application.Services
             _loggerService.Info($"[AddEventAsync] Start adding event: {dto.Name}");
 
             // Kiểm tra sự kiện có tồn tại với tên đã cho chưa
-            var existingEvent = await _unitOfWork.Events.FirstOrDefaultAsync(e => e.Name == dto.Name);
+            var existingEvent = await _unitOfWork.Events.FirstOrDefaultAsync(e => e.Name == dto.Name && !e.IsDeleted);
             if (existingEvent != null)
             {
                 _loggerService.Warn($"[AddEventAsync] Event with name {dto.Name} already exists.");
