@@ -14,11 +14,6 @@ namespace MovieTheater.Domain.DTOs.PromotionDTOs
         [Required(ErrorMessage = "Detail is required.")]
         [StringLength(1000, ErrorMessage = "Detail can't be longer than 1000 characters.")]
         public string Detail { get; set; }
-
-        [Url(ErrorMessage = "Invalid URL format for Image.")]
-        public string Image { get; set; }
-
         public Guid EventId { get; set; }
-
     }
 }

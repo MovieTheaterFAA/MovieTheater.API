@@ -54,7 +54,6 @@ public class PromotionService : IPromotionService
                 Title = dto.Title,
                 DiscountValue = dto.DiscountValue,
                 Detail = dto.Detail,
-                Image = dto.Image,
                 IsDeleted = false,
                 EventId = dto.EventId
             };
@@ -66,7 +65,6 @@ public class PromotionService : IPromotionService
                 promotion.Title,
                 promotion.DiscountValue,
                 promotion.Detail,
-                promotion.Image,
                 promotion.EventId
             };
 
@@ -75,7 +73,6 @@ public class PromotionService : IPromotionService
                 promotion.Title,
                 promotion.DiscountValue,
                 promotion.Detail,
-                promotion.Image,
                 promotion.EventId
             });
             // Thêm chương trình khuyến mãi vào cơ sở dữ liệu
@@ -104,7 +101,6 @@ public class PromotionService : IPromotionService
                 Title = promotion.Title,
                 DiscountValue = promotion.DiscountValue,
                 Detail = promotion.Detail,
-                Image = promotion.Image,
                 EventId = promotion.EventId
             };
         }
@@ -187,7 +183,6 @@ public class PromotionService : IPromotionService
                 promotion.Title,
                 promotion.DiscountValue,
                 promotion.Detail,
-                promotion.Image,
                 promotion.EventId
             };
             bool isUpdated = false;
@@ -219,12 +214,6 @@ public class PromotionService : IPromotionService
                 isUpdated = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.Image) && promotion.Image != dto.Image)
-            {
-                promotion.Image = dto.Image;
-                isUpdated = true;
-            }
-
             if (dto.EventId.HasValue && promotion.EventId != dto.EventId.Value)
             {
                 var eventEntity = await _unitOfWork.Events.GetByIdAsync(dto.EventId.Value);
@@ -246,7 +235,6 @@ public class PromotionService : IPromotionService
                     Title = promotion.Title,
                     DiscountValue = promotion.DiscountValue,
                     Detail = promotion.Detail,
-                    Image = promotion.Image,
                     EventId = promotion.EventId
                 };
             }
@@ -259,7 +247,6 @@ public class PromotionService : IPromotionService
                 promotion.Title,
                 promotion.DiscountValue,
                 promotion.Detail,
-                promotion.Image,
                 promotion.EventId
             };
 
@@ -268,7 +255,6 @@ public class PromotionService : IPromotionService
                 promotion.Title,
                 promotion.DiscountValue,
                 promotion.Detail,
-                promotion.Image,
                 promotion.EventId
             });
 
@@ -294,7 +280,6 @@ public class PromotionService : IPromotionService
                 Title = promotion.Title,
                 DiscountValue = promotion.DiscountValue,
                 Detail = promotion.Detail,
-                Image = promotion.Image,
                 EventId = promotion.EventId
             };
         }

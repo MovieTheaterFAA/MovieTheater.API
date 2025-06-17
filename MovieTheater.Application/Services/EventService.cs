@@ -222,7 +222,6 @@ namespace MovieTheater.Application.Services
                             Title = p.Title,
                             DiscountValue = p.DiscountValue,
                             Detail = p.Detail,
-                            Image = p.Image,
                             EventId = p.EventId
                         }).ToList() ?? new List<PromotionResponseDto>()
                 }).ToList();
