@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -36,14 +37,15 @@ namespace MovieTheater.API.Controllers
         [FromQuery, SwaggerParameter(Description = "Sort by field: Name, Price, Type (optional)")] string? sortBy,
         [FromQuery, SwaggerParameter(Description = "Sort descending? Default: false")] bool isDescending = false,
         [FromQuery, SwaggerParameter(Description = "Page number, starts at 1")] int page = 1,
-        [FromQuery, SwaggerParameter(Description = "Items per page")] int pageSize = 10)
+        [FromQuery, SwaggerParameter(Description = "Items per page")] int pageSize = 10,
+        [FromQuery, SwaggerParameter(Description = "Filter by food type")] FoodType? type = null)
         {
             try
             {
                 if (page < 1 || pageSize < 1)
                     return BadRequest(ApiResult<object>.Failure("400", "Invalid pagination parameters"));
 
-                var result = await _foodAndDrinkService.GetAllFoodAndDrinkAsync(search, sortBy, isDescending, page, pageSize);
+                var result = await _foodAndDrinkService.GetAllFoodAndDrinkAsync(search, sortBy, isDescending, page, pageSize, type);
 
                 return Ok(ApiResult<Pagination<FoodAndDrinkResponseDto>>.Success(result, "200", "Get food and drinks successfully"));
             }

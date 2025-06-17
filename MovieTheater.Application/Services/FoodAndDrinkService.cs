@@ -25,7 +25,7 @@ namespace MovieTheater.Application.Services
             _auditLogService = auditLogService;
         }
 
-        public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
+        public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, FoodType? type = null)
         {
             try
             {
@@ -34,6 +34,11 @@ namespace MovieTheater.Application.Services
                 var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => !f.IsDeleted);
 
                 var query = foodAndDrinks.AsQueryable();
+
+                if (type.HasValue)
+                {
+                    query = query.Where(f => f.Type == type.Value);
+                }
 
                 // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
