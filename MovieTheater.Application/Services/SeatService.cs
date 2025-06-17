@@ -46,12 +46,10 @@ namespace MovieTheater.Application.Services
                     throw new KeyNotFoundException("Showtime not found.");
                 }
 
-                // Get all seats in the cinema room
                 var seats = await _unitOfWork.Seats.GetQueryable()
                     .Where(s => s.CinemaRoomId == showTime.CinemaRoomId)
                     .ToListAsync();
 
-                // Get all ShowTimeSeat for this showtime
                 var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
                     .Where(sts => sts.ShowTimeId == showTimeId)
                     .ToListAsync();
@@ -85,7 +83,7 @@ namespace MovieTheater.Application.Services
             }
         }
 
-        public async Task<bool> HoldSeatsAsync(Guid userId, Guid showTimeId, List<Guid> seatIds)
+        public async Task<List<SeatResponseDto>> HoldSeatsAsync(Guid userId, Guid showTimeId, List<Guid> seatIds)
         {
             try
             {
@@ -94,7 +92,23 @@ namespace MovieTheater.Application.Services
                 CleanupExpiredHolds();
 
                 var now = DateTime.UtcNow;
-                var expireAt = now.AddMinutes(10);
+                var expireAt = now.AddMinutes(5);
+
+                var currentHeldCount = _holdingSeats
+                    .Count(h => h.Key.showTimeId == showTimeId && h.Value.userId == userId && h.Value.expireAt > now);
+
+                var newSeatCount = seatIds
+                    .Where(seatId =>
+                        !_holdingSeats.TryGetValue((seatId, showTimeId), out var holdInfo) ||
+                        holdInfo.userId != userId ||
+                        holdInfo.expireAt <= now)
+                    .ToList();
+
+                if (currentHeldCount + newSeatCount.Count > 8)
+                {
+                    _loggerService.Warn($"User {userId} is trying to hold more than 8 seats for showtime {showTimeId}.");
+                    return new List<SeatResponseDto>();
+                }
 
                 var showExist = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
                 if (showExist == null)
@@ -107,17 +121,20 @@ namespace MovieTheater.Application.Services
                     .Where(s => s.CinemaRoomId == showExist.CinemaRoomId)
                     .ToListAsync();
 
-                if (!allSeatsInRoom.Any())
+                if (allSeatsInRoom.Count == 0)
                 {
                     _loggerService.Warn($"No seats found for cinema room {showExist.CinemaRoomId}.");
                     throw new KeyNotFoundException("No seats found for the specified cinema room.");
                 }
 
                 var seatSet = allSeatsInRoom.Select(s => s.Id).ToHashSet();
+                var seatDict = allSeatsInRoom.ToDictionary(s => s.Id, s => s);
 
                 var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
                     .Where(sts => sts.ShowTimeId == showTimeId)
                     .ToDictionaryAsync(sts => sts.SeatId, sts => sts);
+
+                List<SeatResponseDto> heldSeats = new();
 
                 foreach (var seatId in seatIds)
                 {
@@ -127,35 +144,75 @@ namespace MovieTheater.Application.Services
                         throw new ArgumentException($"Seat {seatId} does not exist in the specified cinema room.");
                     }
 
-                    // Nếu seat đang bị giữ bởi user khác
                     var key = (seatId, showTimeId);
                     if (_holdingSeats.TryGetValue(key, out var holdInfo) &&
                         holdInfo.expireAt > now && holdInfo.userId != userId)
                     {
                         _loggerService.Warn($"Seat {seatId} is already held by another user.");
-                        return false;
+                        continue;
                     }
 
-                    // Kiểm tra trạng thái nếu đã có ShowTimeSeat
                     if (showTimeSeats.TryGetValue(seatId, out var sts) &&
                         (sts.Status == SeatStatus.Booked || sts.Status == SeatStatus.Sold))
                     {
                         _loggerService.Warn($"Seat {seatId} is already {sts.Status}.");
-                        return false;
+                        continue;
                     }
-                }
-
-                foreach (var seatId in seatIds)
                     _holdingSeats[(seatId, showTimeId)] = (userId, expireAt);
 
-                _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", seatIds)}");
+                    var seat = seatDict[seatId];
+                    heldSeats.Add(new SeatResponseDto
+                    {
+                        Row = seat.Row,
+                        Number = seat.Number,
+                        Type = seat.Type
+                    });
+                }
 
-                return true;
+                _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
+
+                return heldSeats;
             }
             catch (Exception ex)
             {
                 _loggerService.Error($"Error holding seats for user {userId} for showtime {showTimeId}: {ex.Message}");
                 throw new InvalidOperationException("An error occurred while holding seats.", ex);
+            }
+        }
+
+        public async Task<ShowTimeSeatDto> GetSeatByIdAsync(Guid seatId)
+        {
+            try
+            {
+                _loggerService.Info($"Retrieving seat with ID {seatId}");
+                var seat = await _unitOfWork.Seats.GetByIdAsync(seatId);
+                if (seat == null)
+                {
+                    _loggerService.Warn($"Seat not found: {seatId}");
+                    throw new KeyNotFoundException("Seat not found.");
+                }
+                var showTimeSeat = await _unitOfWork.ShowTimeSeats.GetQueryable()
+                    .FirstOrDefaultAsync(sts => sts.SeatId == seatId);
+                if (showTimeSeat == null)
+                {
+                    _loggerService.Warn($"ShowTimeSeat not found for seat ID: {seatId}");
+                    throw new KeyNotFoundException("ShowTimeSeat not found for the specified seat.");
+                }
+                var result = new ShowTimeSeatDto
+                {
+                    SeatId = seat.Id,
+                    Row = seat.Row,
+                    Number = seat.Number,
+                    Type = seat.Type,
+                    Status = showTimeSeat.Status
+                };
+                _loggerService.Success($"Successfully retrieved seat with ID {seatId}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Error retrieving seat with ID {seatId}: {ex.Message}");
+                throw new InvalidOperationException("An error occurred while retrieving the seat.", ex);
             }
         }
     }

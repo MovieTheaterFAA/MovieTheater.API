@@ -28,7 +28,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(typeof(object), 400)]
         [ProducesResponseType(typeof(object), 409)]
-        public async Task<IActionResult> HoldSeats([FromBody] HoldSeatsRequestDto request)
+        public async Task<IActionResult> HoldSeatsAsync([FromBody] HoldSeatsRequestDto request)
         {
             if (request == null || request.SeatIds == null || !request.SeatIds.Any())
                 return BadRequest(new { Message = "Invalid request data." });
@@ -37,14 +37,17 @@ namespace MovieTheater.API.Controllers
             {
                 var userId = _claimsService.GetCurrentUserId;
 
-                var success = await _seatService.HoldSeatsAsync(userId, request.ShowTimeId, request.SeatIds);
-                if (success)
+                var heldSeats = await _seatService.HoldSeatsAsync(userId, request.ShowTimeId, request.SeatIds);
+                if (heldSeats.Any())
                 {
-                    return Ok(new { Message = "Seats held successfully." });
+                    return Ok(new
+                    {
+                        Message = "Seats held successfully.",
+                        HeldSeats = heldSeats
+                    });
                 }
                 else
                 {
-                    // Business logic: return 409 Conflict if holding failed (seat taken or not available)
                     return Conflict(new { Message = "One or more seats could not be held. They may already be held or unavailable." });
                 }
             }
@@ -73,7 +76,7 @@ namespace MovieTheater.API.Controllers
         [AllowAnonymous]
         [ProducesResponseType(typeof(List<ShowTimeSeatDto>), 200)]
         [ProducesResponseType(typeof(object), 404)]
-        public async Task<IActionResult> GetSeatsByShowTime([FromRoute] Guid showTimeId)
+        public async Task<IActionResult> GetSeatsByShowTimeAsync([FromRoute] Guid showTimeId)
         {
             try
             {
