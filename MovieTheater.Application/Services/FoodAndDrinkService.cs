@@ -3,11 +3,10 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
-using MovieTheater.Infrastructure.Commons;
-using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Domain.Entities;
-using System.Text.Json;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -32,7 +31,7 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Info($"Fetching food and drinks - Page {page}, PageSize {pageSize}, Search: {search}");
 
-                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync();
+                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => !f.IsDeleted);
 
                 var query = foodAndDrinks.AsQueryable();
 
@@ -65,6 +64,7 @@ namespace MovieTheater.Application.Services
 
                 var result = pagedItems.Select(f => new FoodAndDrinkResponseDto
                 {
+                    Id = f.Id,
                     Name = f.Name,
                     Description = f.Description,
                     Price = f.Price,
@@ -164,10 +164,83 @@ namespace MovieTheater.Application.Services
             };
         }
 
-        private async Task<bool> FoodAndDrinkExistsAsync(string name)
+        public async Task<FoodAndDrinkResponseDto> UpdateFoodAndDrinkAsync(Guid id, FoodAndDrinkRequestDto dto)
         {
-            var existingFoodAndDrink = await _unitOfWork.FoodAndDrinks.FirstOrDefaultAsync(f => f.Name == name);
-            return existingFoodAndDrink != null;
+            _loggerService.Info($"[UpdateFoodAndDrinkAsync] Start updating food and drink: {dto.Name}");
+
+            var foodAndDrink = await _unitOfWork.FoodAndDrinks.GetByIdAsync(id);
+            if (foodAndDrink == null || foodAndDrink.IsDeleted)
+            {
+                _loggerService.Warn($"[UpdateFoodAndDrinkAsync] Food or drink with ID {id} not found or deleted.");
+                throw ErrorHelper.NotFound("Food or drink not found.");
+            }
+
+            // Check for name conflict (excluding self, and not deleted)
+            var existing = await _unitOfWork.FoodAndDrinks.FirstOrDefaultAsync(
+                f => f.Name == dto.Name && f.Id != id && !f.IsDeleted);
+            if (existing != null)
+            {
+                _loggerService.Warn($"[UpdateFoodAndDrinkAsync] Food or drink with name '{dto.Name}' already exists.");
+                throw ErrorHelper.Conflict("Food or drink with the same name already exists.");
+            }
+
+            var oldData = new
+            {
+                foodAndDrink.Name,
+                foodAndDrink.Description,
+                foodAndDrink.Price,
+                foodAndDrink.Type,
+                foodAndDrink.ImageUrl,
+                foodAndDrink.IsAvailable
+            };
+
+            // Update fields
+            foodAndDrink.Name = dto.Name;
+            foodAndDrink.Description = dto.Description;
+            foodAndDrink.Price = dto.Price;
+            foodAndDrink.Type = dto.Type;
+            foodAndDrink.ImageUrl = dto.ImageUrl;
+            foodAndDrink.IsAvailable = dto.IsAvailable;
+
+            await _unitOfWork.FoodAndDrinks.Update(foodAndDrink);
+            await _unitOfWork.SaveChangesAsync();
+
+            var newData = new
+            {
+                foodAndDrink.Name,
+                foodAndDrink.Description,
+                foodAndDrink.Price,
+                foodAndDrink.Type,
+                foodAndDrink.ImageUrl,
+                foodAndDrink.IsAvailable
+            };
+
+            var changedFields = JsonSerializer.Serialize(newData);
+
+            var adminId = _claimsService.GetCurrentUserId;
+            await _auditLogService.LogAsync(
+                adminId,
+                AuditActionType.Update,
+                "FoodAndDrink",
+                foodAndDrink.Id,
+                oldData,
+                newData,
+                changedFields,
+                "Admin updated food and drink."
+            );
+
+            _loggerService.Success($"[UpdateFoodAndDrinkAsync] Food and drink {foodAndDrink.Name} updated successfully.");
+
+            return new FoodAndDrinkResponseDto
+            {
+                Id = foodAndDrink.Id,
+                Name = foodAndDrink.Name,
+                Description = foodAndDrink.Description,
+                Price = foodAndDrink.Price,
+                Type = foodAndDrink.Type,
+                ImageUrl = foodAndDrink.ImageUrl,
+                IsAvailable = foodAndDrink.IsAvailable
+            };
         }
 
         public async Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId)
@@ -175,9 +248,9 @@ namespace MovieTheater.Application.Services
             try
             {
                 var foodAndDrink = await _unitOfWork.FoodAndDrinks.GetByIdAsync(foodAndDrinkId);
-                if (foodAndDrink == null)
+                if (foodAndDrink == null || foodAndDrink.IsDeleted)
                 {
-                    _loggerService.Warn($"FoodAndDrink with ID {foodAndDrinkId} not found.");
+                    _loggerService.Warn($"FoodAndDrink with ID {foodAndDrinkId} not found or already deleted.");
                     return false;
                 }
 
@@ -185,7 +258,7 @@ namespace MovieTheater.Application.Services
                 {
                     foodAndDrink.IsDeleted
                 };
-          
+
                 await _unitOfWork.FoodAndDrinks.SoftRemove(foodAndDrink);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -221,6 +294,12 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"An error occurred while deleting FoodAndDrink: {ex.Message}");
                 return false;
             }
+        }
+
+        private async Task<bool> FoodAndDrinkExistsAsync(string name)
+        {
+            var existingFoodAndDrink = await _unitOfWork.FoodAndDrinks.FirstOrDefaultAsync(f => f.Name == name && !f.IsDeleted);
+            return existingFoodAndDrink != null;
         }
 
     }

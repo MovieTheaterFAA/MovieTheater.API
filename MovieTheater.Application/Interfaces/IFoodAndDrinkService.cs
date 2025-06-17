@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
-using MovieTheater.Infrastructure.Commons;
+﻿using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -12,6 +10,7 @@ namespace MovieTheater.Application.Interfaces
             bool isDescending,
             int page,
             int pageSize);
+        Task<FoodAndDrinkResponseDto> UpdateFoodAndDrinkAsync(Guid id, FoodAndDrinkRequestDto dto);
         Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
         Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId);
 
