@@ -1,10 +1,10 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
 using MovieTheater.Domain.DTOs.BlobDTOs;
+using System.Security.Claims;
 
 namespace MovieTheater.API.Controllers
 {
@@ -21,42 +21,6 @@ namespace MovieTheater.API.Controllers
             _blobService = blobService;
             _loggerService = logger;
             _dbContext = dbContext;
-        }
-
-        [HttpPost("test-upload-file")]
-        [Consumes("multipart/form-data")]
-        [ProducesResponseType(typeof(ApiResult<string>), 200)]
-        [ProducesResponseType(typeof(ApiResult<string>), 400)]
-        public async Task<IActionResult> Upload([FromForm] FileUploadRequestDto request)
-        {
-            var file = request.File;
-            if (file == null || file.Length == 0)
-                return BadRequest(ApiResult<string>.Failure("400", "No file provided."));
-
-            // Check cancel token để stop request khi user abort upload
-            CancellationToken ct = HttpContext.RequestAborted;
-
-            try
-            {
-                // 1) Upload to MinIO - tùy setup folder, tự truyền param tên folder
-                using var stream = file.OpenReadStream();
-                await _blobService.UploadFileAsync(file.FileName, stream, "tests", ct);
-
-                // 2) Generate a presigned URL - follow AWS S3 standard
-                var url = await _blobService.GetFileUrlAsync(file.FileName, ct);
-
-                return Ok(ApiResult<string>.Success(url!, "200", "File uploaded successfully."));
-            }
-            catch (OperationCanceledException)
-            {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
-                return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
-            }
-            catch (Exception ex)
-            {
-                _loggerService.LogError(ex, "Error uploading file.");
-                return StatusCode(500, ApiResult<string>.Failure("500", "An error occurred while uploading the file."));
-            }
         }
 
         [HttpPost("upload-avatar")]
@@ -94,8 +58,8 @@ namespace MovieTheater.API.Controllers
                 await _blobService.UploadFileAsync(file.FileName, stream, sanitizedFolder, ct);
 
                 // 6) Generate a presigned URL that can be stored in User.AvatarUrl - also check if the URL is valid
-                var presignedUrl = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (presignedUrl == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
                     _loggerService.LogError($"Failed to generate presigned URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
@@ -109,12 +73,12 @@ namespace MovieTheater.API.Controllers
                     return NotFound(ApiResult<string>.Failure("404", "User not found."));
                 }
 
-                user.AvatarUrl = presignedUrl;
+                user.AvatarUrl = previewUrl;
                 _dbContext.Users.Update(user);
                 await _dbContext.SaveChangesAsync(ct);
 
                 // 8) Return the presigned URL so the client can immediately display/store it
-                return Ok(ApiResult<string>.Success(presignedUrl, "200", "Avatar uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", "Avatar uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
@@ -157,18 +121,18 @@ namespace MovieTheater.API.Controllers
 
                 await _blobService.UploadFileAsync(file.FileName, stream, sanitizedFolder, ct);
 
-                var presignedUrl = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (presignedUrl == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
                     _loggerService.LogError($"Failed to generate presigned URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
-                eventEntity.Image = presignedUrl;
+                eventEntity.Image = previewUrl;
                 _dbContext.Events.Update(eventEntity);
                 await _dbContext.SaveChangesAsync(ct);
 
-                return Ok(ApiResult<string>.Success(presignedUrl, "200", "Event image uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", "Event image uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
@@ -215,19 +179,19 @@ namespace MovieTheater.API.Controllers
                 await _blobService.UploadFileAsync(file.FileName, stream, sanitizedFolder, ct);
 
                 // 4) Tạo URL ảnh
-                var presignedUrl = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (presignedUrl == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate presigned URL for object '{objectName}'.");
+                    _loggerService.LogError($"Failed to generate preview URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
                 // 5) Cập nhật image URL trong database
-                food.ImageUrl = presignedUrl;
+                food.ImageUrl = previewUrl;
                 _dbContext.FoodAndDrinks.Update(food);
                 await _dbContext.SaveChangesAsync(ct);
 
-                return Ok(ApiResult<string>.Success(presignedUrl, "200", "Food and drink image uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", "Food and drink image uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
@@ -269,18 +233,18 @@ namespace MovieTheater.API.Controllers
                 using var stream = file.OpenReadStream();
                 await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
-                var url = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (url == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
                     _loggerService.LogError($"Failed to generate URL for poster '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
-                movie.PosterImage = url;
+                movie.PosterImage = previewUrl;
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
 
-                return Ok(ApiResult<string>.Success(url, "200", "Movie poster uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", "Movie poster uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
@@ -322,18 +286,18 @@ namespace MovieTheater.API.Controllers
                 using var stream = file.OpenReadStream();
                 await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
-                var url = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (url == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
                     _loggerService.LogError($"Failed to generate URL for background '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
-                movie.BackgroundImage = url;
+                movie.BackgroundImage = previewUrl;
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
 
-                return Ok(ApiResult<string>.Success(url, "200", "Movie background uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", "Movie background uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
@@ -383,8 +347,8 @@ namespace MovieTheater.API.Controllers
                 using var stream = file.OpenReadStream();
                 await _blobService.UploadFileAsync(uniqueFileName, stream, folder, ct);
 
-                var url = await _blobService.GetFileUrlAsync(objectName, ct);
-                if (url == null)
+                var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                if (previewUrl == null)
                 {
                     _loggerService.LogError($"[UploadMovieCastImage] Failed to generate URL for: {objectName}");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
@@ -393,12 +357,12 @@ namespace MovieTheater.API.Controllers
                 movie.Actors ??= new List<string>();
                 movie.ActorsUrl ??= new List<string>();
                 movie.Actors.Add(actorName);
-                movie.ActorsUrl.Add(url);
+                movie.ActorsUrl.Add(previewUrl);
 
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
 
-                return Ok(ApiResult<string>.Success(url, "200", $"Cast image for '{actorName}' uploaded successfully."));
+                return Ok(ApiResult<string>.Success(previewUrl, "200", $"Cast image for '{actorName}' uploaded successfully."));
             }
             catch (OperationCanceledException)
             {
