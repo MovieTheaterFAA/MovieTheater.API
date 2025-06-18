@@ -21,4 +21,6 @@ public interface IAuthService
     Task<bool> ResendOtpAsync(string email, OtpPurpose otpPurpose);
 
     Task<bool> VerifyEmailOtpAsync(string email, string otp);
+
+    Task<UserDto?> EmployeeCreateCustomerAsync(AddCustomerDto customer, Guid employeeId);
 }
