@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
@@ -27,10 +28,15 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("start")]
         [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Start impersonating a user", 
+            Description = "Allows an admin to impersonate a target user by their ID and specify a reason.")]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> Start([FromQuery] Guid targetUserId, [FromQuery] string reason)
+        public async Task<IActionResult> Start(
+            [FromQuery, SwaggerParameter("ID of the user to impersonate", Required = true)] Guid targetUserId,
+            [FromQuery, SwaggerParameter("Reason for impersonation", Required = true)] string reason)
         {
             try
             {
@@ -52,6 +58,9 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("stop")]
         [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Stop impersonation", 
+            Description = "Stops the current impersonation session if one is active.")]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -75,6 +84,9 @@ namespace MovieTheater.API.Controllers
 
         [HttpGet("status")]
         [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Get impersonation status", 
+            Description = "Returns whether the admin is currently impersonating another user.")]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public IActionResult Status()
