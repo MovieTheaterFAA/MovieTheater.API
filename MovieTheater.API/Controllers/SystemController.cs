@@ -37,6 +37,10 @@ public class SystemController : ControllerBase
             await SeedCinemaRoomAsync();
             //Seed showtime data
             await SeedShowTimeAsync();
+            //Seed food and drinks data
+            await SeedFoodAndDrinkAsync();
+            //Seed events and promotions
+            await SeedEventAndPromotionAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -71,6 +75,21 @@ public class SystemController : ControllerBase
             PhoneNumber = "0944000000",
             Password = passwordHasher.HashPassword("1@"),
             Role = RoleType.Admin,
+            ScoreBalance = 0,
+            IsEmailVerified = true,
+            UserStatus = UserStatus.Active,
+            CCCD = "11000000000",
+            AvatarUrl = "https://avatar.iran.liara.run/public"
+        },
+            new()
+        {
+            FullName = "System Owner User",
+            Email = "system@gmail.com",
+            Sex = Gender.Female,
+            DateOfBirth = DateTime.UtcNow.AddYears(-30),
+            PhoneNumber = "0944000000",
+            Password = passwordHasher.HashPassword("1@"),
+            Role = RoleType.SystemOwner,
             ScoreBalance = 0,
             IsEmailVerified = true,
             UserStatus = UserStatus.Active,
@@ -377,7 +396,6 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -468,6 +486,170 @@ public class SystemController : ControllerBase
 
         _logger.Success("Showtimes seeded successfully.");
     }
+
+    private async Task SeedEventAndPromotionAsync()
+    {
+        var events = new List<Event>
+    {
+        new Event
+        {
+            Name = "Summer Blockbuster Festival",
+            StartTime = DateTime.UtcNow.AddDays(1),
+            EndTime = DateTime.UtcNow.AddDays(30),
+            Detail = "Enjoy the hottest movies and exclusive deals all summer long!",
+            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fsummer-blockbuster.jpg&version_id=null",
+            Promotions = new List<Promotion>
+            {
+                new Promotion { Title = "Buy 1 Get 1 Free", DiscountValue = 0.5m, Detail = "Buy one ticket, get one free for select movies." },
+                new Promotion { Title = "Free Popcorn Combo", DiscountValue = 0.2m, Detail = "Get a free popcorn combo with every 2 tickets." },
+                new Promotion { Title = "Student Discount", DiscountValue = 0.15m, Detail = "Students enjoy 15% off all showtimes." },
+                new Promotion { Title = "Family Pack", DiscountValue = 0.25m, Detail = "Family pack: 4 tickets + snacks at 25% off." },
+                new Promotion { Title = "Early Bird", DiscountValue = 0.1m, Detail = "10% off for tickets booked before 10am." }
+            }
+        },
+        new Event
+        {
+            Name = "Mid-Autumn Movie Night",
+            StartTime = DateTime.UtcNow.AddDays(10),
+            EndTime = DateTime.UtcNow.AddDays(40),
+            Detail = "Celebrate Mid-Autumn with special screenings and mooncake treats.",
+            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fmid-autumn.jpg&version_id=null",
+            Promotions = new List<Promotion>
+            {
+                new Promotion { Title = "Mooncake Gift", DiscountValue = 0.05m, Detail = "Free mooncake with every ticket." },
+                new Promotion { Title = "Couple Night", DiscountValue = 0.2m, Detail = "20% off for couples booking together." },
+                new Promotion { Title = "Kids Free", DiscountValue = 0.5m, Detail = "Kids under 12 get 50% off." },
+                new Promotion { Title = "Snack Combo", DiscountValue = 0.3m, Detail = "30% off on all snack combos." },
+                new Promotion { Title = "Late Night Show", DiscountValue = 0.12m, Detail = "12% off for shows after 9pm." }
+            }
+        },
+        new Event
+        {
+            Name = "New Year Movie Marathon",
+            StartTime = DateTime.UtcNow.AddDays(20),
+            EndTime = DateTime.UtcNow.AddDays(50),
+            Detail = "Ring in the New Year with a marathon of blockbuster hits.",
+            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fnewyear.jpg&version_id=null",
+            Promotions = new List<Promotion>
+            {
+                new Promotion { Title = "Marathon Pass", DiscountValue = 0.4m, Detail = "40% off for all-day marathon passes." },
+                new Promotion { Title = "Free Drink", DiscountValue = 0.1m, Detail = "Free drink with every ticket." },
+                new Promotion { Title = "Group Discount", DiscountValue = 0.2m, Detail = "20% off for groups of 5 or more." },
+                new Promotion { Title = "Lucky Draw", DiscountValue = 0.05m, Detail = "Enter lucky draw with every purchase." },
+                new Promotion { Title = "VIP Upgrade", DiscountValue = 0.3m, Detail = "Upgrade to VIP seats at 30% off." }
+            }
+        }
+    };
+
+        _logger.Info("Seeding events and promotions...");
+        await _context.Events.AddRangeAsync(events);
+        await _context.SaveChangesAsync();
+        _logger.Success("Events and promotions seeded successfully.");
+    }
+    private async Task SeedFoodAndDrinkAsync()
+    {
+        var foodanddrinks = new List<FoodAndDrink>
+        {
+    new()
+    {
+        Name = "Butter Popcorn",
+        Description = "Aromatic, crispy popcorn with a savory butter flavor.",
+        Price = 45000m, // 45,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Pepsi Can",
+        Description = "Carbonated soft drink, perfect with popcorn.",
+        Price = 25000m, // 25,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 1: Popcorn + Pepsi",
+        Description = "Value combo including a serving of butter popcorn and one Pepsi can.",
+        Price = 65000m, // 65,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Cheese Sausage",
+        Description = "Hot sausage filled with melted cheese, delicious and satisfying.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Peach Citrus Lemongrass Tea",
+        Description = "Refreshing drink with the aroma of peach, citrus, and lemongrass.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "French Fries",
+        Description = "Crispy potato fries, served with ketchup or cheese sauce.",
+        Price = 30000m, // 30,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Aquafina Water",
+        Description = "500ml purified bottled water, convenient and refreshing.",
+        Price = 15000m, // 15,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Combo 2: Large Popcorn + 2 Pepsi",
+        Description = "Perfect for two: 1 large popcorn and 2 Pepsi cans.",
+        Price = 90000m, // 90,000₫
+        Type = FoodType.Combo,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Hotdog Sausage",
+        Description = "Soft bun with hot sausage, mayonnaise, and ketchup.",
+        Price = 35000m, // 35,000₫
+        Type = FoodType.Food,
+        ImageUrl = null,
+        IsAvailable = true
+    },
+    new()
+    {
+        Name = "Coca-Cola Bottle",
+        Description = "Classic carbonated drink, 390ml plastic bottle.",
+        Price = 27000m, // 27,000₫
+        Type = FoodType.Drink,
+        ImageUrl = null,
+        IsAvailable = true
+        }
+
+    };
+
+        _logger.Info("Seeding food and drinks...");
+
+        await _context.FoodAndDrinks.AddRangeAsync(foodanddrinks);
+        await _context.SaveChangesAsync();
+        _logger.Success("Food and Drink seeded successfully.");
+    }
+
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {

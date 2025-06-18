@@ -1,7 +1,6 @@
 ﻿using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -23,10 +22,16 @@ namespace MovieTheater.Application.Interfaces
             int pageSize
             );
 
+        Task<GetUserDto?> GetUserDetailAsync(Guid userId);
+
         Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto);
 
         Task<EditEmployeeDto> EditEmployeeAsync(Guid userId, EditEmployeeDto editEmployeeDto);
 
         Task<bool> DeleteEmployeeAsync(Guid employeeId, Guid adminId);
+
+        Task<bool> BanUserAsync(Guid userId, Guid adminId);
+
+        Task<bool> UnbanUserAsync(Guid userId, Guid adminId);
     }
 }

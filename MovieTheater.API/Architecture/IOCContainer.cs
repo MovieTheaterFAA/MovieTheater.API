@@ -118,6 +118,8 @@ public static class IocContainer
         services.AddScoped<IFoodAndDrinkService, FoodAndDrinkService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IPromotionService, PromotionService>();
+        services.AddScoped<IImpersonationService, ImpersonationService>();
+
         services.AddScoped<ISeatService, SeatService>();
         services.AddHttpContextAccessor();
 
@@ -217,6 +219,9 @@ public static class IocContainer
 
             options.AddPolicy("AdminPolicy", policy =>
                 policy.RequireRole("Admin"));
+
+            options.AddPolicy("SystemOwnerPolicy", policy =>
+                policy.RequireRole("SystemOwner"));
         });
 
         return services;

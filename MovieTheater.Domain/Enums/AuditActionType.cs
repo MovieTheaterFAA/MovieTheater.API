@@ -10,6 +10,7 @@ namespace MovieTheater.Domain.Enums
     {
         Create,
         Update,
-        Delete
+        Delete,
+        Impersonate
     }
 }

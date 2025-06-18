@@ -1,6 +1,5 @@
-﻿using System.Threading.Tasks;
-using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
-using MovieTheater.Infrastructure.Commons;
+﻿using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
+using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -11,7 +10,9 @@ namespace MovieTheater.Application.Interfaces
             string? sortBy,
             bool isDescending,
             int page,
-            int pageSize);
+            int pageSize,
+            FoodType? type);
+        Task<FoodAndDrinkResponseDto> UpdateFoodAndDrinkAsync(Guid id, FoodAndDrinkRequestDto dto);
         Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
         Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId);
 

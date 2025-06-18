@@ -1,6 +1,7 @@
 ﻿using MovieTheater.API.Architecture;
 using MovieTheater.API.Hubs;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Services;
 using SwaggerThemes;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
@@ -16,12 +17,17 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Configuration.AddJsonFile("appsettings.json", true, true);
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        hehe =>
+    options.AddPolicy("AllowFrontend",
+        policy =>
         {
-            hehe.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
+            policy.WithOrigins(
+                "https://movietheaterfe.ae-tao-fullstack-api.site", // Production
+                "http://localhost:3000",                             // Local dev
+                "http://localhost:3001"                             // Local dev
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
         });
 });
 
@@ -38,6 +44,15 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
+
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true; // Bật chi tiết lỗi cho SignalR
@@ -51,7 +66,7 @@ using (var scope = app.Services.CreateScope())
     await blob.EnsureBucketExistsAsync();
 }
 
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 // Configure the HTTP request pipeline - test
 if (app.Environment.IsDevelopment())
@@ -79,6 +94,7 @@ catch (Exception e)
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseSession();
 app.MapHub<SeatHub>("/seatHub");
 
 app.Run();

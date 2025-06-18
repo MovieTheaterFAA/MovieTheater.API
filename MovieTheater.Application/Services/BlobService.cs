@@ -44,7 +44,7 @@ namespace MovieTheater.Application.Services
         }
 
         /// <summary>
-        ///     Check xem bucket đã tồn tại trên Minio chưa (creates nếu bucket ko tồn tiai5 ).
+        ///     Check xem bucket đã tồn tại trên Minio chưa (creates nếu bucket ko tồn tai ).
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
@@ -148,13 +148,16 @@ namespace MovieTheater.Application.Services
                     .WithObject(fileName)
                     .WithExpiry(7 * 24 * 60 * 60);
 
-                // Kick off the presign task
                 var presignTask = _minioClient.PresignedGetObjectAsync(args);
 
-                // Await with cancellation support
                 string url = cancellationToken == default
                     ? await presignTask
                     : await presignTask.WaitAsync(cancellationToken);
+
+                // Replace both http and https with the public domain
+                var minioHost = Environment.GetEnvironmentVariable("MINIO_HOST") ?? "https://minio.fpt-devteam.fun";
+                url = url.Replace("http://103.211.201.162:9000", minioHost)
+                         .Replace("https://103.211.201.162:9000", minioHost);
 
                 _loggerService.Success($"Presigned URL: {url}");
                 return url;

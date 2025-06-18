@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
@@ -18,11 +19,13 @@ namespace MovieTheater.API.Controllers
         private readonly IUserService _userService;
         private readonly IClaimsService _claimsService;
         private readonly ILoggerService _loggerService;
-        public UserController(IUserService userService, IClaimsService claimsService, ILoggerService loggerService)
+        private readonly IImpersonationService _impersonationService;
+        public UserController(IUserService userService, IClaimsService claimsService, ILoggerService loggerService, IImpersonationService impersonationService)
         {
             _userService = userService;
             _claimsService = claimsService;
             _loggerService = loggerService;
+            _impersonationService = impersonationService;
         }
         [HttpGet("me")]
         [Authorize]
@@ -33,7 +36,7 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
-                var currentUserId = _claimsService.GetCurrentUserId;
+                var currentUserId = _impersonationService.GetEffectiveUserId();
                 var currentUser = await _userService.GetUserDetails(currentUserId);
 
                 var result = ApiResult<object>.Success(currentUser, "200", "User profile retrieved successfully.");
@@ -61,7 +64,7 @@ namespace MovieTheater.API.Controllers
                     return BadRequest(ApiResult<object>.Failure("400", "User update data is required."));
                 }
 
-                var currentUserId = _claimsService.GetCurrentUserId;
+                var currentUserId = _impersonationService.GetEffectiveUserId();
                 if (currentUserId == Guid.Empty)
                 {
                     return BadRequest(ApiResult<object>.Failure("400", "Invalid or missing user ID."));

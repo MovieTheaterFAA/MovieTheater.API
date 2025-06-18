@@ -67,6 +67,77 @@ namespace MovieTheater.Application.Services
         }
 
         /// <summary>
+        ///     Employee creates a customer account.
+        /// </summary>
+        /// <param name="customer"></param>
+        /// <returns></returns>
+        public async Task<UserDto?> EmployeeCreateCustomerAsync(AddCustomerDto customer, Guid employeeId)
+        {
+            try
+            {
+                _loggerService.Info($"Employee {employeeId} creating customer account for {customer.Email}");
+
+                if (await UserExistsAsync(customer.Email) || await UserExistsAsync(customer.FullName))
+                {
+                    _loggerService.Warn($"Email {customer.Email} already registered.");
+                    throw ErrorHelper.Conflict("Email has already been used.");
+                }
+
+                var rawPassword = OtpGenerator.GenerateAlphanumeric(12);
+
+                var hashedPassword = new PasswordHasher().HashPassword(rawPassword);
+
+                var user = new User
+                {
+                    Email = customer.Email,
+                    Password = hashedPassword,
+                    FullName = customer.FullName,
+                    PhoneNumber = customer.PhoneNumber,
+                    UserStatus = UserStatus.Active,
+                    Role = RoleType.Customer,
+                    IsEmailVerified = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = employeeId
+                };
+
+                await _unitOfWork.Users.AddAsync(user);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _emailService.SendEmployeeCredentialsEmailAsync(new EmployeeCredentialsEmailDto
+                {
+                    To = user.Email,
+                    UserName = user.Email,
+                    Password = rawPassword
+                });
+
+                //// Ghi log vào AuditLog
+                //var auditLog = new AuditLog
+                //{
+                //    AdminId = employeeId,
+                //    ActionType = "Create",
+                //    EntityType = "User",
+                //    EntityId = user.Id,
+                //    ChangedFields = "FullName,Email,PhoneNumber,Password",
+                //    OldValue = "",
+                //    NewValue = JsonSerializer.Serialize(new { user.FullName, user.Email, user.PhoneNumber }),
+                //    Timestamp = DateTime.UtcNow,
+                //    Reason = "Employee created customer account"
+                //};
+                //await _unitOfWork.AuditLogs.AddAsync(auditLog);
+                //await _unitOfWork.SaveChangesAsync();
+
+                _loggerService.Success($"Employee {employeeId} created customer account: {user.Email}");
+
+                return ToUserDto(user);
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Error creating customer account: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
         ///     Login a user and return JWT access and refresh token.
         /// </summary>
         /// <param name="loginDto"></param>
@@ -83,6 +154,10 @@ namespace MovieTheater.Application.Services
 
             if (!new PasswordHasher().VerifyPassword(loginDto.Password!, user.Password))
                 throw ErrorHelper.Unauthorized("Password is incorrect.");
+
+
+            if (user.UserStatus == UserStatus.Banned)
+                throw ErrorHelper.Forbidden("Your account has been banned. Please contact support for more information.");
 
             if (user.UserStatus != UserStatus.Active)
                 throw ErrorHelper.Forbidden("Account have not verified yet.");

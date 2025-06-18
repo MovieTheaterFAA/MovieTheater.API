@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -10,7 +9,6 @@ using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services;
@@ -116,7 +114,6 @@ public class AdminService : IAdminService
                 "Admin created new employee"
                 );
 
-
         _loggerService.Success($"[AddEmployeeAsync] Employee {user.Email} created successfully.");
 
         // Gửi email thông tin đăng nhập cho nhân viên
@@ -194,6 +191,8 @@ public class AdminService : IAdminService
                 ScoreBalance = u.ScoreBalance,
                 CreatedAt = u.CreatedAt,
                 AvatarUrl = u.AvatarUrl ?? string.Empty,
+                IsDeleted = u.IsDeleted,
+                Status = u.UserStatus
             }).ToList();
 
             _loggerService.Success($"Retrieved {userDtos.Count} users on page {page}");
@@ -361,6 +360,20 @@ public class AdminService : IAdminService
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
 
+            // Notify employee about the update
+            await _emailService.SendUpdateEmployeeCredentialsEmailAsync(new Domain.DTOs.EmailDTOs.UpdateEmployeeCredentialsEmailDto
+            {
+                To = user.Email,
+                UserName = user.Email,
+                Password = !string.IsNullOrWhiteSpace(editEmployeeDto.Password) ? editEmployeeDto.Password : "Your password was not changed",
+                FullName = user.FullName,
+                DateOfBirth = user.DateOfBirth,
+                Sex = user.Sex,
+                CCCD = user.CCCD,
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address
+            });
+
             var newData = new
             {
                 user.FullName,
@@ -388,7 +401,7 @@ public class AdminService : IAdminService
                 adminId,
                 AuditActionType.Update,
                 "Employee",
-                userId  ,
+                userId,
                 oldData,
                 newData,
                 changedFields,
@@ -429,7 +442,6 @@ public class AdminService : IAdminService
             user.UserStatus,
         };
 
-
         user.UserStatus = UserStatus.Deleted;
         user.IsDeleted = true;
         user.DeletedAt = DateTime.UtcNow;
@@ -461,6 +473,134 @@ public class AdminService : IAdminService
                );
 
         return true;
+    }
+
+    public async Task<bool> BanUserAsync(Guid userId, Guid adminId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+        {
+            _loggerService.Warn($"[BanUserAsync] User with ID {userId} not found or already deleted.");
+            return false;
+        }
+
+        if (user.UserStatus == UserStatus.Banned)
+        {
+            _loggerService.Warn($"[BanUserAsync] User with ID {userId} is already banned.");
+            return false;
+        }
+
+        var oldValue = new
+        {
+            user.UserStatus,
+        };
+
+        user.UserStatus = UserStatus.Banned;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = adminId;
+
+        var newValue = new
+        {
+            user.UserStatus,
+        };
+
+        var changedFields = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            UserStatus = UserStatus.Banned,
+        });
+
+        await _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditLogService.LogAsync(
+            adminId,
+            AuditActionType.Update,
+            "User",
+            userId,
+            oldValue,
+            newValue,
+            changedFields,
+            "User was banned by admin"
+        );
+
+        _loggerService.Success($"[BanUserAsync] User with ID {userId} has been banned.");
+        return true;
+    }
+
+    public async Task<bool> UnbanUserAsync(Guid userId, Guid adminId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+        {
+            _loggerService.Warn($"[UnbanUserAsync] User with ID {userId} not found or already deleted.");
+            return false;
+        }
+
+        if (user.UserStatus != UserStatus.Banned)
+        {
+            _loggerService.Warn($"[UnbanUserAsync] User with ID {userId} is not banned.");
+            return false;
+        }
+
+        var oldValue = new
+        {
+            user.UserStatus,
+        };
+
+        user.UserStatus = UserStatus.Active;
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = adminId;
+
+        var newValue = new
+        {
+            user.UserStatus,
+        };
+
+        var changedFields = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            UserStatus = UserStatus.Active,
+        });
+
+        await _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditLogService.LogAsync(
+            adminId,
+            AuditActionType.Update,
+            "User",
+            userId,
+            oldValue,
+            newValue,
+            changedFields,
+            "User was unbanned by admin"
+        );
+
+        _loggerService.Success($"[UnbanUserAsync] User with ID {userId} has been unbanned.");
+        return true;
+    }
+
+    public async Task<GetUserDto?> GetUserDetailAsync(Guid userId)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted)
+            return null;
+
+        return new GetUserDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Sex = user.Sex,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            CCCD = user.CCCD,
+            Address = user.Address,
+            Role = user.Role,
+            ScoreBalance = user.ScoreBalance,
+            CreatedAt = user.CreatedAt,
+            AvatarUrl = user.AvatarUrl ?? string.Empty,
+            IsDeleted = user.IsDeleted,
+            Status = user.UserStatus
+        };
     }
 
     //========================= PRIVATE HELPER METHODS ============================
@@ -528,6 +668,4 @@ public class AdminService : IAdminService
         // Note: Password, UserStatus, Role, IsEmailVerified, CreatedBy are set above
         return user;
     }
-
-
 }

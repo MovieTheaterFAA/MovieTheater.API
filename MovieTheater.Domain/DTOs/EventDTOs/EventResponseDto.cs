@@ -1,4 +1,6 @@
-﻿namespace MovieTheater.Domain.DTOs.EventDTOs
+﻿using MovieTheater.Domain.DTOs.PromotionDTOs;
+
+namespace MovieTheater.Domain.DTOs.EventDTOs
 {
     public class EventResponseDto
     {
@@ -13,5 +15,7 @@
         public string Detail { get; set; }
 
         public string Image { get; set; }
+
+        public List<PromotionResponseDto> Promotions { get; set; } = new();
     }
 }
