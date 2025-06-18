@@ -4,6 +4,7 @@ namespace MovieTheater.Domain.DTOs.SeatDTOs
 {
     public class SeatResponseDto
     {
+        public Guid Id { get; set; }
         public string Row { get; set; }
         public int Number { get; set; }
         public SeatType Type { get; set; }

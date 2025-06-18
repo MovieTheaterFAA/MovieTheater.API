@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Net;
 
 namespace MovieTheater.API.Controllers
 {
@@ -51,21 +51,11 @@ namespace MovieTheater.API.Controllers
                     return Conflict(new { Message = "One or more seats could not be held. They may already be held or unavailable." });
                 }
             }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { Message = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
             catch (Exception ex)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { Message = "An unexpected error occurred.", Detail = ex.Message });
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
@@ -73,7 +63,6 @@ namespace MovieTheater.API.Controllers
         /// Get seat list and status by showtime
         /// </summary>
         [HttpGet("showtime/{showTimeId}/list")]
-        [AllowAnonymous]
         [ProducesResponseType(typeof(List<ShowTimeSeatDto>), 200)]
         [ProducesResponseType(typeof(object), 404)]
         public async Task<IActionResult> GetSeatsByShowTimeAsync([FromRoute] Guid showTimeId)
@@ -83,13 +72,11 @@ namespace MovieTheater.API.Controllers
                 var result = await _seatService.GetSeatsByShowTimeAsync(showTimeId);
                 return Ok(result);
             }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
             catch (Exception ex)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { Message = "An unexpected error occurred.", Detail = ex.Message });
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
     }

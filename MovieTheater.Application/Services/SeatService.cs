@@ -163,6 +163,7 @@ namespace MovieTheater.Application.Services
                     var seat = seatDict[seatId];
                     heldSeats.Add(new SeatResponseDto
                     {
+                        Id = seat.Id,
                         Row = seat.Row,
                         Number = seat.Number,
                         Type = seat.Type
