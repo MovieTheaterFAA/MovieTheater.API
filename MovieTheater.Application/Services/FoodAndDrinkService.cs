@@ -180,7 +180,6 @@ namespace MovieTheater.Application.Services
                 throw ErrorHelper.NotFound("Food or drink not found.");
             }
 
-            // Check for name conflict (excluding self, and not deleted)
             var existing = await _unitOfWork.FoodAndDrinks.FirstOrDefaultAsync(
                 f => f.Name == dto.Name && f.Id != id && !f.IsDeleted);
             if (existing != null)
@@ -199,13 +198,58 @@ namespace MovieTheater.Application.Services
                 foodAndDrink.IsAvailable
             };
 
-            // Update fields
-            foodAndDrink.Name = dto.Name;
-            foodAndDrink.Description = dto.Description;
-            foodAndDrink.Price = dto.Price;
-            foodAndDrink.Type = dto.Type;
-            foodAndDrink.ImageUrl = dto.ImageUrl;
-            foodAndDrink.IsAvailable = dto.IsAvailable;
+            bool isUpdated = false;
+
+            if (!string.IsNullOrWhiteSpace(dto.Name) && foodAndDrink.Name != dto.Name)
+            {
+                foodAndDrink.Name = dto.Name;
+                isUpdated = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Description) && foodAndDrink.Description != dto.Description)
+            {
+                foodAndDrink.Description = dto.Description;
+                isUpdated = true;
+            }
+
+            if (dto.Price != foodAndDrink.Price)
+            {
+                foodAndDrink.Price = dto.Price;
+                isUpdated = true;
+            }
+
+            if (dto.Type != foodAndDrink.Type)
+            {
+                foodAndDrink.Type = dto.Type;
+                isUpdated = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.ImageUrl) && foodAndDrink.ImageUrl != dto.ImageUrl)
+            {
+                foodAndDrink.ImageUrl = dto.ImageUrl;
+                isUpdated = true;
+            }
+
+            if (dto.IsAvailable != foodAndDrink.IsAvailable)
+            {
+                foodAndDrink.IsAvailable = dto.IsAvailable;
+                isUpdated = true;
+            }
+
+            if (!isUpdated)
+            {
+                _loggerService.Warn($"[UpdateFoodAndDrinkAsync] No changes detected for FoodAndDrink ID: {id}");
+                return new FoodAndDrinkResponseDto
+                {
+                    Id = foodAndDrink.Id,
+                    Name = foodAndDrink.Name,
+                    Description = foodAndDrink.Description,
+                    Price = foodAndDrink.Price,
+                    Type = foodAndDrink.Type,
+                    ImageUrl = foodAndDrink.ImageUrl,
+                    IsAvailable = foodAndDrink.IsAvailable
+                };
+            }
 
             await _unitOfWork.FoodAndDrinks.Update(foodAndDrink);
             await _unitOfWork.SaveChangesAsync();
@@ -221,8 +265,8 @@ namespace MovieTheater.Application.Services
             };
 
             var changedFields = JsonSerializer.Serialize(newData);
-
             var adminId = _claimsService.GetCurrentUserId;
+
             await _auditLogService.LogAsync(
                 adminId,
                 AuditActionType.Update,
