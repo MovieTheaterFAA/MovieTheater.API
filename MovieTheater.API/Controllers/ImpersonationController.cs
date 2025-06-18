@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers
@@ -26,6 +27,9 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("start")]
         [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> Start([FromQuery] Guid targetUserId, [FromQuery] string reason)
         {
             try
@@ -48,6 +52,9 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("stop")]
         [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> Stop()
         {
             try
@@ -68,6 +75,8 @@ namespace MovieTheater.API.Controllers
 
         [HttpGet("status")]
         [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public IActionResult Status()
         {
             try
