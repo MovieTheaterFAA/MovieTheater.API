@@ -5,6 +5,7 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.AuthenDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
@@ -23,7 +24,16 @@ namespace MovieTheater.API.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Register a new user account.
+        /// </summary>
+        /// <param name="userDto">User registration data.</param>
+        /// <returns>Registered user information.</returns>
         [HttpPost("register")]
+        [SwaggerOperation(
+            Summary = "Register a new user",
+            Description = "Creates a new user account with the provided registration information."
+        )]
         [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
         public async Task<IActionResult> Register([FromBody] UserRegistrationDto userDto)
@@ -41,27 +51,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("employee-add-customer")]
-        [Authorize(Roles = "Employee,Admin")]
-        [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
-        [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
-        public async Task<IActionResult> EmployeeCreateCustomer([FromBody] AddCustomerDto customer)
-        {
-            try
-            {
-                var employeeId = _claimsService.GetCurrentUserId;
-                var result = await _authService.EmployeeCreateCustomerAsync(customer, employeeId);
-                return Ok(ApiResult<UserDto>.Success(result, "200", "Customer account created successfully."));
-            }
-            catch (Exception ex)
-            {
-                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
-                return StatusCode(statusCode, errorResponse);
-            }
-        }
-
+        /// <summary>
+        /// User login.
+        /// </summary>
+        /// <param name="dto">Login credentials.</param>
+        /// <returns>JWT access and refresh tokens.</returns>
         [HttpPost("login")]
+        [SwaggerOperation(
+            Summary = "User login",
+            Description = "Authenticate user and return JWT tokens."
+        )]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 400)]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto dto)
@@ -79,8 +78,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Logout the current user.
+        /// </summary>
+        /// <returns>Logout result.</returns>
         [HttpPost("logout")]
         [Authorize]
+        [SwaggerOperation(
+            Summary = "Logout user",
+            Description = "Logs out the currently authenticated user."
+        )]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -100,7 +107,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Reset user password using OTP.
+        /// </summary>
+        /// <param name="dto">Reset password data.</param>
+        /// <returns>Password reset result.</returns>
         [HttpPost("reset-password")]
+        [SwaggerOperation(
+            Summary = "Reset password",
+            Description = "Reset user password using OTP sent to email."
+        )]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
@@ -119,7 +135,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Refresh JWT access token using a valid refresh token.
+        /// </summary>
+        /// <param name="requestToken">Refresh token data.</param>
+        /// <returns>New JWT tokens.</returns>
         [HttpPost("refresh-token")]
+        [SwaggerOperation(
+            Summary = "Refresh JWT token",
+            Description = "Refresh JWT access token using a valid refresh token."
+        )]
         [ProducesResponseType(typeof(ApiResult<LoginResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 401)]
@@ -139,7 +164,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Resend OTP to user's email for registration or password reset.
+        /// </summary>
+        /// <param name="dto">Resend OTP request data.</param>
+        /// <returns>OTP resend result.</returns>
         [HttpPost("resend-otp")]
+        [SwaggerOperation(
+            Summary = "Resend OTP",
+            Description = "Resend OTP to user's email for registration or password reset."
+        )]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -163,7 +197,16 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Verify OTP for email confirmation.
+        /// </summary>
+        /// <param name="dto">OTP verification data.</param>
+        /// <returns>Verification result.</returns>
         [HttpPost("verify-otp")]
+        [SwaggerOperation(
+            Summary = "Verify OTP",
+            Description = "Verify OTP for email confirmation and activate account."
+        )]
         [ProducesResponseType(typeof(ApiResult<object>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
@@ -179,6 +222,35 @@ namespace MovieTheater.API.Controllers
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
                 var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        /// <summary>
+        /// Employee creates a new customer account.
+        /// </summary>
+        /// <param name="customer">Customer registration data.</param>
+        /// <returns>Created customer information.</returns>
+        [HttpPost("add-offline-customer")]
+        [Authorize(Roles = "Employee")]
+        [SwaggerOperation(
+            Summary = "Employee creates a new customer",
+            Description = "Allows an employee to create a new customer account."
+        )]
+        [ProducesResponseType(typeof(ApiResult<UserDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<UserDto>), 400)]
+        public async Task<IActionResult> EmployeeCreateCustomer([FromBody, SwaggerParameter("Customer registration data")] AddCustomerDto customer)
+        {
+            try
+            {
+                var employeeId = _claimsService.GetCurrentUserId;
+                var result = await _authService.EmployeeCreateCustomerAsync(customer, employeeId);
+                return Ok(ApiResult<UserDto>.Success(result, "200", "Customer account created successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<UserDto>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }
