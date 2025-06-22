@@ -20,13 +20,15 @@ namespace MovieTheater.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IRedisService _redisService;
 
-        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
+        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
+            _redisService = redisService;
         }
 
         public async Task<EventResponseDto?> AddEventAsync(EventRequestDto dto)
@@ -76,6 +78,7 @@ namespace MovieTheater.Application.Services
             try
             {
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("event:list:");
             }
             catch (DbUpdateException dbEx)
             {
@@ -135,6 +138,7 @@ namespace MovieTheater.Application.Services
                 await _unitOfWork.Events.SoftRemove(eventEntity);
 
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("event:list:");
 
                 var newValue = new
                 {
@@ -173,20 +177,23 @@ namespace MovieTheater.Application.Services
         {
             try
             {
-                _loggerService.Info($"Fetching events - Page {page}, PageSize {pageSize}, Search: {search}");
+                var cacheKey = $"event:list:{search}:{sortBy}:{isDescending}:{page}:{pageSize}";
+                var cached = await _redisService.GetAsync<Pagination<EventResponseDto>>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
                 var events = await _unitOfWork.Events.GetAllAsync(null, e => e.Promotions);
-
-                var query = events.AsQueryable();
-
-                query = query.Where(e => !e.IsDeleted);
+                var query = events.AsQueryable().Where(e => !e.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var lowerSearch = search.ToLower();
-                    query = query.Where(e =>
-                        (!string.IsNullOrEmpty(e.Name) && e.Name.ToLower().Contains(lowerSearch))
-                    );
+                    query = query.Where(e => !string.IsNullOrEmpty(e.Name) && e.Name.ToLower().Contains(lowerSearch));
                 }
 
                 var totalEvents = query.Count();
@@ -224,9 +231,11 @@ namespace MovieTheater.Application.Services
                         }).ToList() ?? new List<PromotionResponseDto>()
                 }).ToList();
 
-                _loggerService.Success($"Retrieved {result.Count} events on page {page} successfully.");
+                var paginated = new Pagination<EventResponseDto>(result, totalEvents, page, pageSize);
+                await _redisService.SetAsync(cacheKey, paginated, TimeSpan.FromMinutes(5));
 
-                return new Pagination<EventResponseDto>(result, totalEvents, page, pageSize);
+                _loggerService.Success($"Retrieved {result.Count} events on page {page} successfully.");
+                return paginated;
             }
             catch (Exception ex)
             {
@@ -321,6 +330,7 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Events.Update(eventEntity);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("event:list:");
 
                 var newData = new
                 {
@@ -412,6 +422,7 @@ namespace MovieTheater.Application.Services
                 }
 
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("event:list:");
             }
             catch (Exception ex)
             {

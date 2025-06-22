@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
 using MovieTheater.Domain.DTOs.BlobDTOs;
+using MovieTheater.Infrastructure.Interfaces;
 using System.Security.Claims;
 
 namespace MovieTheater.API.Controllers
@@ -15,12 +16,14 @@ namespace MovieTheater.API.Controllers
         private readonly IBlobService _blobService;
         private readonly ILogger<FileController> _loggerService;
         private readonly MovieTheaterDbContext _dbContext;
+        private readonly IRedisService _redisService;
 
-        public FileController(IBlobService blobService, ILogger<FileController> logger, MovieTheaterDbContext dbContext)
+        public FileController(IBlobService blobService, ILogger<FileController> logger, MovieTheaterDbContext dbContext, IRedisService redisService)
         {
             _blobService = blobService;
             _loggerService = logger;
             _dbContext = dbContext;
+            _redisService = redisService;
         }
 
         [HttpPost("upload-avatar")]
@@ -76,6 +79,7 @@ namespace MovieTheater.API.Controllers
                 user.AvatarUrl = previewUrl;
                 _dbContext.Users.Update(user);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveAsync($"user:detail:{userId}");
 
                 // 8) Return the presigned URL so the client can immediately display/store it
                 return Ok(ApiResult<string>.Success(previewUrl, "200", "Avatar uploaded successfully."));
@@ -131,6 +135,7 @@ namespace MovieTheater.API.Controllers
                 eventEntity.Image = previewUrl;
                 _dbContext.Events.Update(eventEntity);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveByPatternAsync("event:list:");
 
                 return Ok(ApiResult<string>.Success(previewUrl, "200", "Event image uploaded successfully."));
             }
@@ -243,6 +248,8 @@ namespace MovieTheater.API.Controllers
                 movie.PosterImage = previewUrl;
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveByPatternAsync("movie:list:");
+                await _redisService.RemoveAsync($"movie:detail:{id}");
 
                 return Ok(ApiResult<string>.Success(previewUrl, "200", "Movie poster uploaded successfully."));
             }
@@ -296,6 +303,8 @@ namespace MovieTheater.API.Controllers
                 movie.BackgroundImage = previewUrl;
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveByPatternAsync("movie:list:");
+                await _redisService.RemoveAsync($"movie:detail:{id}");
 
                 return Ok(ApiResult<string>.Success(previewUrl, "200", "Movie background uploaded successfully."));
             }
@@ -367,6 +376,8 @@ namespace MovieTheater.API.Controllers
 
                 _dbContext.Movies.Update(movie);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveByPatternAsync("movie:list:");
+                await _redisService.RemoveAsync($"movie:detail:{id}");
 
                 return Ok(ApiResult<string>.Success(previewUrl, "200", $"Cast image for '{actorName}' uploaded successfully."));
             }
