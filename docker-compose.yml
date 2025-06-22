@@ -13,7 +13,7 @@
       - ConnectionStrings__DefaultConnection=Host=103.211.201.162;Port=5434;Database=movietheater_db;Username=postgres;Password=postgres
       # Xài local
       # - ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=movietheater_db;Username=postgres;Password=postgres
-      - ConnectionStrings__Redis=redis:6380,abortConnect=false
+      - ConnectionStrings__Redis=movietheater-redis:6379,abortConnect=false
       - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU
       - JWT__Issuer=MovieTheater_Issuer
       - JWT__Audience=MovieTheater_Audience
