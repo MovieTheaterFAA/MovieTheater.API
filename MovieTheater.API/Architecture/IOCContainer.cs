@@ -12,6 +12,7 @@ using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Infrastructure.Repositories;
 using Resend;
+using StackExchange.Redis;
 using System.Text;
 
 namespace MovieTheater.API.Architecture;
@@ -35,10 +36,11 @@ public static class IocContainer
 
         services.SetupJwt();
 
-        // services.SetupGraphQl();
+        // 3th party services
+        services.SetupRedis();
         services.SetupReSendService();
-
         services.SetupVnpay();
+
         return services;
     }
 
@@ -64,6 +66,22 @@ public static class IocContainer
 
         return services;
     }
+
+    public static IServiceCollection SetupRedis(this IServiceCollection services)
+    {
+        var redisConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Redis");
+
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+            throw new InvalidOperationException("Redis connection string not found in environment variables.");
+
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(redisConnectionString));
+
+        services.AddScoped<IRedisService, RedisService>();
+
+        return services;
+    }
+
 
     public static IServiceCollection SetupVnpay(this IServiceCollection services)
     {
@@ -101,7 +119,6 @@ public static class IocContainer
     public static IServiceCollection SetupBusinessServicesLayer(this IServiceCollection services)
     {
         // Inject service vào DI container
-
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ILoggerService, LoggerService>();
