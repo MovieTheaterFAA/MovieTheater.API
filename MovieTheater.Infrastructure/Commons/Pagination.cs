@@ -1,5 +1,6 @@
 ﻿public class Pagination<T>
 {
+    public Pagination() { } // Needed for deserialization
     public Pagination(List<T> items, int count, int pageNumber, int pageSize)
     {
         Items = items;
