@@ -1,7 +1,6 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.MovieDTOs;
-using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
@@ -16,7 +15,7 @@ namespace MovieTheater.Application.Services
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
 
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService,IAuditLogService auditLogService)
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
@@ -214,7 +213,7 @@ namespace MovieTheater.Application.Services
                     Name = movieRequestDto.Name,
                     FromDate = movieRequestDto.FromDate,
                     ToDate = movieRequestDto.ToDate,
-                    Actors = new List<string>(), 
+                    Actors = new List<string>(),
                     ActorsUrl = new List<string>(),
                     Director = movieRequestDto.Director,
                     RunningTime = movieRequestDto.RunningTime,
@@ -266,7 +265,7 @@ namespace MovieTheater.Application.Services
                     movie.Status
                 });
 
-                
+
 
                 // Thêm bộ phim vào cơ sở dữ liệu
                 await _unitOfWork.Movies.AddAsync(movie);
@@ -306,7 +305,7 @@ namespace MovieTheater.Application.Services
 
                 return responseDto;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _loggerService.Error($"[AddMovie] Error add movie. Exception: {ex.Message}");
                 throw;
@@ -369,20 +368,6 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (movieUpdateDto.Actors is { Count: > 0 } &&
-                    !movie.Actors?.SequenceEqual(movieUpdateDto.Actors) == true)
-                {
-                    movie.Actors = new List<string>(movieUpdateDto.Actors);
-                    isUpdated = true;
-                }
-
-                if (movieUpdateDto.ActorsUrl is { Count: > 0 } &&
-                    !movie.ActorsUrl?.SequenceEqual(movieUpdateDto.ActorsUrl) == true)
-                {
-                    movie.ActorsUrl = new List<string>(movieUpdateDto.ActorsUrl);
-                    isUpdated = true;
-                }
-
                 if (!string.IsNullOrWhiteSpace(movieUpdateDto.Director) && movie.Director != movieUpdateDto.Director)
                 {
                     movie.Director = movieUpdateDto.Director;
@@ -414,12 +399,6 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (!string.IsNullOrWhiteSpace(movieUpdateDto.PosterImage) && movie.PosterImage != movieUpdateDto.PosterImage)
-                {
-                    movie.PosterImage = movieUpdateDto.PosterImage;
-                    isUpdated = true;
-                }
-
                 if (movieUpdateDto.Rating >= 0 && movieUpdateDto.Rating <= 10 && movie.Rating != movieUpdateDto.Rating)
                 {
                     movie.Rating = movieUpdateDto.Rating.Value;
@@ -440,14 +419,11 @@ namespace MovieTheater.Application.Services
                         Name = movie.Name,
                         FromDate = movie.FromDate,
                         ToDate = movie.ToDate,
-                        Actors = movie.Actors,
-                        ActorsUrl = movie.ActorsUrl,
                         Director = movie.Director,
                         RunningTime = movie.RunningTime,
                         TrailerUrl = movie.TrailerUrl,
                         Genres = movie.Genres,
                         Description = movie.Description,
-                        PosterImage = movie.PosterImage,
                         Rating = movie.Rating,
                         Status = movie.Status,
                     };
@@ -510,14 +486,11 @@ namespace MovieTheater.Application.Services
                     Name = movie.Name,
                     FromDate = movie.FromDate,
                     ToDate = movie.ToDate,
-                    Actors = movie.Actors,
-                    ActorsUrl = movie.ActorsUrl,
                     Director = movie.Director,
                     RunningTime = movie.RunningTime,
                     TrailerUrl = movie.TrailerUrl,
                     Genres = movie.Genres,
                     Description = movie.Description,
-                    PosterImage = movie.PosterImage,
                     Rating = movie.Rating,
                     Status = movie.Status,
                 };

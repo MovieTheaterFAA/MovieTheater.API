@@ -323,13 +323,15 @@ namespace MovieTheater.API.Controllers
             [FromForm] MovieCastUploadDto request)
         {
             var file = request.File;
-            var actorName = request.ActorName;
+            var actorName = request.ActorName?.Trim();
 
             if (file == null || file.Length == 0)
                 return BadRequest(ApiResult<string>.Failure("400", "No file provided."));
 
-            if (string.IsNullOrWhiteSpace(actorName))
-                return BadRequest(ApiResult<string>.Failure("400", "Actor name is required."));
+            if (string.IsNullOrWhiteSpace(actorName) ||
+                actorName.ToLowerInvariant() == "string" ||
+                actorName.Length < 2)
+                return BadRequest(ApiResult<string>.Failure("400", "Invalid actor name."));
 
             CancellationToken ct = HttpContext.RequestAborted;
 
@@ -339,7 +341,12 @@ namespace MovieTheater.API.Controllers
                 if (movie == null)
                     return NotFound(ApiResult<string>.Failure("404", "Movie not found."));
 
-                var safeActor = actorName.Trim().Replace(" ", "_").ToLowerInvariant();
+                // Prevent duplicate actor names
+                movie.Actors ??= new List<string>();
+                if (movie.Actors.Any(a => a.Equals(actorName, StringComparison.OrdinalIgnoreCase)))
+                    return BadRequest(ApiResult<string>.Failure("400", "Actor already exists."));
+
+                var safeActor = actorName.Replace(" ", "_").ToLowerInvariant();
                 var folder = $"movies/{id}/cast/{safeActor}";
                 var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
                 var objectName = $"{folder}/{uniqueFileName}";
@@ -354,9 +361,8 @@ namespace MovieTheater.API.Controllers
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
-                movie.Actors ??= new List<string>();
-                movie.ActorsUrl ??= new List<string>();
                 movie.Actors.Add(actorName);
+                movie.ActorsUrl ??= new List<string>();
                 movie.ActorsUrl.Add(previewUrl);
 
                 _dbContext.Movies.Update(movie);

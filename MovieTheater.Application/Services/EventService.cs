@@ -50,7 +50,6 @@ namespace MovieTheater.Application.Services
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
                 Detail = dto.Detail,
-                Image = dto.Image,
             };
 
             var newData = new
@@ -106,7 +105,6 @@ namespace MovieTheater.Application.Services
                 StartTime = newEvent.StartTime,
                 EndTime = newEvent.EndTime,
                 Detail = newEvent.Detail,
-                Image = newEvent.Image,
             };
         }
 
