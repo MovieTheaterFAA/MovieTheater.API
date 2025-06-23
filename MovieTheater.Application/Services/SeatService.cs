@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Collections.Concurrent;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Hubs;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Collections.Concurrent;
 
 namespace MovieTheater.Application.Services
 {
@@ -12,12 +14,14 @@ namespace MovieTheater.Application.Services
     {
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IHubContext<SeatHub> _seatHub;
         private static readonly ConcurrentDictionary<(Guid seatId, Guid showTimeId), (Guid userId, DateTime expireAt)> _holdingSeats = new();
 
-        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork)
+        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, IHubContext<SeatHub> seatHub)
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
+            _seatHub = seatHub;
         }
 
         private static void CleanupExpiredHolds()
@@ -68,8 +72,6 @@ namespace MovieTheater.Application.Services
                                                 h.Key.showTimeId == showTimeId &&
                                                 h.Value.expireAt > DateTime.UtcNow)
                                                 ? SeatStatus.Holding : SeatStatus.Available)
-
-
                     };
                 }).ToList();
 
@@ -171,6 +173,22 @@ namespace MovieTheater.Application.Services
                 }
 
                 _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
+
+                // Broadcast seat status to other client
+                if (heldSeats.Any())
+                {
+                    await _seatHub.Clients
+                        .Group($"ShowTime_{showTimeId}")
+                        .SendAsync("ReceiveSeatUpdate", new
+                        {
+                            ShowTimeId = showTimeId,
+                            Seats = heldSeats.Select(s => new
+                            {
+                                SeatId = s.Id,
+                                Status = SeatStatus.Holding
+                            })
+                        });
+                }
 
                 return heldSeats;
             }
