@@ -16,13 +16,15 @@ namespace MovieTheater.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IRedisService _redisService;
 
-        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
+        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
+            _redisService = redisService;
         }
 
         public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, FoodType? type = null)
@@ -31,16 +33,16 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Info($"Fetching food and drinks - Page {page}, PageSize {pageSize}, Search: {search}");
 
-                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => !f.IsDeleted);
+                string cacheKey = $"fooddrink:list:{search}:{sortBy}:{isDescending}:{page}:{pageSize}:{type}";
+                var cached = await _redisService.GetAsync<Pagination<FoodAndDrinkResponseDto>>(cacheKey);
+                if (cached != null) return cached;
 
+                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => !f.IsDeleted);
                 var query = foodAndDrinks.AsQueryable();
 
                 if (type.HasValue)
-                {
                     query = query.Where(f => f.Type == type.Value);
-                }
 
-                // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var lowerSearch = search.ToLower();
@@ -53,7 +55,6 @@ namespace MovieTheater.Application.Services
 
                 var totalItems = query.Count();
 
-                // Sorting
                 query = sortBy?.ToLower() switch
                 {
                     "name" => isDescending ? query.OrderByDescending(f => f.Name) : query.OrderBy(f => f.Name),
@@ -78,9 +79,11 @@ namespace MovieTheater.Application.Services
                     IsAvailable = f.IsAvailable
                 }).ToList();
 
+                var response = new Pagination<FoodAndDrinkResponseDto>(result, totalItems, page, pageSize);
+                await _redisService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(5));
                 _loggerService.Success($"Retrieved {result.Count} food/drink items on page {page} successfully.");
 
-                return new Pagination<FoodAndDrinkResponseDto>(result, totalItems, page, pageSize);
+                return response;
             }
             catch (Exception ex)
             {
@@ -88,6 +91,7 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while retrieving food and drink items. Please try again later.");
             }
         }
+
 
         public async Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto)
         {
@@ -138,6 +142,7 @@ namespace MovieTheater.Application.Services
             try
             {
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("fooddrink:list:");
             }
             catch (DbUpdateException dbEx)
             {
@@ -253,6 +258,7 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.FoodAndDrinks.Update(foodAndDrink);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("fooddrink:list:");
 
             var newData = new
             {
@@ -310,6 +316,7 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.FoodAndDrinks.SoftRemove(foodAndDrink);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("fooddrink:list:");
 
                 var newValue = new
                 {

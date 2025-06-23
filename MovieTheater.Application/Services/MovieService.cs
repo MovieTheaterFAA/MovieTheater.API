@@ -14,13 +14,15 @@ namespace MovieTheater.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IRedisService _redisService;
 
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
+            _redisService = redisService;
         }
 
         public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
@@ -34,15 +36,21 @@ namespace MovieTheater.Application.Services
         {
             try
             {
-                _loggerService.Info($"Fetching movies - Page {page}, PageSize {pageSize}, Search: {search}");
+                string genreKey = genres != null ? string.Join(",", genres.OrderBy(g => g)) : "";
+                string cacheKey = $"movie:list:{search}:{sortBy}:{isDescending}:{page}:{pageSize}:{genreKey}:{status}";
+
+                var cached = await _redisService.GetAsync<Pagination<MovieResponseDto>>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
                 var movies = await _unitOfWork.Movies.GetAllAsync();
+                var query = movies.AsQueryable().Where(m => !m.IsDeleted);
 
-                var query = movies.AsQueryable();
-
-                query = query.Where(m => !m.IsDeleted);
-
-                // Filter by search
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var lowerSearch = search.ToLower();
@@ -52,13 +60,12 @@ namespace MovieTheater.Application.Services
                         (m.Actors != null && m.Actors.Any(a => a.ToLower().Contains(lowerSearch)))
                     );
                 }
-                // Filter by genres
+
                 if (genres != null && genres.Any())
                 {
                     query = query.Where(m => m.Genres != null && m.Genres.Any(g => genres.Contains(g)));
                 }
 
-                // Filter by status
                 if (status.HasValue)
                 {
                     query = query.Where(m => m.Status == status.Value);
@@ -66,7 +73,6 @@ namespace MovieTheater.Application.Services
 
                 var totalMovies = query.Count();
 
-                // Sort
                 query = sortBy?.ToLower() switch
                 {
                     "name" => isDescending ? query.OrderByDescending(m => m.Name) : query.OrderBy(m => m.Name),
@@ -98,9 +104,11 @@ namespace MovieTheater.Application.Services
                     Status = m.Status
                 }).ToList();
 
-                _loggerService.Success($"Retrieved {result.Count} movies on page {page} successfully.");
+                var response = new Pagination<MovieResponseDto>(result, totalMovies, page, pageSize);
 
-                return new Pagination<MovieResponseDto>(result, totalMovies, page, pageSize);
+                await _redisService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(5));
+
+                return response;
             }
             catch (Exception ex)
             {
@@ -108,12 +116,20 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while retrieving movies. Please try again later.");
             }
         }
-
         public async Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId)
         {
             try
             {
-                _loggerService.Info($"[GetMovieDetailAsync] Fetching details for MovieId: {movieId}");
+                var cacheKey = $"movie:detail:{movieId}";
+
+                var cached = await _redisService.GetAsync<MovieResponseDto>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
                 var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
                 if (movie == null || movie.IsDeleted)
@@ -141,7 +157,8 @@ namespace MovieTheater.Application.Services
                     Rating = movie.Rating,
                 };
 
-                _loggerService.Success($"[GetMovieDetailAsync] Movie details fetched successfully for MovieId: {movieId}");
+                await _redisService.SetAsync(cacheKey, responseDto, TimeSpan.FromMinutes(10));
+
                 return responseDto;
             }
             catch (Exception ex)
@@ -150,7 +167,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while fetching movie details. Please try again later.");
             }
         }
-
         public async Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name)
         {
             try
@@ -270,6 +286,7 @@ namespace MovieTheater.Application.Services
                 // Thêm bộ phim vào cơ sở dữ liệu
                 await _unitOfWork.Movies.AddAsync(movie);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("movies:list:");
 
                 await _auditLogService.LogAsync
                     (
@@ -431,6 +448,8 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Movies.Update(movie);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("movies:list:");
+                await _redisService.RemoveAsync($"movie:detail:{movieId}");
 
                 var newData = new
                 {
@@ -501,7 +520,6 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-
         public async Task<bool> DeleteMovieAsync(Guid movieId)
         {
             try
@@ -520,6 +538,8 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Movies.SoftRemove(movie);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveByPatternAsync("movies:list:");
+                await _redisService.RemoveAsync($"movie:detail:{movieId}");
 
                 var newValue = new
                 {

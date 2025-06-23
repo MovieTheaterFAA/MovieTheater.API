@@ -1,7 +1,4 @@
-﻿using System.Data;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -10,6 +7,9 @@ using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Data;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MovieTheater.Application.Services;
 
@@ -20,14 +20,16 @@ public class AdminService : IAdminService
     private readonly IEmailService _emailService;
     private readonly IClaimsService _claimsService;
     private readonly IAuditLogService _auditLogService;
+    private readonly IRedisService _redisService;
 
-    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService, IAuditLogService auditLogService)
+    public AdminService(IUnitOfWork unitOfWork, ILoggerService loggerService, IEmailService emailService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _emailService = emailService;
         _claimsService = claimsService;
         _auditLogService = auditLogService;
+        _redisService = redisService;
     }
 
     public async Task<UserDto?> AddEmployeeAsync(AddEmployeeRequestDto dto)
@@ -66,6 +68,7 @@ public class AdminService : IAdminService
         try
         {
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync($"admin:user:list:");
         }
         catch (DbUpdateException dbEx)
         {
@@ -134,21 +137,27 @@ public class AdminService : IAdminService
     {
         try
         {
-            _loggerService.Info($"Fetching users - Page {page}, PageSize {pageSize}, Role: {role}, Search: {search}");
+            var cacheKey = $"admin:user:list:{search}:{role}:{sortBy}:{isDescending}:{page}:{pageSize}";
+            var cached = await _redisService.GetAsync<Pagination<GetUserDto>>(cacheKey);
+            if (cached != null)
+            {
+                _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                return cached;
+            }
 
-            var query = _unitOfWork.Users.GetQueryable();
+            _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
-            query = query.Where(u => !u.IsDeleted);
+            var query = _unitOfWork.Users.GetQueryable().Where(u => !u.IsDeleted);
 
             if (role.HasValue)
-            {
                 query = query.Where(u => u.Role == role.Value);
-            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var searchLower = search.ToLower();
-                query = query.Where(u => u.FullName.ToLower().Contains(searchLower) || u.Email.ToLower().Contains(searchLower));
+                query = query.Where(u =>
+                    u.FullName.ToLower().Contains(searchLower) ||
+                    u.Email.ToLower().Contains(searchLower));
             }
 
             var totalUsers = await query.CountAsync();
@@ -162,21 +171,12 @@ public class AdminService : IAdminService
                     _ => query.OrderBy(u => u.Id)
                 };
             }
-            else
-            {
-                query = query.OrderBy(u => u.Id);
-            }
+            else query = query.OrderBy(u => u.Id);
 
             var users = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
-            if (!users.Any())
-            {
-                _loggerService.Warn($"No user found on page {page}");
-                return new Pagination<GetUserDto>(new List<GetUserDto>(), 0, page, pageSize);
-            }
 
             var userDtos = users.Select(u => new GetUserDto
             {
@@ -195,9 +195,9 @@ public class AdminService : IAdminService
                 Status = u.UserStatus
             }).ToList();
 
-            _loggerService.Success($"Retrieved {userDtos.Count} users on page {page}");
-
-            return new Pagination<GetUserDto>(userDtos, totalUsers, page, pageSize);
+            var result = new Pagination<GetUserDto>(userDtos, totalUsers, page, pageSize);
+            await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
+            return result;
         }
         catch (Exception ex)
         {
@@ -205,6 +205,7 @@ public class AdminService : IAdminService
             throw new Exception("An error occurred while fetching users. Please try again later");
         }
     }
+
 
     public async Task<Pagination<UserDto>> GetListEmployeeAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize)
     {
@@ -359,6 +360,8 @@ public class AdminService : IAdminService
 
             await _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync($"admin:user:list:");
+            await _redisService.RemoveAsync($"admin:user:detail:{userId}");
 
             // Notify employee about the update
             await _emailService.SendUpdateEmployeeCredentialsEmailAsync(new Domain.DTOs.EmailDTOs.UpdateEmployeeCredentialsEmailDto
@@ -459,6 +462,8 @@ public class AdminService : IAdminService
 
         await _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
+        await _redisService.RemoveByPatternAsync($"admin:user:list:");
+        await _redisService.RemoveAsync($"admin:user:detail:{employeeId}");
 
         await _auditLogService.LogAsync
                (
@@ -511,6 +516,8 @@ public class AdminService : IAdminService
 
         await _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
+        await _redisService.RemoveByPatternAsync($"admin:user:list:");
+        await _redisService.RemoveAsync($"admin:user:detail:{userId}");
 
         await _auditLogService.LogAsync(
             adminId,
@@ -563,6 +570,8 @@ public class AdminService : IAdminService
 
         await _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
+        await _redisService.RemoveByPatternAsync($"admin:user:list:");
+        await _redisService.RemoveAsync($"admin:user:detail:{userId}");
 
         await _auditLogService.LogAsync(
             adminId,
@@ -581,11 +590,21 @@ public class AdminService : IAdminService
 
     public async Task<GetUserDto?> GetUserDetailAsync(Guid userId)
     {
+        var cacheKey = $"admin:user:detail:{userId}";
+        var cached = await _redisService.GetAsync<GetUserDto>(cacheKey);
+        if (cached != null)
+        {
+            _loggerService.Info($"[CACHE HIT] {cacheKey}");
+            return cached;
+        }
+
+        _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
+
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null || user.IsDeleted)
             return null;
 
-        return new GetUserDto
+        var dto = new GetUserDto
         {
             Id = user.Id,
             FullName = user.FullName,
@@ -601,7 +620,11 @@ public class AdminService : IAdminService
             IsDeleted = user.IsDeleted,
             Status = user.UserStatus
         };
+
+        await _redisService.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10));
+        return dto;
     }
+
 
     //========================= PRIVATE HELPER METHODS ============================
 

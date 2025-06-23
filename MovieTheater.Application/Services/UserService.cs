@@ -11,10 +11,12 @@ namespace MovieTheater.Application.Services
 
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
-        public UserService(IUnitOfWork unitOfWork, ILoggerService loggerService)
+        private readonly IRedisService _redisService;
+        public UserService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
+            _redisService = redisService;
         }
 
         public async Task<CurrentUserDto> GetUserDetails(Guid userId)
@@ -27,17 +29,18 @@ namespace MovieTheater.Application.Services
 
             try
             {
+                string cacheKey = $"user:detail:{userId}";
+                var cached = await _redisService.GetAsync<CurrentUserDto>(cacheKey);
+                if (cached != null) return cached;
+                
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
-
                 if (user == null)
                 {
                     _loggerService.Warn($"No user found with ID: {userId}");
                     throw new KeyNotFoundException($"User with ID {userId} not found.");
                 }
 
-                _loggerService.Info($"Successfully fetched user with ID: {userId}");
-
-                return new CurrentUserDto
+                var result = new CurrentUserDto
                 {
                     FullName = user.FullName,
                     DateOfBirth = user.DateOfBirth,
@@ -51,24 +54,16 @@ namespace MovieTheater.Application.Services
                     AvatarUrl = user.AvatarUrl,
                 };
 
-            }
-            catch (KeyNotFoundException knfEx)
-            {
-                _loggerService.Error($"User retrieval error: {knfEx.Message}");
-                throw;
-            }
-            catch (ArgumentException argEx)
-            {
-                _loggerService.Error($"Invalid argument: {argEx.Message}");
-                throw;
+                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+                return result;
             }
             catch (Exception ex)
             {
                 _loggerService.Error($"An unexpected error occurred while fetching user details for ID {userId}: {ex.Message}");
                 throw;
             }
-
         }
+
 
         public async Task<UserUpdateDto> UpdateUserInfo(Guid userId, UserUpdateDto userUpdateDto)
         {
@@ -147,6 +142,8 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveAsync($"user:detail:{userId}");
+                await _redisService.RemoveByPatternAsync("admin:user:list:"); // xóa cache cho cả list admin
 
                 _loggerService.Success($"User info updated successfully for UserId: {userId}");
 

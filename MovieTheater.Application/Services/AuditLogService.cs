@@ -3,7 +3,6 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.Json;
 
@@ -13,11 +12,13 @@ namespace MovieTheater.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILoggerService _loggerService;
+        private readonly IRedisService _redisService;
 
-        public AuditLogService(IUnitOfWork unitOfWork, ILoggerService loggerService)
+        public AuditLogService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
+            _redisService = redisService;
         }
 
         public async Task LogAsync(Guid adminId, AuditActionType actionType, string entityType, Guid entityId, object oldValue, object newValue, string changedFields, string reason = null)
@@ -37,34 +38,36 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.AuditLogs.AddAsync(log);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("auditlog:list:");
         }
 
         public async Task<Pagination<AuditLogDto>> ViewLogAsync(string? search, AuditActionType? actionType, string? entityType, bool isDescending, int page, int pageSize)
         {
             try
             {
-                _loggerService.Info($"Fetching audit logs - Page {page}, PageSize {pageSize}, Search: {search}");
+                var cacheKey = $"auditlog:list:{search}:{actionType}:{entityType}:{isDescending}:{page}:{pageSize}";
+                var cached = await _redisService.GetAsync<Pagination<AuditLogDto>>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
                 var logs = await _unitOfWork.AuditLogs.GetAllAsync();
                 var users = await _unitOfWork.Users.GetAllAsync();
-
                 var query = logs.AsQueryable();
 
                 if (actionType.HasValue)
-                {
-                    string actionTypeStr = actionType.Value.ToString();
-                    query = query.Where(log => log.ActionType == actionTypeStr);
-                }
+                    query = query.Where(log => log.ActionType == actionType.Value.ToString());
 
                 if (!string.IsNullOrWhiteSpace(entityType))
-                {
                     query = query.Where(log => log.EntityType.Equals(entityType, StringComparison.OrdinalIgnoreCase));
-                }
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     var lowerSearch = search.ToLower();
-
                     var matchedAdminIds = users
                         .Where(u => !string.IsNullOrEmpty(u.FullName) && u.FullName.ToLower().Contains(lowerSearch))
                         .Select(u => u.Id)
@@ -101,9 +104,11 @@ namespace MovieTheater.Application.Services
                     Timestamp = l.Timestamp,
                 }).ToList();
 
-                _loggerService.Success($"Retrieved {pagedLogs.Count} audit logs on page {page} successfully.");
+                var paginated = new Pagination<AuditLogDto>(result, totalLogs, page, pageSize);
+                await _redisService.SetAsync(cacheKey, paginated, TimeSpan.FromMinutes(5));
 
-                return new Pagination<AuditLogDto>(result, totalLogs, page, pageSize);
+                _loggerService.Success($"Retrieved {pagedLogs.Count} audit logs on page {page} successfully.");
+                return paginated;
             }
             catch (Exception ex)
             {
@@ -111,5 +116,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while retrieving audit logs. Please try again later.");
             }
         }
+
     }
 }

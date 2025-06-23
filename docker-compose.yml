@@ -13,6 +13,7 @@
       - ConnectionStrings__DefaultConnection=Host=103.211.201.162;Port=5434;Database=movietheater_db;Username=postgres;Password=postgres
       # Xài local
       # - ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=movietheater_db;Username=postgres;Password=postgres
+      - ConnectionStrings__Redis=movietheater-redis:6379,abortConnect=false
       - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU
       - JWT__Issuer=MovieTheater_Issuer
       - JWT__Audience=MovieTheater_Audience
@@ -37,5 +38,19 @@
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:latest
+    container_name: movietheater-redis
+    ports:
+      - "6380:6379"
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  redis-data:
