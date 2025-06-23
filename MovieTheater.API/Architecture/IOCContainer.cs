@@ -137,6 +137,7 @@ public static class IocContainer
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<IImpersonationService, ImpersonationService>();
 
+        services.AddScoped<ISeatService, SeatService>();
         services.AddHttpContextAccessor();
 
         return services;

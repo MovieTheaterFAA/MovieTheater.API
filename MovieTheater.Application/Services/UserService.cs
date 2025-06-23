@@ -32,7 +32,7 @@ namespace MovieTheater.Application.Services
                 string cacheKey = $"user:detail:{userId}";
                 var cached = await _redisService.GetAsync<CurrentUserDto>(cacheKey);
                 if (cached != null) return cached;
-
+                
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
                 if (user == null)
                 {
