@@ -1,11 +1,16 @@
 ﻿using MovieTheater.Domain.DTOs.ShowTimeDTOs;
+using static MovieTheater.Domain.DTOs.ShowTimeDTOs.BatchShowtimeRequestDto;
 
 namespace MovieTheater.Application.Interfaces
 {
     public interface IShowTimeService
     {
-        Task<ShowtimeResponseDTO> AddShowTimeAsync(ShowTimeRequestDto showTimeRequestDto);
+        Task<List<ShowtimeResponseDTO>> AddBatchShowTimesAsync(BatchShowTimeRequestDto dto);
+
+        Task<ShowtimeResponseDTO> AddSingleShowTimeAsync(ShowTimeRequestDto showTimeRequestDto);
+
         Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime date);
+
         Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime date, Guid? movieId, Guid? roomId);
     }
 }

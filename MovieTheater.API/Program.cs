@@ -1,11 +1,11 @@
-﻿using MovieTheater.API.Architecture;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MovieTheater.API.Architecture;
 using MovieTheater.API.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using SwaggerThemes;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,7 +55,7 @@ builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
 
 builder.Services.AddSignalR(options =>
 {
-    options.EnableDetailedErrors = true; // Bật chi tiết lỗi cho SignalR
+    options.EnableDetailedErrors = true;
 });
 var app = builder.Build();
 
