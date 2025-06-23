@@ -5,6 +5,8 @@ using MovieTheater.API.Architecture;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using SwaggerThemes;
+using Quartz;
+using MovieTheater.API.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +52,18 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
+
+builder.Services.AddQuartz(q =>
+{
+    // Đăng ký job cleanup
+    var jobKey = new JobKey("CleanUpExpiredEventsJob");
+    q.AddJob<CleanUpExpiredEventsJob>(opts => opts.WithIdentity(jobKey));
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("CleanUpExpiredEventsJob-trigger")
+        .WithCronSchedule("0/10 * * * * ?")); // Mỗi ngày lúc 0h
+});
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
 var app = builder.Build();
 
