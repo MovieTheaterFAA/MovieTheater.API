@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.ShowTimeDTOs;
-using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 using static MovieTheater.Domain.DTOs.ShowTimeDTOs.BatchShowtimeRequestDto;
 
@@ -14,12 +13,10 @@ namespace MovieTheater.API.Controllers
     public class ShowTimeController : ControllerBase
     {
         private readonly IShowTimeService _showTimeService;
-        private readonly IClaimsService _claimsService;
 
-        public ShowTimeController(IShowTimeService showTimeService, IClaimsService claimsService)
+        public ShowTimeController(IShowTimeService showTimeService)
         {
             _showTimeService = showTimeService;
-            _claimsService = claimsService;
         }
 
         [HttpPost("single")]
