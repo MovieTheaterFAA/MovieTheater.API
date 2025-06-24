@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.SeatDTOs;
+using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Hubs;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -14,21 +16,225 @@ namespace MovieTheater.Application.Services
     {
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuditLogService _auditLogService;
+        private readonly IRedisService _redisService;
         private readonly IHubContext<SeatHub> _seatHub;
         private static readonly ConcurrentDictionary<(Guid seatId, Guid showTimeId), (Guid userId, DateTime expireAt)> _holdingSeats = new();
 
-        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, IHubContext<SeatHub> seatHub)
+        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, IHubContext<SeatHub> seatHub, IAuditLogService auditLogService, IRedisService redisService)
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
             _seatHub = seatHub;
+            _auditLogService = auditLogService;
+            _redisService = redisService;
         }
 
-        public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
+        ///================== Admin Methods ===================///
+        public async Task<List<SeatDto>> GetSeatsByCinemaRoomAsync(Guid cinemaRoomId)
+        {
+            string cacheKey = $"seat:list:cinemaroom:{cinemaRoomId}";
+            try
+            {
+                var cached = await _redisService.GetAsync<List<SeatDto>>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
+                var seats = await _unitOfWork.Seats.GetQueryable()
+                    .Where(s => s.CinemaRoomId == cinemaRoomId && !s.IsDeleted)
+                    .Select(s => new SeatDto
+                    {
+                        Id = s.Id,
+                        Row = s.Row,
+                        Number = s.Number,
+                        Type = s.Type,
+                        CinemaRoomId = s.CinemaRoomId
+                    })
+                    .ToListAsync();
+
+                await _redisService.SetAsync(cacheKey, seats, TimeSpan.FromMinutes(5));
+                _loggerService.Success($"[SeatManagementService] Retrieved {seats.Count} seats for cinema room {cinemaRoomId}");
+                return seats;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[SeatManagementService] Error fetching seats: {ex.Message}");
+                throw new Exception("An error occurred while fetching seats for the cinema room.");
+            }
+        }
+        public async Task<List<SeatDto>> BatchCreateSeatsAsync(Guid cinemaRoomId, BatchCreateSeatDto dto, Guid adminId)
         {
             try
             {
-                _loggerService.Info($"Retrieving seats for showtime {showTimeId}");
+                _loggerService.Info($"[SeatManagementService] Batch creating seats for cinema room {cinemaRoomId}");
+
+                var room = await _unitOfWork.CinemaRooms.GetByIdAsync(cinemaRoomId);
+                if (room == null || room.IsDeleted)
+                {
+                    _loggerService.Warn($"[SeatManagementService] Cinema room {cinemaRoomId} not found.");
+                    throw new KeyNotFoundException("Cinema room not found.");
+                }
+
+                var newSeats = dto.Seats.Select(s => new Seat
+                {
+                    Id = Guid.NewGuid(),
+                    CinemaRoomId = cinemaRoomId,
+                    Row = s.Row,
+                    Number = s.Number,
+                    Type = s.Type,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = adminId
+                }).ToList();
+
+                await _unitOfWork.Seats.AddRangeAsync(newSeats);
+                await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveAsync($"seat:list:cinemaroom:{cinemaRoomId}");
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    AuditActionType.Create,
+                    "Seat",
+                    cinemaRoomId,
+                    null,
+                    newSeats,
+                    JsonSerializer.Serialize(dto),
+                    "Batch created seats"
+                );
+
+                _loggerService.Success($"[SeatManagementService] Batch created {newSeats.Count} seats for cinema room {cinemaRoomId}");
+
+                return newSeats.Select(s => new SeatDto
+                {
+                    Id = s.Id,
+                    Row = s.Row,
+                    Number = s.Number,
+                    Type = s.Type,
+                    CinemaRoomId = s.CinemaRoomId
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[SeatManagementService] Error batch creating seats: {ex.Message}");
+                throw new Exception("An error occurred while batch creating seats.");
+            }
+        }
+        public async Task<SeatDto?> UpdateSeatAsync(Guid seatId, UpdateSeatDto dto, Guid adminId)
+        {
+            try
+            {
+                _loggerService.Info($"[SeatManagementService] Updating seat {seatId}");
+
+                var seat = await _unitOfWork.Seats.GetByIdAsync(seatId);
+                if (seat == null || seat.IsDeleted)
+                {
+                    _loggerService.Warn($"[SeatManagementService] Seat {seatId} not found.");
+                    return null;
+                }
+
+                var oldData = new { seat.Row, seat.Number, seat.Type };
+
+                seat.Row = dto.Row;
+                seat.Number = dto.Number;
+                seat.Type = dto.Type;
+                seat.UpdatedAt = DateTime.UtcNow;
+                seat.UpdatedBy = adminId;
+
+                await _unitOfWork.Seats.Update(seat);
+                await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveAsync($"seat:list:cinemaroom:{seat.CinemaRoomId}");
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    AuditActionType.Update,
+                    "Seat",
+                    seat.Id,
+                    oldData,
+                    new { seat.Row, seat.Number, seat.Type },
+                    JsonSerializer.Serialize(dto),
+                    "Updated seat"
+                );
+
+                _loggerService.Success($"[SeatManagementService] Updated seat {seatId}");
+
+                return new SeatDto
+                {
+                    Id = seat.Id,
+                    Row = seat.Row,
+                    Number = seat.Number,
+                    Type = seat.Type,
+                    CinemaRoomId = seat.CinemaRoomId
+                };
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[SeatManagementService] Error updating seat: {ex.Message}");
+                throw new Exception("An error occurred while updating the seat.");
+            }
+        }
+        public async Task<bool> SoftDeleteSeatAsync(Guid seatId, Guid adminId)
+        {
+            try
+            {
+                _loggerService.Info($"[SeatManagementService] Soft deleting seat {seatId}");
+
+                var seat = await _unitOfWork.Seats.GetByIdAsync(seatId);
+                if (seat == null || seat.IsDeleted)
+                {
+                    _loggerService.Warn($"[SeatManagementService] Seat {seatId} not found.");
+                    return false;
+                }
+
+                var oldData = new { seat.Row, seat.Number, seat.Type, seat.IsDeleted };
+
+                seat.IsDeleted = true;
+                seat.DeletedAt = DateTime.UtcNow;
+                seat.DeletedBy = adminId;
+
+                await _unitOfWork.Seats.Update(seat);
+                await _unitOfWork.SaveChangesAsync();
+                await _redisService.RemoveAsync($"seat:list:cinemaroom:{seat.CinemaRoomId}");
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    AuditActionType.Delete,
+                    "Seat",
+                    seat.Id,
+                    oldData,
+                    new { seat.IsDeleted },
+                    JsonSerializer.Serialize(new { seat.IsDeleted }),
+                    "Soft deleted seat"
+                );
+
+                _loggerService.Success($"[SeatManagementService] Soft deleted seat {seatId}");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[SeatManagementService] Error soft deleting seat: {ex.Message}");
+                throw new Exception("An error occurred while deleting the seat.");
+            }
+        }
+
+
+        //================== User & Admin Methods ===================///
+        public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
+        {
+            string cacheKey = $"seat:list:showtime:{showTimeId}";
+            try
+            {
+                var cached = await _redisService.GetAsync<List<ShowTimeSeatDto>>(cacheKey);
+                if (cached != null)
+                {
+                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
+                    return cached;
+                }
+
+                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
                 CleanupExpiredHolds();
                 var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
@@ -63,6 +269,7 @@ namespace MovieTheater.Application.Services
                     };
                 }).ToList();
 
+                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
                 _loggerService.Success($"Successfully retrieved seats for showtime {showTimeId} with {result.Count} seats.");
                 return result;
             }
@@ -220,6 +427,9 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while retrieving the seat.", ex);
             }
         }
+
+
+        //=================== Helper Methods ===================///
         private static void CleanupExpiredHolds()
         {
             var now = DateTime.UtcNow;

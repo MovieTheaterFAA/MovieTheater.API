@@ -4,11 +4,12 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
     [ApiController]
-    [Route("api/seats")]
+    [Route("api/seat")]
     public class SeatController : ControllerBase
     {
         private readonly ISeatService _seatService;
@@ -19,6 +20,85 @@ namespace MovieTheater.API.Controllers
             _seatService = seatService;
             _claimsService = claimsService;
         }
+
+        [HttpGet("cinema-room/{id}")]
+        [SwaggerOperation(Summary = "Get all seats in a cinema room (for editing layout)")]
+        public async Task<IActionResult> GetSeatsByCinemaRoom(Guid id)
+        {
+            try
+            {
+                var result = await _seatService.GetSeatsByCinemaRoomAsync(id);
+                return Ok(ApiResult<List<SeatDto>>.Success(result, "200", "Fetched seats successfully"));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPost("batch/{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(Summary = "Create seats for a room")]
+        public async Task<IActionResult> BatchCreateSeats(Guid id, [FromBody] BatchCreateSeatDto dto)
+        {
+            try
+            {
+                var adminId = _claimsService.GetCurrentUserId;
+                var result = await _seatService.BatchCreateSeatsAsync(id, dto, adminId);
+                return Ok(ApiResult<List<SeatDto>>.Success(result, "200", "Batch created seats successfully"));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(Summary = "Update seat info (type, position)")]
+        public async Task<IActionResult> UpdateSeat(Guid id, [FromBody] UpdateSeatDto dto)
+        {
+            try
+            {
+                var adminId = _claimsService.GetCurrentUserId;
+                var result = await _seatService.UpdateSeatAsync(id, dto, adminId);
+                if (result == null)
+                    return NotFound(ApiResult<object>.Failure("404", "Seat not found"));
+                return Ok(ApiResult<SeatDto>.Success(result, "200", "Updated seat successfully"));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(Summary = "Soft delete a seat")]
+        public async Task<IActionResult> DeleteSeat(Guid id)
+        {
+            try
+            {
+                var adminId = _claimsService.GetCurrentUserId;
+                var success = await _seatService.SoftDeleteSeatAsync(id, adminId);
+                if (!success)
+                    return NotFound(ApiResult<object>.Failure("404", "Seat not found"));
+                return Ok(ApiResult<object>.Success(null, "200", "Deleted seat successfully"));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
 
         /// <summary>
         /// Hold seats for a showtime (temporary lock, not booking yet)

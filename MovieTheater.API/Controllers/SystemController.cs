@@ -29,17 +29,11 @@ public class SystemController : ControllerBase
         {
             await ClearDatabase(_context);
 
-            //Seed user data
             await SeedUserAsync();
-            //Seed movie data
             await SeedMovieAsync();
-            //Seed cinema rooms and seats
-            //await SeedCinemaRoomAsync();
-            //Seed showtime data
-            await SeedShowTimeAsync();
-            //Seed food and drinks data
+            await SeedCinemaRoomAsync();
+            //await SeedShowTimeAsync();
             await SeedFoodAndDrinkAsync();
-            //Seed events and promotions
             await SeedEventAndPromotionAsync();
 
             return Ok(ApiResult<object>.Success(new
@@ -195,7 +189,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-
     private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
@@ -395,68 +388,34 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
+    private async Task SeedCinemaRoomAsync()
+    {
+        var rooms = new List<CinemaRoom>
+    {
+        new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
+        new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
+        new() { Name = "2D Room 1",   Type = RoomType.TwoD },
+        new() { Name = "2D Room 2",   Type = RoomType.TwoD },
+        new() { Name = "4D Room 1",   Type = RoomType.FourD }
+    };
 
-    //private async Task SeedCinemaRoomAsync()
-    //{
-    //    var rooms = new List<CinemaRoom>
-    //{
-    //    new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
-    //    new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
-    //    new() { Name = "2D Room 1",   Type = RoomType.TwoD },
-    //    new() { Name = "2D Room 2",   Type = RoomType.TwoD },
-    //    new() { Name = "4D Room 1",   Type = RoomType.FourD }
-    //};
+        // Remove any existing rooms with the same names to avoid duplicates
+        var existingNames = rooms.Select(r => r.Name).ToList();
+        var existingRooms = await _context.CinemaRooms
+            .Where(r => existingNames.Contains(r.Name))
+            .ToListAsync();
 
-    //    var seatLayouts = new Dictionary<RoomType, int>
-    //{
-    //    { RoomType.IMAX, 120 },
-    //    { RoomType.TwoD, 80 },
-    //    { RoomType.FourD, 60 }
-    //};
+        if (existingRooms.Any())
+        {
+            _context.CinemaRooms.RemoveRange(existingRooms);
+            await _context.SaveChangesAsync();
+        }
 
-    //    var seats = new List<Seat>();
-
-    //    foreach (var room in rooms)
-    //    {
-    //        int totalSeats = seatLayouts[room.Type];
-    //        int rows = 6;
-    //        int cols = totalSeats / rows;
-    //        int seatCounter = 0;
-
-    //        for (int r = 0; r < rows; r++)
-    //        {
-    //            char rowLabel = (char)('A' + r);
-    //            SeatType seatType = r switch
-    //            {
-    //                0 => SeatType.Couple,
-    //                <= 3 => SeatType.VIP,
-    //                _ => SeatType.Normal
-    //            };
-
-    //            for (int c = 1; c <= cols; c++)
-    //            {
-    //                seats.Add(new Seat
-    //                {
-    //                    CinemaRoom = room,
-    //                    Row = rowLabel.ToString(),
-    //                    Number = c,
-    //                    Type = seatType
-    //                });
-    //                seatCounter++;
-    //            }
-    //        }
-
-    //        room.SeatQuantity = seatCounter;
-    //    }
-
-    //    _logger.Info("Seeding cinema rooms and seats...");
-    //    await _context.CinemaRooms.AddRangeAsync(rooms);
-    //    await _context.Seats.AddRangeAsync(seats);
-    //    await _context.SaveChangesAsync();
-    //    _logger.Success("Cinema rooms and seats seeded successfully.");
-
-    //}
-
+        _logger.Info("Seeding cinema rooms...");
+        await _context.CinemaRooms.AddRangeAsync(rooms);
+        await _context.SaveChangesAsync();
+        _logger.Success("Cinema rooms seeded successfully.");
+    }
     private async Task SeedShowTimeAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
@@ -486,7 +445,6 @@ public class SystemController : ControllerBase
 
         _logger.Success("Showtimes seeded successfully.");
     }
-
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
