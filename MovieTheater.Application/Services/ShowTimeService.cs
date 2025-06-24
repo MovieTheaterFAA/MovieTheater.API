@@ -3,6 +3,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.ShowTimeDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 using static MovieTheater.Domain.DTOs.ShowTimeDTOs.BatchShowtimeRequestDto;
 
@@ -13,14 +14,16 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
+        private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
 
-        public ShowTimeService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IRedisService redisService)
+        public ShowTimeService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IRedisService redisService, IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _redisService = redisService;
+            _auditLogService = auditLogService;
         }
 
         //============================ Admin =============================
@@ -61,6 +64,30 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.ShowTimes.AddRangeAsync(showTimes);
             await _unitOfWork.SaveChangesAsync();
             await _redisService.RemoveAsync($"showtime:room:{dto.CinemaRoomId}:date:{dto.ShowTimes.First().StartTime:yyyyMMdd}");
+
+            // Audit log: log only primitive properties
+            var newShowTimeData = showTimes.Select(st => new
+            {
+                st.Id,
+                st.MovieId,
+                st.CinemaRoomId,
+                st.ShowDate,
+                st.Duration
+            }).ToList();
+
+            await _unitOfWork.AuditLogs.AddAsync(new AuditLog
+            {
+                AdminId = _claimsService.GetCurrentUserId,
+                ActionType = AuditActionType.Create.ToString(),
+                EntityType = "ShowTime",
+                EntityId = dto.CinemaRoomId,
+                OldValue = null,
+                NewValue = System.Text.Json.JsonSerializer.Serialize(newShowTimeData),
+                ChangedFields = System.Text.Json.JsonSerializer.Serialize(dto),
+                Timestamp = DateTime.UtcNow,
+                Reason = "Batch created showtimes"
+            });
+            await _unitOfWork.SaveChangesAsync();
 
             return showTimes.Select(st => new ShowtimeResponseDTO
             {
@@ -121,6 +148,30 @@ namespace MovieTheater.Application.Services
             }
 
             _loggerService.Success($"[AddShowTimeAsync] Showtime for MovieId {showTime.MovieId} added successfully.");
+
+            // Audit log: log only primitive properties
+            var newShowTimeData = new
+            {
+                showTime.Id,
+                showTime.MovieId,
+                showTime.CinemaRoomId,
+                showTime.ShowDate,
+                showTime.Duration
+            };
+
+            await _unitOfWork.AuditLogs.AddAsync(new AuditLog
+            {
+                AdminId = _claimsService.GetCurrentUserId,
+                ActionType = AuditActionType.Create.ToString(),
+                EntityType = "ShowTime",
+                EntityId = showTime.Id,
+                OldValue = null,
+                NewValue = System.Text.Json.JsonSerializer.Serialize(newShowTimeData),
+                ChangedFields = System.Text.Json.JsonSerializer.Serialize(showTimeRequestDto),
+                Timestamp = DateTime.UtcNow,
+                Reason = "Created showtime"
+            });
+            await _unitOfWork.SaveChangesAsync();
 
             // Trả về ShowtimeResponseDTO
             var responseDto = new ShowtimeResponseDTO

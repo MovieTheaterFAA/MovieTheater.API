@@ -94,13 +94,22 @@ namespace MovieTheater.Application.Services
                 await _unitOfWork.SaveChangesAsync();
                 await _redisService.RemoveAsync($"seat:list:cinemaroom:{cinemaRoomId}");
 
+                var newSeatData = newSeats.Select(s => new
+                {
+                    s.Id,
+                    s.Row,
+                    s.Number,
+                    s.Type,
+                    s.CinemaRoomId
+                }).ToList();
+
                 await _auditLogService.LogAsync(
                     adminId,
                     AuditActionType.Create,
                     "Seat",
                     cinemaRoomId,
                     null,
-                    newSeats,
+                    newSeatData,
                     JsonSerializer.Serialize(dto),
                     "Batch created seats"
                 );
