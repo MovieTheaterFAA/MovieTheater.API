@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -7,6 +6,7 @@ using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Hubs;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Collections.Concurrent;
 
 namespace MovieTheater.Application.Services
 {
@@ -22,18 +22,6 @@ namespace MovieTheater.Application.Services
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
             _seatHub = seatHub;
-        }
-
-        private static void CleanupExpiredHolds()
-        {
-            var now = DateTime.UtcNow;
-            foreach (var entry in _holdingSeats)
-            {
-                if (entry.Value.expireAt <= now)
-                {
-                    _holdingSeats.TryRemove(entry.Key, out _);
-                }
-            }
         }
 
         public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
@@ -84,7 +72,6 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while retrieving seats.", ex);
             }
         }
-
         public async Task<List<SeatResponseDto>> HoldSeatsAsync(Guid userId, Guid showTimeId, List<Guid> seatIds)
         {
             try
@@ -198,7 +185,6 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while holding seats.", ex);
             }
         }
-
         public async Task<ShowTimeSeatDto> GetSeatByIdAsync(Guid seatId)
         {
             try
@@ -232,6 +218,17 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Error($"Error retrieving seat with ID {seatId}: {ex.Message}");
                 throw new InvalidOperationException("An error occurred while retrieving the seat.", ex);
+            }
+        }
+        private static void CleanupExpiredHolds()
+        {
+            var now = DateTime.UtcNow;
+            foreach (var entry in _holdingSeats)
+            {
+                if (entry.Value.expireAt <= now)
+                {
+                    _holdingSeats.TryRemove(entry.Key, out _);
+                }
             }
         }
     }
