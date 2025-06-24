@@ -19,31 +19,6 @@ namespace MovieTheater.API.Controllers
             _showTimeService = showTimeService;
         }
 
-        [HttpPost("single")]
-        [Authorize(Policy = "AdminPolicy")]
-        [SwaggerOperation(
-            Summary = "Add a new single showtime",
-            Description = "Creates a new showtime for a movie in a cinema room. Requires Admin privileges."
-        )]
-        [ProducesResponseType(typeof(ApiResult<ShowtimeResponseDTO>), 200)]
-        [ProducesResponseType(typeof(ApiResult<object>), 400)]
-        [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> AddSingleShowTimeAsync(
-        [FromBody, SwaggerParameter("New showtime data to be added")] ShowTimeRequestDto showTimeRequestDto)
-        {
-            try
-            {
-                var result = await _showTimeService.AddSingleShowTimeAsync(showTimeRequestDto);
-                return Ok(ApiResult<ShowtimeResponseDTO>.Success(result, "200", "Showtime added successfully."));
-            }
-            catch (Exception ex)
-            {
-                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<ShowtimeResponseDTO>(ex);
-                return StatusCode(statusCode, errorResponse);
-            }
-        }
-
         [HttpPost("batch")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(

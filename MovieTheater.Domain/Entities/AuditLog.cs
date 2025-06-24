@@ -5,11 +5,11 @@
         public Guid AdminId { get; set; }
         public string ActionType { get; set; }      // e.g., Create, Update, Delete
         public string EntityType { get; set; }      // e.g., Employee, Movie, etc.
-        public Guid EntityId { get; set; }          // Entity ID that was modified
-        public string ChangedFields { get; set; }   // JSON or string representation of changed fields
-        public string OldValue { get; set; }        // JSON or string representation of old value (for updates)
-        public string NewValue { get; set; }        // JSON or string representation of new value (for updates)
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow; // test fix
+        public Guid EntityId { get; set; }
+        public string? ChangedFields { get; set; }
+        public string? OldValue { get; set; }
+        public string NewValue { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string Reason { get; set; }
     }
 }

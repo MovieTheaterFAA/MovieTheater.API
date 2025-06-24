@@ -7,8 +7,6 @@ namespace MovieTheater.Application.Interfaces
     {
         Task<List<ShowtimeResponseDTO>> AddBatchShowTimesAsync(BatchShowTimeRequestDto dto);
 
-        Task<ShowtimeResponseDTO> AddSingleShowTimeAsync(ShowTimeRequestDto showTimeRequestDto);
-
         Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime date);
 
         Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime date, Guid? movieId, Guid? roomId);
