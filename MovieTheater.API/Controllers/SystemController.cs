@@ -34,7 +34,7 @@ public class SystemController : ControllerBase
             //Seed movie data
             await SeedMovieAsync();
             //Seed cinema rooms and seats
-            await SeedCinemaRoomAsync();
+            //await SeedCinemaRoomAsync();
             //Seed showtime data
             await SeedShowTimeAsync();
             //Seed food and drinks data
@@ -396,66 +396,66 @@ public class SystemController : ControllerBase
         _logger.Success("Movies seeded successfully.");
     }
 
-    private async Task SeedCinemaRoomAsync()
-    {
-        var rooms = new List<CinemaRoom>
-    {
-        new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
-        new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
-        new() { Name = "2D Room 1",   Type = RoomType.TwoD },
-        new() { Name = "2D Room 2",   Type = RoomType.TwoD },
-        new() { Name = "4D Room 1",   Type = RoomType.FourD }
-    };
+    //private async Task SeedCinemaRoomAsync()
+    //{
+    //    var rooms = new List<CinemaRoom>
+    //{
+    //    new() { Name = "IMAX Room 1", Type = RoomType.IMAX },
+    //    new() { Name = "IMAX Room 2", Type = RoomType.IMAX },
+    //    new() { Name = "2D Room 1",   Type = RoomType.TwoD },
+    //    new() { Name = "2D Room 2",   Type = RoomType.TwoD },
+    //    new() { Name = "4D Room 1",   Type = RoomType.FourD }
+    //};
 
-        var seatLayouts = new Dictionary<RoomType, int>
-    {
-        { RoomType.IMAX, 120 },
-        { RoomType.TwoD, 80 },
-        { RoomType.FourD, 60 }
-    };
+    //    var seatLayouts = new Dictionary<RoomType, int>
+    //{
+    //    { RoomType.IMAX, 120 },
+    //    { RoomType.TwoD, 80 },
+    //    { RoomType.FourD, 60 }
+    //};
 
-        var seats = new List<Seat>();
+    //    var seats = new List<Seat>();
 
-        foreach (var room in rooms)
-        {
-            int totalSeats = seatLayouts[room.Type];
-            int rows = 6;
-            int cols = totalSeats / rows;
-            int seatCounter = 0;
+    //    foreach (var room in rooms)
+    //    {
+    //        int totalSeats = seatLayouts[room.Type];
+    //        int rows = 6;
+    //        int cols = totalSeats / rows;
+    //        int seatCounter = 0;
 
-            for (int r = 0; r < rows; r++)
-            {
-                char rowLabel = (char)('A' + r);
-                SeatType seatType = r switch
-                {
-                    0 => SeatType.Couple,
-                    <= 3 => SeatType.VIP,
-                    _ => SeatType.Normal
-                };
+    //        for (int r = 0; r < rows; r++)
+    //        {
+    //            char rowLabel = (char)('A' + r);
+    //            SeatType seatType = r switch
+    //            {
+    //                0 => SeatType.Couple,
+    //                <= 3 => SeatType.VIP,
+    //                _ => SeatType.Normal
+    //            };
 
-                for (int c = 1; c <= cols; c++)
-                {
-                    seats.Add(new Seat
-                    {
-                        CinemaRoom = room,
-                        Row = rowLabel.ToString(),
-                        Number = c,
-                        Type = seatType
-                    });
-                    seatCounter++;
-                }
-            }
+    //            for (int c = 1; c <= cols; c++)
+    //            {
+    //                seats.Add(new Seat
+    //                {
+    //                    CinemaRoom = room,
+    //                    Row = rowLabel.ToString(),
+    //                    Number = c,
+    //                    Type = seatType
+    //                });
+    //                seatCounter++;
+    //            }
+    //        }
 
-            room.SeatQuantity = seatCounter;
-        }
+    //        room.SeatQuantity = seatCounter;
+    //    }
 
-        _logger.Info("Seeding cinema rooms and seats...");
-        await _context.CinemaRooms.AddRangeAsync(rooms);
-        await _context.Seats.AddRangeAsync(seats);
-        await _context.SaveChangesAsync();
-        _logger.Success("Cinema rooms and seats seeded successfully.");
+    //    _logger.Info("Seeding cinema rooms and seats...");
+    //    await _context.CinemaRooms.AddRangeAsync(rooms);
+    //    await _context.Seats.AddRangeAsync(seats);
+    //    await _context.SaveChangesAsync();
+    //    _logger.Success("Cinema rooms and seats seeded successfully.");
 
-    }
+    //}
 
     private async Task SeedShowTimeAsync()
     {

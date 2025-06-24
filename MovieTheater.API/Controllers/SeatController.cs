@@ -62,14 +62,14 @@ namespace MovieTheater.API.Controllers
         /// <summary>
         /// Get seat list and status by showtime
         /// </summary>
-        [HttpGet("showtime/{showTimeId}/list")]
+        [HttpGet("showtime/{id}")]
         [ProducesResponseType(typeof(List<ShowTimeSeatDto>), 200)]
         [ProducesResponseType(typeof(object), 404)]
-        public async Task<IActionResult> GetSeatsByShowTimeAsync([FromRoute] Guid showTimeId)
+        public async Task<IActionResult> GetSeatsByShowTimeAsync([FromRoute] Guid id)
         {
             try
             {
-                var result = await _seatService.GetSeatsByShowTimeAsync(showTimeId);
+                var result = await _seatService.GetSeatsByShowTimeAsync(id);
                 return Ok(result);
             }
             catch (Exception ex)
