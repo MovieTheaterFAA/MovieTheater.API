@@ -1,11 +1,11 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using MovieTheater.API.Architecture;
-using MovieTheater.API.Hubs;
+﻿using MovieTheater.API.Architecture;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
+using MovieTheater.Infrastructure.Hubs;
 using SwaggerThemes;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
