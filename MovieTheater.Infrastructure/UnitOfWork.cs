@@ -17,7 +17,9 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<CinemaRoom> cinemaRooms,
         IGenericRepository<AuditLog> aditLogs,
         IGenericRepository<FoodAndDrink> foodAndDrinks,
-        IGenericRepository<Event> events)
+        IGenericRepository<Event> events,
+        IGenericRepository<Seat> seats,
+        IGenericRepository<ShowTimeSeat> showTimeSeats)
     {
         _dbContext = dbContext;
         Users = userRepository;
@@ -29,6 +31,8 @@ public class UnitOfWork : IUnitOfWork
         AuditLogs = aditLogs;
         FoodAndDrinks = foodAndDrinks;
         Events = events;
+        Seats = seats;
+        ShowTimeSeats = showTimeSeats;
     }
 
     public IGenericRepository<User> Users { get; }
@@ -48,6 +52,8 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<FoodAndDrink> FoodAndDrinks { get; }
 
     public IGenericRepository<Event> Events { get; }
+    public IGenericRepository<Seat> Seats { get; }
+    public IGenericRepository<ShowTimeSeat> ShowTimeSeats { get; }
 
     public void Dispose()
     {

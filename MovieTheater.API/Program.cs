@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MovieTheater.API.Architecture;
+using MovieTheater.API.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using SwaggerThemes;
@@ -52,6 +53,10 @@ builder.Services.AddSession(options =>
 });
 builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
 
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+});
 var app = builder.Build();
 
 // Check chắc chắn MinIO bucket đã tồn tại sau khi project build
@@ -90,5 +95,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseSession();
+app.MapHub<SeatHub>("/seatHub");
 
 app.Run();

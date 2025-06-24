@@ -13,6 +13,8 @@ public interface IUnitOfWork : IDisposable
     IGenericRepository<AuditLog> AuditLogs { get; }
     IGenericRepository<FoodAndDrink> FoodAndDrinks { get; }
     IGenericRepository<Event> Events { get; }
+    IGenericRepository<Seat> Seats { get; }
+    IGenericRepository<ShowTimeSeat> ShowTimeSeats { get; }
 
     Task<int> SaveChangesAsync();
 }

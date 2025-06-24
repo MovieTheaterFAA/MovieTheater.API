@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.8.41" />
+	<PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>

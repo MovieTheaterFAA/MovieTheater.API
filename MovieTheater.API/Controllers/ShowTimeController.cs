@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.ShowTimeDTOs;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
+using static MovieTheater.Domain.DTOs.ShowTimeDTOs.BatchShowtimeRequestDto;
 
 namespace MovieTheater.API.Controllers
 {
@@ -20,32 +22,57 @@ namespace MovieTheater.API.Controllers
             _claimsService = claimsService;
         }
 
+        [HttpPost("single")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Add a new single showtime",
+            Description = "Creates a new showtime for a movie in a cinema room. Requires Admin privileges."
+        )]
+        [ProducesResponseType(typeof(ApiResult<ShowtimeResponseDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AddSingleShowTimeAsync(
+        [FromBody, SwaggerParameter("New showtime data to be added")] ShowTimeRequestDto showTimeRequestDto)
+        {
+            try
+            {
+                var result = await _showTimeService.AddSingleShowTimeAsync(showTimeRequestDto);
+                return Ok(ApiResult<ShowtimeResponseDTO>.Success(result, "200", "Showtime added successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<ShowtimeResponseDTO>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
 
-        //[HttpPost("movieId")]
-        //[Authorize(Policy = "AdminPolicy")]
-        //[SwaggerOperation(
-        //    Summary = "Add a new showtime",
-        //    Description = "Creates a new showtime for a movie in a cinema room. Requires Admin privileges."
-        //)]
-        //[ProducesResponseType(typeof(ApiResult<ShowtimeResponseDTO>), 200)]
-        //[ProducesResponseType(typeof(ApiResult<object>), 400)]
-        //[ProducesResponseType(typeof(ApiResult<object>), 500)]
-        //public async Task<IActionResult> AddShowTimeAsync([FromBody, SwaggerParameter("New showtime data to be added")] ShowTimeRequestDto showTimeRequestDto)
-        //{
-        //    try
-        //    {
-        //        var result = await _showTimeService.AddShowTimeAsync(showTimeRequestDto);
-        //        return Ok(ApiResult<ShowtimeResponseDTO>.Success(result, "200", "Showtime added successfully."));
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-        //        var errorResponse = ExceptionUtils.CreateErrorResponse<ShowtimeResponseDTO>(ex);
-        //        return StatusCode(statusCode, errorResponse);
-        //    }
-        //}
+        [HttpPost("batch")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Add a batch of showtimes",
+            Description = "Creates multiple showtimes for a cinema room. Requires Admin privileges."
+        )]
+        [ProducesResponseType(typeof(ApiResult<List<ShowtimeResponseDTO>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AddBatchShowTimesAsync(
+            [FromBody, SwaggerParameter("Batch showtime data to be added")] BatchShowTimeRequestDto batchShowTimeRequestDto)
+        {
+            try
+            {
+                var result = await _showTimeService.AddBatchShowTimesAsync(batchShowTimeRequestDto);
+                return Ok(ApiResult<List<ShowtimeResponseDTO>>.Success(result, "200", "Batch showtimes added successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
 
-        [HttpGet("by-movie-and-date")]
+        [HttpGet("movie-and-date")]
         [SwaggerOperation(
             Summary = "Get showtimes by movie and date",
             Description = "Retrieve all showtimes for a specific movie on a specific date."
@@ -73,10 +100,11 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpGet("by-date")]
+        [HttpGet("date")]
+        [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
-        Summary = "Get showtimes by date",
-        Description = "Retrieve all showtimes for a specific date.")]
+            Summary = "Get showtimes by date",
+            Description = "Retrieve all showtimes for a specific date.")]
         [ProducesResponseType(typeof(ApiResult<List<ShowtimeResponseDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
@@ -101,6 +129,5 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-
     }
 }
