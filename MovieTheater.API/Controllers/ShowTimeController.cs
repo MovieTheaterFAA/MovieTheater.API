@@ -46,7 +46,7 @@ namespace MovieTheater.API.Controllers
 
         [HttpGet("movie-and-date")]
         [SwaggerOperation(
-            Summary = "Get showtimes by movie and date",
+            Summary = "Get showtimes by movie and date for User",
             Description = "Retrieve all showtimes for a specific movie on a specific date."
         )]
         [ProducesResponseType(typeof(ApiResult<List<ShowtimeResponseDTO>>), 200)]
@@ -75,7 +75,7 @@ namespace MovieTheater.API.Controllers
         [HttpGet("date")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
-            Summary = "Get showtimes by date",
+            Summary = "Get showtimes by date for Admin",
             Description = "Retrieve all showtimes for a specific date.")]
         [ProducesResponseType(typeof(ApiResult<List<ShowtimeResponseDTO>>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
