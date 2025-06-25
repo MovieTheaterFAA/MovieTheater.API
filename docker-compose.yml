@@ -14,6 +14,7 @@
       # Xài local
       # - ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=movietheater_db;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=movietheater-redis:6379,abortConnect=false
+      - GEMINI_API_KEY=AIzaSyD8YgqkR7d1gDYL_7cFXRDfYNhQl4glD4k
       - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU
       - JWT__Issuer=MovieTheater_Issuer
       - JWT__Audience=MovieTheater_Audience
