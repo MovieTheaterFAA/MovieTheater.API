@@ -1,11 +1,14 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Interfaces.ThirdParty;
 using MovieTheater.Application.Services;
 using MovieTheater.Application.Services.Commons;
+using MovieTheater.Application.Services.ThirdParty;
 using MovieTheater.Domain;
 using MovieTheater.Infrastructure;
 using MovieTheater.Infrastructure.Commons;
@@ -13,7 +16,6 @@ using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Infrastructure.Repositories;
 using Resend;
 using StackExchange.Redis;
-using System.Text;
 
 namespace MovieTheater.API.Architecture;
 
@@ -82,7 +84,6 @@ public static class IocContainer
         return services;
     }
 
-
     public static IServiceCollection SetupVnpay(this IServiceCollection services)
     {
         // Xây dựng IConfiguration từ các nguồn cấu hình
@@ -138,6 +139,9 @@ public static class IocContainer
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<IImpersonationService, ImpersonationService>();
+        services.AddScoped<IChatbotService, ChatbotService>();
+        services.AddScoped<IDataAnalyzerService, DataAnalyzerService>();
+        services.AddScoped<IGeminiService, GeminiService>();
 
         services.AddHttpContextAccessor();
 
