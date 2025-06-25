@@ -19,82 +19,88 @@ namespace MovieTheater.Application.Services
             _chatbotHub = chatbotHub;
         }
 
-        public async Task<string> AskMemberAsync(string prompt, string? groupId = null)
+        public async Task<string> FreestyleAskAsync(string prompt, string? groupId = null)
         {
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("Prompt is required.");
 
-            string response;
+            // Fetch all movies and food/drinks
+            var movies = await _analyzerService.GetAllMoviesAsync();
+            var foods = await _analyzerService.GetAllFoodAndDrinksAsync();
+            var promotions = await _analyzerService.GetAllPromotionsAsync();
+            var cinemaRooms = await _analyzerService.GetAllCinemaRoomsAsync();
+            var seatTypes = await _analyzerService.GetAllSeatTypesAsync();
 
-            // Lowercase for easier matching
-            var lowerPrompt = prompt.ToLowerInvariant();
+            // Format movie data
+            var movieContext = string.Join("\n", movies.Select(m =>
+                $"""
+                - Name: {m.Name}
+                Director: {m.Director}
+                Rating: {m.Rating}
+                Status: {m.Status}
+                Genres: {string.Join(", ", m.Genres ?? new List<string>())}
+                Cast: {string.Join(", ", m.Actors ?? new List<string>())}
+                From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
+                """
+            ));
 
-            // Detect "most booked" intent
-            if (Regex.IsMatch(lowerPrompt, @"(most\s+(booked|popular|reserved|frequent(ed)?|chosen|picked))|(best\s+selling)", RegexOptions.IgnoreCase))
-            {
-                int top = ExtractTopNumber(prompt) ?? 5;
-                var movies = await _analyzerService.GetMostBookedMoviesAsync(top);
+            // Format food and drink data
+            var foodContext = string.Join("\n", foods.Select(f =>
+                $"""
+                - Name: {f.Name}
+                Type: {f.Type}
+                Price: {f.Price}
+                Description: {f.Description}
+                """
+            ));
 
-                var formatted = string.Join("\n", movies.Select(m =>
-                    $"""
-                    - Name: {m.Name}
-                    Director: {m.Director}
-                    Rating: {m.Rating}
-                    Status: {m.Status}
-                    Genres: {string.Join(", ", m.Genres ?? new List<string>())}
-                    From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
-                    """
-                ));
+            // Format promotions with their parent event
+            var promotionContext = string.Join("\n", promotions.Select(p =>
+                $"""
+                - Title: {p.Title}
+                Discount: {p.DiscountValue}
+                Detail: {p.Detail}
+                Event: {(p.Event != null ? p.Event.Name : "N/A")}
+                EventTime: {(p.Event != null ? $"{p.Event.StartTime:yyyy-MM-dd} to {p.Event.EndTime:yyyy-MM-dd}" : "N/A")}
+                """
+            ));
 
-                var generatedPrompt = $"""
-                    Here are the top {top} most booked movies in our cinema system:
-                    {formatted}
+            // Format cinema room data
+            var cinemaRoomContext = string.Join("\n", cinemaRooms.Select(r =>
+                $"""
+                - Name: {r.Name}
+                Type: {r.Type}
+                """
+            ));
 
-                    Please provide a concise analysis for members:
-                    - What trends do you notice?
-                    - Which genres or directors are most popular?
-                    - Any recommendations for members?
-                    Answer in clear, friendly English, using bullet points if possible.
-                    """;
+            // Format seat types
+            var seatTypeContext = string.Join("\n", seatTypes.Select(st =>
+                $"- {st} ({(int)st})"
+            ));
 
-                response = await _geminiService.GenerateResponseAsync(generatedPrompt);
-            }
-            // Detect "top rating" intent
-            else if (Regex.IsMatch(lowerPrompt, @"(top\s+(rating|rated|score|scored|reviewed|best))|(highest\s+rated)", RegexOptions.IgnoreCase))
-            {
-                int top = ExtractTopNumber(prompt) ?? 5;
-                var movies = await _analyzerService.GetTopRatingMoviesAsync(top);
+            // Combine context and prompt
+            var contextPrompt = $"""
+            [Movie Database Context]
+            {movieContext}
 
-                var formatted = string.Join("\n", movies.Select(m =>
-                    $"""
-                    - Name: {m.Name}
-                    Director: {m.Director}
-                    Rating: {m.Rating}
-                    Status: {m.Status}
-                    Genres: {string.Join(", ", m.Genres ?? new List<string>())}
-                    From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
-                    """
-                ));
+            [Food & Drink Menu]
+            {foodContext}
 
-                var generatedPrompt = $"""
-                    Here are the top {top} highest rated movies in our cinema system:
-                    {formatted}
+            [Promotions & Events]
+            {promotionContext}
 
-                    Please provide a concise analysis for members:
-                    - What makes these movies highly rated?
-                    - Any notable patterns in genres or directors?
-                    - Suggestions for members interested in top-rated films?
-                    Answer in clear, friendly English, using bullet points if possible.
-                    """;
+            [Cinema Rooms]
+            {cinemaRoomContext}
 
-                response = await _geminiService.GenerateResponseAsync(generatedPrompt);
-            }
-            else
-            {
-                response = await _geminiService.GenerateResponseAsync(prompt);
-            }
+            [Seat Types]
+            {seatTypeContext}
 
-            // Broadcast if groupId is provided
+            [User Question]
+            {prompt}
+            """;
+
+            var response = await _geminiService.GenerateResponseAsync(contextPrompt);
+
             if (!string.IsNullOrWhiteSpace(groupId))
             {
                 await BroadcastChatbotResponseAsync(groupId, response);

@@ -24,7 +24,7 @@ namespace MovieTheater.API.Controllers
                 if (string.IsNullOrWhiteSpace(request?.Prompt))
                     return BadRequest(ApiResult<object>.Failure("400", "Prompt is required."));
 
-                var result = await _chatbotService.AskMemberAsync(request.Prompt);
+                var result = await _chatbotService.FreestyleAskAsync(request.Prompt);
                 return Ok(ApiResult<string>.Success(result, "200", "Chatbot response generated successfully."));
             }
             catch (Exception ex)

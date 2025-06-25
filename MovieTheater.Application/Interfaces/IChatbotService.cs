@@ -2,6 +2,6 @@
 {
     public interface IChatbotService
     {
-        Task<string> AskMemberAsync(string prompt, string? groupId = null);
+        Task<string> FreestyleAskAsync(string prompt, string? groupId = null);
     }
 }

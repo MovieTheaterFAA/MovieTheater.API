@@ -2,6 +2,7 @@
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Domain;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Application.Services
 {
@@ -33,6 +34,53 @@ namespace MovieTheater.Application.Services
                 .OrderByDescending(m => m.Rating)
                 .Take(top)
                 .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Movie>> GetAllMoviesAsync()
+        {
+            var movies = await _context.Movies
+                .Where(m => !m.IsDeleted)
+                .ToListAsync();
+
+            return movies;
+        }
+
+        public async Task<IReadOnlyList<FoodAndDrink>> GetAllFoodAndDrinksAsync()
+        {
+            return await _context.FoodAndDrinks
+                .Where(f => !f.IsDeleted)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Event>> GetAllEventsAsync()
+        {
+            return await _context.Events
+                .Where(e => !e.IsDeleted)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<Promotion>> GetAllPromotionsAsync()
+        {
+            return await _context.Promotions
+                .Include(p => p.Event)
+                .Where(p => !p.IsDeleted && p.Event != null && !p.Event.IsDeleted)
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<CinemaRoom>> GetAllCinemaRoomsAsync()
+        {
+            return await _context.CinemaRooms
+                .Where(r => !r.IsDeleted)
+                .ToListAsync();
+        }
+
+        public Task<IReadOnlyList<SeatType>> GetAllSeatTypesAsync()
+        {
+            var seatTypes = System.Enum.GetValues(typeof(SeatType))
+                .Cast<SeatType>()
+                .ToList()
+                .AsReadOnly();
+            return Task.FromResult((IReadOnlyList<SeatType>)seatTypes);
         }
     }
 }
