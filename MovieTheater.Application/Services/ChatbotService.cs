@@ -1,6 +1,8 @@
 ﻿using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.SignalR;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.ThirdParty;
+using MovieTheater.Infrastructure.Hubs;
 
 namespace MovieTheater.Application.Services
 {
@@ -8,22 +10,21 @@ namespace MovieTheater.Application.Services
     {
         private readonly IDataAnalyzerService _analyzerService;
         private readonly IGeminiService _geminiService;
+        private readonly IHubContext<ChatbotHub> _chatbotHub;
 
-        public ChatbotService(IDataAnalyzerService analyzerService, IGeminiService geminiService)
+        public ChatbotService(IDataAnalyzerService analyzerService, IGeminiService geminiService, IHubContext<ChatbotHub> chatbotHub)
         {
             _analyzerService = analyzerService;
             _geminiService = geminiService;
+            _chatbotHub = chatbotHub;
         }
 
-        /// <summary>
-        /// Flexible method for member AI analysis and Q&A.
-        /// Detects intent from prompt and generates the appropriate analysis or answer.
-        /// </summary>
-        /// <param name="prompt">User's question or request.</param>
-        public async Task<string> AskMemberAsync(string prompt)
+        public async Task<string> AskMemberAsync(string prompt, string? groupId = null)
         {
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("Prompt is required.");
+
+            string response;
 
             // Lowercase for easier matching
             var lowerPrompt = prompt.ToLowerInvariant();
@@ -37,11 +38,11 @@ namespace MovieTheater.Application.Services
                 var formatted = string.Join("\n", movies.Select(m =>
                     $"""
                     - Name: {m.Name}
-                      Director: {m.Director}
-                      Rating: {m.Rating}
-                      Status: {m.Status}
-                      Genres: {string.Join(", ", m.Genres ?? new List<string>())}
-                      From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
+                    Director: {m.Director}
+                    Rating: {m.Rating}
+                    Status: {m.Status}
+                    Genres: {string.Join(", ", m.Genres ?? new List<string>())}
+                    From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
                     """
                 ));
 
@@ -54,13 +55,12 @@ namespace MovieTheater.Application.Services
                     - Which genres or directors are most popular?
                     - Any recommendations for members?
                     Answer in clear, friendly English, using bullet points if possible.
-                """;
+                    """;
 
-                return await _geminiService.GenerateResponseAsync(generatedPrompt);
+                response = await _geminiService.GenerateResponseAsync(generatedPrompt);
             }
-
             // Detect "top rating" intent
-            if (Regex.IsMatch(lowerPrompt, @"(top\s+(rating|rated|score|scored|reviewed|best))|(highest\s+rated)", RegexOptions.IgnoreCase))
+            else if (Regex.IsMatch(lowerPrompt, @"(top\s+(rating|rated|score|scored|reviewed|best))|(highest\s+rated)", RegexOptions.IgnoreCase))
             {
                 int top = ExtractTopNumber(prompt) ?? 5;
                 var movies = await _analyzerService.GetTopRatingMoviesAsync(top);
@@ -68,11 +68,11 @@ namespace MovieTheater.Application.Services
                 var formatted = string.Join("\n", movies.Select(m =>
                     $"""
                     - Name: {m.Name}
-                      Director: {m.Director}
-                      Rating: {m.Rating}
-                      Status: {m.Status}
-                      Genres: {string.Join(", ", m.Genres ?? new List<string>())}
-                      From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
+                    Director: {m.Director}
+                    Rating: {m.Rating}
+                    Status: {m.Status}
+                    Genres: {string.Join(", ", m.Genres ?? new List<string>())}
+                    From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
                     """
                 ));
 
@@ -85,13 +85,33 @@ namespace MovieTheater.Application.Services
                     - Any notable patterns in genres or directors?
                     - Suggestions for members interested in top-rated films?
                     Answer in clear, friendly English, using bullet points if possible.
-                """;
+                    """;
 
-                return await _geminiService.GenerateResponseAsync(generatedPrompt);
+                response = await _geminiService.GenerateResponseAsync(generatedPrompt);
+            }
+            else
+            {
+                response = await _geminiService.GenerateResponseAsync(prompt);
             }
 
-            // Default: treat as a general prompt
-            return await _geminiService.GenerateResponseAsync(prompt);
+            // Broadcast if groupId is provided
+            if (!string.IsNullOrWhiteSpace(groupId))
+            {
+                await BroadcastChatbotResponseAsync(groupId, response);
+            }
+
+            return response;
+        }
+
+        public async Task BroadcastChatbotResponseAsync(string groupId, string response)
+        {
+            await _chatbotHub.Clients.Group(groupId)
+                .SendAsync("ReceiveChatbotResponse", new
+                {
+                    GroupId = groupId,
+                    Response = response,
+                    Timestamp = DateTime.UtcNow
+                });
         }
 
         /// <summary>

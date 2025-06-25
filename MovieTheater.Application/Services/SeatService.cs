@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -7,8 +9,6 @@ using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Hubs;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -66,6 +66,7 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while fetching seats for the cinema room.");
             }
         }
+
         public async Task<List<SeatDto>> BatchCreateSeatsAsync(Guid cinemaRoomId, BatchCreateSeatDto dto, Guid adminId)
         {
             try
@@ -131,6 +132,7 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while batch creating seats.");
             }
         }
+
         public async Task<SeatDto?> UpdateSeatAsync(Guid seatId, UpdateSeatDto dto, Guid adminId)
         {
             try
@@ -184,6 +186,7 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while updating the seat.");
             }
         }
+
         public async Task<bool> SoftDeleteSeatAsync(Guid seatId, Guid adminId)
         {
             try
@@ -228,7 +231,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while deleting the seat.");
             }
         }
-
 
         //================== User & Admin Methods ===================///
         public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
@@ -288,6 +290,7 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while retrieving seats.", ex);
             }
         }
+
         public async Task<List<SeatResponseDto>> HoldSeatsAsync(Guid userId, Guid showTimeId, List<Guid> seatIds)
         {
             try
@@ -377,20 +380,10 @@ namespace MovieTheater.Application.Services
 
                 _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
 
-                // Broadcast seat status to other client
+                // Broadcast seat status to other clients
                 if (heldSeats.Any())
                 {
-                    await _seatHub.Clients
-                        .Group($"ShowTime_{showTimeId}")
-                        .SendAsync("ReceiveSeatUpdate", new
-                        {
-                            ShowTimeId = showTimeId,
-                            Seats = heldSeats.Select(s => new
-                            {
-                                SeatId = s.Id,
-                                Status = SeatStatus.Holding
-                            })
-                        });
+                    await BroadcastSeatUpdateAsync(showTimeId, heldSeats);
                 }
 
                 return heldSeats;
@@ -401,6 +394,7 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while holding seats.", ex);
             }
         }
+
         public async Task<ShowTimeSeatDto> GetSeatByIdAsync(Guid seatId)
         {
             try
@@ -437,7 +431,6 @@ namespace MovieTheater.Application.Services
             }
         }
 
-
         //=================== Helper Methods ===================///
         private static void CleanupExpiredHolds()
         {
@@ -449,6 +442,21 @@ namespace MovieTheater.Application.Services
                     _holdingSeats.TryRemove(entry.Key, out _);
                 }
             }
+        }
+
+        private async Task BroadcastSeatUpdateAsync(Guid showTimeId, List<SeatResponseDto> heldSeats)
+        {
+            await _seatHub.Clients
+                .Group($"ShowTime_{showTimeId}")
+                .SendAsync("ReceiveSeatUpdate", new
+                {
+                    ShowTimeId = showTimeId,
+                    Seats = heldSeats.Select(s => new
+                    {
+                        SeatId = s.Id,
+                        Status = SeatStatus.Holding
+                    })
+                });
         }
     }
 }
