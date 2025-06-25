@@ -1,24 +1,24 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.ThirdParty;
+using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services.ThirdParty
 {
     public class GeminiService : IGeminiService
     {
         private readonly string _apiKey;
-        private readonly ICacheService _cache;
+        private readonly IRedisService _cacheService;
         private readonly HttpClient _httpClient;
 
-        public GeminiService(IHttpClientFactory httpClientFactory, IConfiguration config, ICacheService cache)
+        public GeminiService(IHttpClientFactory httpClientFactory, IConfiguration config, IRedisService cacheService)
         {
             _httpClient = httpClientFactory.CreateClient();
             _apiKey = config["Gemini:ApiKey"]
-                      ?? Environment.GetEnvironmentVariable("   ")
+                      ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
                       ?? throw new Exception("Gemini API key not configured.");
-            _cache = cache;
+            _cacheService = cacheService;
         }
 
         public async Task<string> GenerateResponseAsync(string userPrompt)
@@ -26,10 +26,11 @@ namespace MovieTheater.Application.Services.ThirdParty
             var fullPrompt = $"{GeminiContext.SystemPrompt}\n\n{userPrompt}";
             var cacheKey = $"gemini:response:{fullPrompt.GetHashCode()}";
 
-            if (await _cache.ExistsAsync(cacheKey))
+            // Try to get from cache
+            var cached = await _cacheService.GetAsync<string>(cacheKey);
+            if (!string.IsNullOrWhiteSpace(cached))
             {
-                var cached = await _cache.GetAsync<string>(cacheKey);
-                if (!string.IsNullOrWhiteSpace(cached)) return cached;
+                return cached;
             }
 
             var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
@@ -72,7 +73,7 @@ namespace MovieTheater.Application.Services.ThirdParty
 
             var finalResult = result ?? string.Empty;
 
-            await _cache.SetAsync(cacheKey, finalResult, TimeSpan.FromHours(2));
+            //await _cache.SetAsync(cacheKey, finalResult, TimeSpan.FromHours(2));
 
             return finalResult;
         }
