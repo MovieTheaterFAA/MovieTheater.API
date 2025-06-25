@@ -73,8 +73,6 @@ namespace MovieTheater.Application.Services.ThirdParty
 
             var finalResult = result ?? string.Empty;
 
-            //await _cache.SetAsync(cacheKey, finalResult, TimeSpan.FromHours(2));
-
             return finalResult;
         }
     }
