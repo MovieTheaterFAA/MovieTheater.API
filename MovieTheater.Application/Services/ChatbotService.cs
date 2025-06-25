@@ -41,6 +41,8 @@ namespace MovieTheater.Application.Services
                 Genres: {string.Join(", ", m.Genres ?? new List<string>())}
                 Cast: {string.Join(", ", m.Actors ?? new List<string>())}
                 From: {m.FromDate:yyyy-MM-dd} To: {m.ToDate:yyyy-MM-dd}
+                RunningTime: {m.RunningTime} minutes
+                Description: {m.Description}
                 """
             ));
 
