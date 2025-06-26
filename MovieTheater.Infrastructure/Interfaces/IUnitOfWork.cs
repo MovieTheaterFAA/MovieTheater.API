@@ -15,6 +15,10 @@ public interface IUnitOfWork : IDisposable
     IGenericRepository<Event> Events { get; }
     IGenericRepository<Seat> Seats { get; }
     IGenericRepository<ShowTimeSeat> ShowTimeSeats { get; }
-
+    IGenericRepository<Booking> Bookings { get; }
+    IGenericRepository<BookingSeat> BookingSeats { get; }
+    IGenericRepository<BookingFood> BookingFoods { get; }
+    IGenericRepository<Invoice> Invoices { get; }
+    IGenericRepository<Payment> Payments { get; }
     Task<int> SaveChangesAsync();
 }

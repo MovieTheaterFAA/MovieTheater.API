@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -16,6 +15,7 @@ using MovieTheater.Infrastructure.Interfaces;
 using MovieTheater.Infrastructure.Repositories;
 using Resend;
 using StackExchange.Redis;
+using System.Text;
 
 namespace MovieTheater.API.Architecture;
 
@@ -142,6 +142,11 @@ public static class IocContainer
         services.AddScoped<IChatbotService, ChatbotService>();
         services.AddScoped<IDataAnalyzerService, DataAnalyzerService>();
         services.AddScoped<IGeminiService, GeminiService>();
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IInvoiceService, InvoiceService>();
+        services.AddScoped<IPaymentService, StripePaymentService>();
+
+        services.AddHostedService<BookingCleanupService>();
 
         services.AddHttpContextAccessor();
 

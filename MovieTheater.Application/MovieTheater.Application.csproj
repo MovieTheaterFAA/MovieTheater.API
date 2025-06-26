@@ -13,6 +13,7 @@
 	<ItemGroup>
 		<PackageReference Include="Minio" Version="6.0.4" />
 		<PackageReference Include="Resend" Version="0.1.1" />
+		<PackageReference Include="Stripe.net" Version="48.2.0" />
 	</ItemGroup>
 	
 </Project>

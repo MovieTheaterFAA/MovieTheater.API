@@ -1,11 +1,13 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using MovieTheater.API.Architecture;
+﻿using MovieTheater.API.Architecture;
+using MovieTheater.API.Configuration;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using MovieTheater.Infrastructure.Hubs;
+using Stripe;
 using SwaggerThemes;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,16 @@ builder.Services.AddSwaggerGen();
 builder.Services.SetupIocContainer();
 builder.Configuration.AddEnvironmentVariables();
 builder.Configuration.AddJsonFile("appsettings.json", true, true);
+
+// Configure Stripe
+builder.Services.Configure<StripeSettings>(options =>
+{
+    options.SecretKey = builder.Configuration["Stripe__SecretKey"];
+    options.PublishableKey = builder.Configuration["Stripe__PublishableKey"];
+});
+// Set Stripe API key
+StripeConfiguration.ApiKey = builder.Configuration["Stripe__SecretKey"];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",

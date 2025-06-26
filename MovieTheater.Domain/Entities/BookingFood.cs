@@ -2,7 +2,7 @@
 
 namespace MovieTheater.Domain.Entities
 {
-    public class BookingFood
+    public class BookingFood : BaseEntity
     {
         public Guid BookingId { get; set; }
 
