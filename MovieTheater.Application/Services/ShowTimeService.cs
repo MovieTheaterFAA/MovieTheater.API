@@ -162,11 +162,13 @@ namespace MovieTheater.Application.Services
 
 
         //============================ User =============================
-        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime date)
+        public async Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime? date = null)
         {
             try
             {
-                string cacheKey = $"showtime:movie:{movieId}:date:{date:yyyyMMdd}";
+                string cacheKey = date.HasValue
+                    ? $"showtime:movie:{movieId}:date:{date.Value:yyyyMMdd}"
+                    : $"showtime:movie:{movieId}:all";
                 var cached = await _redisService.GetAsync<List<ShowtimeResponseDTO>>(cacheKey);
                 if (cached != null)
                 {
@@ -175,15 +177,19 @@ namespace MovieTheater.Application.Services
                 }
 
                 _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
-                _loggerService.Info($"[GetShowTimesByMovieAndDateAsync] movieId: {movieId}, date: {date:yyyy-MM-dd}");
+                _loggerService.Info($"[GetShowTimesByMovieAndDateAsync] movieId: {movieId}, date: {(date.HasValue ? date.Value.ToString("yyyy-MM-dd") : "all")}");
 
-                var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
-                    .Where(st => st.MovieId == movieId && st.ShowDate.Date == date.Date && !st.IsDeleted)
-                    .ToListAsync();
+                var query = _unitOfWork.ShowTimes.GetQueryable()
+                    .Where(st => st.MovieId == movieId && !st.IsDeleted);
+
+                if (date.HasValue)
+                    query = query.Where(st => st.ShowDate.Date == date.Value.Date);
+
+                var showTimes = await query.OrderBy(st => st.ShowDate).ToListAsync();
 
                 if (showTimes == null || !showTimes.Any())
                 {
-                    _loggerService.Warn($"[GetShowTimesByMovieAndDateAsync] No showtimes found for MovieId {movieId} on date {date:yyyy-MM-dd}.");
+                    _loggerService.Warn($"[GetShowTimesByMovieAndDateAsync] No showtimes found for MovieId {movieId}.");
                     return new List<ShowtimeResponseDTO>();
                 }
 
