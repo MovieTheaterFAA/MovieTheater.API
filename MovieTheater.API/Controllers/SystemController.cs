@@ -32,9 +32,10 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             await SeedMovieAsync();
             await SeedCinemaRoomAsync();
-            //await SeedShowTimeAsync();
+            await SeedShowTimeForAllRoomsAndMoviesAsync();
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
+            await SeedSeatsForAllCinemaRoomsAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -416,34 +417,100 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Cinema rooms seeded successfully.");
     }
-    private async Task SeedShowTimeAsync()
+    private async Task SeedShowTimeForAllRoomsAndMoviesAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
-        var movies = await _context.Movies.Take(3).ToListAsync();
+        var movies = await _context.Movies.Where(m => m.Status == MovieStatus.NowShowing).ToListAsync();
         var showtimes = new List<ShowTime>();
-        var startDate = DateTime.UtcNow.Date;
+        var random = new Random();
 
         foreach (var room in rooms)
         {
             foreach (var movie in movies)
             {
-                if (movie.RunningTime.HasValue)
+                if (!movie.RunningTime.HasValue) continue;
+
+                // Randomize showtime start hour based on room type
+                int baseHour = room.Type switch
                 {
-                    showtimes.Add(new ShowTime
-                    {
-                        CinemaRoomId = room.Id,
-                        MovieId = movie.Id,
-                        ShowDate = startDate,
-                        Duration = TimeSpan.FromMinutes(movie.RunningTime.Value)
-                    });
-                    startDate = startDate.AddDays(1);
-                }
+                    RoomType.IMAX => 10,
+                    RoomType.FourD => 12,
+                    RoomType.TwoD => 14,
+                    _ => 16
+                };
+                int randomHour = baseHour + random.Next(0, 5); // e.g. 10-14 for IMAX, 12-16 for 4D, etc.
+
+                var showDate = DateTime.UtcNow.Date.AddHours(randomHour);
+
+                showtimes.Add(new ShowTime
+                {
+                    Id = Guid.NewGuid(),
+                    CinemaRoomId = room.Id,
+                    MovieId = movie.Id,
+                    ShowDate = showDate,
+                    Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty // System seed
+                });
             }
         }
+
         await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
 
-        _logger.Success("Showtimes seeded successfully.");
+        _logger.Success($"Seeded {showtimes.Count} showtimes for all rooms and movies.");
+    }
+    private async Task SeedSeatsForAllCinemaRoomsAsync()
+    {
+        var rooms = await _context.CinemaRooms.ToListAsync();
+        var rowCount = 5;
+        var seatsPerRow = 10;
+        var seatList = new List<Seat>();
+
+        foreach (var room in rooms)
+        {
+            // Only seed if no seats exist for this room
+            var existing = await _context.Seats.AnyAsync(s => s.CinemaRoomId == room.Id);
+            if (existing) continue;
+
+            for (int rowIdx = 0; rowIdx < rowCount; rowIdx++)
+            {
+                string rowLabel = ((char)('A' + rowIdx)).ToString();
+                SeatType seatType;
+                if (rowIdx == 0)
+                    seatType = SeatType.Couple;
+                else if (rowIdx == rowCount / 2)
+                    seatType = SeatType.VIP;
+                else
+                    seatType = SeatType.Normal;
+
+                for (int seatNum = 1; seatNum <= seatsPerRow; seatNum++)
+                {
+                    seatList.Add(new Seat
+                    {
+                        Id = Guid.NewGuid(),
+                        CinemaRoomId = room.Id,
+                        Row = rowLabel,
+                        Number = seatNum,
+                        Type = seatType,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = Guid.Empty // System seed
+                    });
+                }
+            }
+            _logger.Info($"Seeded {rowCount * seatsPerRow} seats for room {room.Name}.");
+        }
+
+        if (seatList.Count > 0)
+        {
+            await _context.Seats.AddRangeAsync(seatList);
+            await _context.SaveChangesAsync();
+            _logger.Success($"Seeded {seatList.Count} seats for all cinema rooms.");
+        }
+        else
+        {
+            _logger.Info("No new seats to seed.");
+        }
     }
     private async Task SeedEventAndPromotionAsync()
     {
