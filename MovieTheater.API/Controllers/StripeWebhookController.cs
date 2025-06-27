@@ -16,7 +16,6 @@ namespace MovieTheater.API.Controllers
     {
         private readonly IInvoiceService _invoiceService;
         private readonly ILoggerService _loggerService;
-        private readonly StripeSettings _stripeSettings;
         private readonly string _endpointSecret;
 
         public StripeWebhookController(
@@ -26,8 +25,12 @@ namespace MovieTheater.API.Controllers
         {
             _invoiceService = invoiceService;
             _loggerService = loggerService;
-            _stripeSettings = stripeSettings.Value;
-            _endpointSecret = _stripeSettings.WebhookSecret;
+            _endpointSecret = stripeSettings.Value.WebhookSecret;
+
+            if (string.IsNullOrEmpty(_endpointSecret))
+            {
+                _loggerService.Warn("Stripe webhook secret is missing in configuration!");
+            }
         }
 
         [HttpPost]
@@ -35,8 +38,24 @@ namespace MovieTheater.API.Controllers
         {
             var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
 
+            // Log incoming webhook data for debugging
+            _loggerService.Info($"Received Stripe webhook data: {json.Substring(0, Math.Min(100, json.Length))}...");
+
             try
             {
+                // If webhook secret is missing, log warning and try to process without verification
+                if (string.IsNullOrEmpty(_endpointSecret))
+                {
+                    _loggerService.Warn("Processing webhook without signature verification - NOT RECOMMENDED FOR PRODUCTION");
+                    var jsonEvent = JsonSerializer.Deserialize<JsonElement>(json);
+                    var eventType = jsonEvent.GetProperty("type").GetString();
+                    _loggerService.Info($"Webhook event type (unverified): {eventType}");
+
+                    // Continue with basic processing...
+                    return Ok();
+                }
+
+                // Verify webhook signature
                 var stripeEvent = EventUtility.ConstructEvent(
                     json,
                     Request.Headers["Stripe-Signature"],
@@ -46,7 +65,7 @@ namespace MovieTheater.API.Controllers
                 _loggerService.Info($"Received Stripe webhook: {stripeEvent.Type}");
 
                 // Handle the event based on its type
-                if (stripeEvent.Type == "checkout.session.expired")
+                if (stripeEvent.Type == "checkout.session.completed")
                 {
                     var session = stripeEvent.Data.Object as Session;
 
@@ -88,7 +107,12 @@ namespace MovieTheater.API.Controllers
             catch (StripeException e)
             {
                 _loggerService.Error($"Stripe webhook error: {e.Message}");
-                return BadRequest();
+                return BadRequest(new { Error = e.Message });
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"General error processing webhook: {ex.Message}");
+                return StatusCode(500, new { Error = "Internal server error processing webhook" });
             }
         }
     }

@@ -109,7 +109,7 @@ public class BookingService : IBookingService
                 sts => sts.ShowTimeId == request.ShowTimeId && request.SeatIds.Contains(sts.SeatId));
 
             // Check if any selected seat is already booked
-            if (selectedSeats.Any(s => s.Status != SeatStatus.Available))
+            if (selectedSeats.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
             {
                 _loggerService.Warn($"Attempted to book unavailable seats for showtime: {request.ShowTimeId}");
                 throw new InvalidOperationException("One or more selected seats are not available");
@@ -146,9 +146,14 @@ public class BookingService : IBookingService
             // Update seat status to booked
             foreach (var seat in selectedSeats)
             {
-                seat.Status = SeatStatus.Booked;
+                var ShowTimeSeat = new ShowTimeSeat
+                {
+                    ShowTimeId = request.ShowTimeId,
+                    SeatId = seat.SeatId,
+                    Status = SeatStatus.Booked
+                };
             }
-            await _unitOfWork.ShowTimeSeats.UpdateRange(selectedSeats.ToList());
+            await _unitOfWork.ShowTimeSeats.AddRangeAsync(selectedSeats.ToList());
 
             await _unitOfWork.SaveChangesAsync();
             _loggerService.Success($"Booking created successfully with ID: {booking.Id}");
@@ -394,7 +399,6 @@ public class BookingService : IBookingService
                 SeatId = bs.SeatId,
                 Row = bs.Seat?.Row,
                 Number = bs.Seat?.Number ?? 0,
-                Price = GetSeatPrice(bs.Seat)
             }).ToList() ?? new List<BookingSeatDto>(),
             BookingFoods = booking.BookingFoods?.Select(bf => new BookingFoodDto
             {

@@ -15,18 +15,69 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.SetupIocContainer();
-builder.Configuration.AddEnvironmentVariables();
-builder.Configuration.AddJsonFile("appsettings.json", true, true);
 
-// Configure Stripe
-builder.Services.Configure<StripeSettings>(options =>
+builder.Configuration
+    .AddJsonFile("appsettings.json", true, true)
+    .AddEnvironmentVariables();
+
+// Configure Stripe settings
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+
+// Temporary debug code - REMOVE AFTER DEBUGGING
+Console.WriteLine("======= ENVIRONMENT VARIABLES =======");
+foreach (var env in Environment.GetEnvironmentVariables().Keys)
 {
-    options.SecretKey = builder.Configuration["Stripe__SecretKey"];
-    options.PublishableKey = builder.Configuration["Stripe__PublishableKey"];
-});
-// Set Stripe API key
-StripeConfiguration.ApiKey = builder.Configuration["Stripe__SecretKey"];
+    if (env.ToString().Contains("Stripe"))
+    {
+        Console.WriteLine($"{env}: {Environment.GetEnvironmentVariable(env.ToString())?[..4]}...");
+    }
+}
+Console.WriteLine("====================================");
 
+// Validate Stripe configuration
+var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
+var stripePublishableKey = builder.Configuration["Stripe:PublishableKey"];
+var stripeWebhookSecret = builder.Configuration["Stripe:WebhookSecret"];
+
+// Log Stripe key status - first few characters only for security
+Console.WriteLine($"Stripe Secret Key: {(string.IsNullOrEmpty(stripeSecretKey) ? "MISSING" : stripeSecretKey[..6] + "...")}");
+Console.WriteLine($"Stripe Publishable Key: {(string.IsNullOrEmpty(stripePublishableKey) ? "MISSING" : stripePublishableKey[..6] + "...")}");
+Console.WriteLine($"Stripe Webhook Secret: {(string.IsNullOrEmpty(stripeWebhookSecret) ? "MISSING" : stripeWebhookSecret[..6] + "...")}");
+
+// Set Stripe API key
+StripeConfiguration.ApiKey = stripeSecretKey;
+
+// Set up Stripe app info
+var appInfo = new AppInfo { Name = "MovieTheater", Version = "v1" };
+StripeConfiguration.AppInfo = appInfo;
+
+// Register HTTP client for Stripe
+builder.Services.AddHttpClient("Stripe");
+
+// Register the StripeClient as a service
+builder.Services.AddTransient<IStripeClient, StripeClient>(s =>
+{
+    var clientFactory = s.GetRequiredService<IHttpClientFactory>();
+
+    var sysHttpClient = new SystemNetHttpClient(
+        clientFactory.CreateClient("Stripe"),
+        StripeConfiguration.MaxNetworkRetries,
+        appInfo,
+        StripeConfiguration.EnableTelemetry);
+
+    return new StripeClient(stripeSecretKey, httpClient: sysHttpClient);
+});
+builder.Services.AddSingleton(serviceProvider => stripeWebhookSecret ?? string.Empty);
+if (string.IsNullOrEmpty(stripeSecretKey))
+{
+    Console.WriteLine("⚠️ CRITICAL: Stripe Secret Key is missing! Payment processing will fail.");
+    // In production, you might want to throw an exception here to prevent the app from starting
+}
+
+if (string.IsNullOrEmpty(stripeWebhookSecret))
+{
+    Console.WriteLine("⚠️ WARNING: Stripe Webhook Secret is missing! Webhook validation will be disabled.");
+}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",

@@ -13,6 +13,5 @@ namespace MovieTheater.Domain.Entities
 
         [ForeignKey(nameof(SeatId))]
         public Seat Seat { get; set; }
-        public decimal Price { get; set; }
     }
 }
