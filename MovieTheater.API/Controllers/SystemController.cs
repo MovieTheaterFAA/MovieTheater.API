@@ -426,39 +426,64 @@ public class SystemController : ControllerBase
 
         foreach (var room in rooms)
         {
-            foreach (var movie in movies)
+            // For each room, keep a list of scheduled time windows to prevent overlap
+            var scheduledWindows = new List<(DateTime Start, DateTime End)>();
+
+            // Shuffle movies to randomize order per room
+            var shuffledMovies = movies.OrderBy(_ => random.Next()).ToList();
+
+            // Start from a base hour for the room type
+            int baseHour = room.Type switch
+            {
+                RoomType.IMAX => 10,
+                RoomType.FourD => 12,
+                RoomType.TwoD => 14,
+                _ => 16
+            };
+            var day = DateTime.UtcNow.Date;
+
+            foreach (var movie in shuffledMovies)
             {
                 if (!movie.RunningTime.HasValue) continue;
 
-                // Randomize showtime start hour based on room type
-                int baseHour = room.Type switch
+                // Try to find a non-overlapping start time within a reasonable range (e.g., 10:00-22:00)
+                bool scheduled = false;
+                for (int hour = baseHour; hour <= 22; hour++)
                 {
-                    RoomType.IMAX => 10,
-                    RoomType.FourD => 12,
-                    RoomType.TwoD => 14,
-                    _ => 16
-                };
-                int randomHour = baseHour + random.Next(0, 5); // e.g. 10-14 for IMAX, 12-16 for 4D, etc.
+                    var start = day.AddHours(hour).AddMinutes(random.Next(0, 2) * 15); // add 0 or 15 min for some randomness
+                    var duration = TimeSpan.FromMinutes(movie.RunningTime.Value + 15); // movie + 15 min rest
+                    var end = start.Add(duration);
 
-                var showDate = DateTime.UtcNow.Date.AddHours(randomHour);
-
-                showtimes.Add(new ShowTime
+                    // Check for overlap with already scheduled showtimes in this room
+                    bool overlap = scheduledWindows.Any(w => w.Start < end && start < w.End);
+                    if (!overlap)
+                    {
+                        showtimes.Add(new ShowTime
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            MovieId = movie.Id,
+                            ShowDate = start,
+                            Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                        scheduledWindows.Add((start, end));
+                        scheduled = true;
+                        break;
+                    }
+                }
+                if (!scheduled)
                 {
-                    Id = Guid.NewGuid(),
-                    CinemaRoomId = room.Id,
-                    MovieId = movie.Id,
-                    ShowDate = showDate,
-                    Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = Guid.Empty // System seed
-                });
+                    _logger.Warn($"Could not schedule non-overlapping showtime for movie '{movie.Name}' in room '{room.Name}'.");
+                }
             }
         }
 
         await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
 
-        _logger.Success($"Seeded {showtimes.Count} showtimes for all rooms and movies.");
+        _logger.Success($"Seeded {showtimes.Count} non-overlapping showtimes for all rooms and movies.");
     }
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {

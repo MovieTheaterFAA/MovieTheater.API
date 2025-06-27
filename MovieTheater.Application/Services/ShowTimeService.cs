@@ -54,6 +54,38 @@ namespace MovieTheater.Application.Services
                             .Where(m => movieIds.Contains(m.Id))
                             .ToDictionaryAsync(m => m.Id);
 
+            // ===== Overlap validation for batch =====
+            // Prepare a list of (start, end) for each showtime in the batch
+            var showtimeWindows = new List<(DateTime Start, DateTime End)>();
+            foreach (var entry in dto.ShowTimes)
+            {
+                if (!movies.TryGetValue(entry.MovieId, out var movie))
+                    throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
+
+                var runningTime = movie.RunningTime ?? 0;
+                var duration = TimeSpan.FromMinutes(runningTime + 15); // movie + rest
+                var start = entry.StartTime;
+                var end = start.Add(duration);
+
+                showtimeWindows.Add((start, end));
+            }
+
+            // Check for overlap in the batch
+            for (int i = 0; i < showtimeWindows.Count; i++)
+            {
+                for (int j = i + 1; j < showtimeWindows.Count; j++)
+                {
+                    var a = showtimeWindows[i];
+                    var b = showtimeWindows[j];
+                    // If a starts before b ends and b starts before a ends, they overlap
+                    if (a.Start < b.End && b.Start < a.End)
+                    {
+                        throw new InvalidOperationException("Showtimes in the batch cannot overlap. Please check the start times and durations.");
+                    }
+                }
+            }
+            // === End overlap validation ===
+
             var showTimes = new List<ShowTime>();
 
             foreach (var entry in dto.ShowTimes)
