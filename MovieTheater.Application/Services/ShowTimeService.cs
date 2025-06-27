@@ -31,6 +31,20 @@ namespace MovieTheater.Application.Services
         {
             _loggerService.Info($"[AddBatchShowTimesAsync] Start adding showtimes for room {dto.CinemaRoomId}");
 
+            // Business rule: Only allow adding showtimes for movies in the next week (not in the current week)
+            var today = DateTime.UtcNow.Date;
+            var startOfThisWeek = today.AddDays(-(int)today.DayOfWeek);
+            var startOfNextWeek = startOfThisWeek.AddDays(7);
+
+            // All showtimes must be in next week (>= startOfNextWeek and < startOfNextWeek + 7)
+            foreach (var entry in dto.ShowTimes)
+            {
+                if (entry.StartTime.Date < startOfNextWeek || entry.StartTime.Date >= startOfNextWeek.AddDays(7))
+                {
+                    throw new InvalidOperationException("Showtimes can only be added for the next week (not in the current week).");
+                }
+            }
+
             var room = await _unitOfWork.CinemaRooms.GetByIdAsync(dto.CinemaRoomId);
             if (room == null)
                 throw new InvalidOperationException("Cinema room not found.");
