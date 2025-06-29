@@ -36,7 +36,7 @@ public class SystemController : ControllerBase
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
-            await SeedShowTimeSeatsWithRandomStatusAsync();
+            //await SeedShowTimeSeatsWithRandomStatusAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -501,8 +501,6 @@ public class SystemController : ControllerBase
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
-        var rowCount = 10; // 1-10
-        var colCount = 13; // A-M
         var seatList = new List<Seat>();
 
         foreach (var room in rooms)
@@ -511,34 +509,138 @@ public class SystemController : ControllerBase
             var existing = await _context.Seats.AnyAsync(s => s.CinemaRoomId == room.Id);
             if (existing) continue;
 
-            for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
+            if (room.Type == RoomType.TwoD)
             {
-                // Determine seat type by row
-                SeatType seatType;
-                if (rowIdx == 1)
-                    seatType = SeatType.Couple;
-                else if (rowIdx >= 2 && rowIdx <= 6)
-                    seatType = SeatType.VIP;
-                else
-                    seatType = SeatType.Normal;
-
-                for (int colIdx = 0; colIdx < colCount; colIdx++)
+                // 2D: 10 rows, 13 columns (A-M)
+                int rowCount = 10;
+                int colCount = 13;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
                 {
-                    string colLabel = ((char)('A' + colIdx)).ToString();
+                    SeatType seatType;
+                    if (rowIdx == rowCount)
+                        seatType = SeatType.Couple;
+                    else if (rowIdx >= 5 && rowIdx <= 8)
+                        seatType = SeatType.VIP;
+                    else
+                        seatType = SeatType.Normal;
 
-                    seatList.Add(new Seat
+                    for (int colIdx = 0; colIdx < colCount; colIdx++)
                     {
-                        Id = Guid.NewGuid(),
-                        CinemaRoomId = room.Id,
-                        Row = colLabel,
-                        Number = rowIdx,
-                        Type = seatType,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedBy = Guid.Empty // System seed
-                    });
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = seatType,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
                 }
+                _logger.Info($"Seeded {rowCount * colCount} seats for 2D room {room.Name}.");
             }
-            _logger.Info($"Seeded {rowCount * colCount} seats for room {room.Name}.");
+            else if (room.Type == RoomType.IMAX)
+            {
+                // IMAX: 12 rows, variable columns
+                int rowCount = 12;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
+                {
+                    int colStart = 0;
+                    int colEnd = 0;
+                    if (rowIdx >= 1 && rowIdx <= 4)
+                    {
+                        colStart = 0; colEnd = 11; // A-L (12 seats)
+                    }
+                    else if (rowIdx >= 5 && rowIdx <= 8)
+                    {
+                        colStart = 0; colEnd = 14; // A-O (15 seats)
+                    }
+                    else // 9-12
+                    {
+                        colStart = 0; colEnd = 15; // A-P (16 seats)
+                    }
+
+                    SeatType seatType;
+                    if (rowIdx == rowCount)
+                        seatType = SeatType.Couple;
+                    else if (rowIdx >= 5 && rowIdx <= 8)
+                        seatType = SeatType.VIP;
+                    else
+                        seatType = SeatType.Normal;
+
+                    for (int colIdx = colStart; colIdx <= colEnd; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = seatType,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                }
+                _logger.Info($"Seeded seats for IMAX room {room.Name}.");
+            }
+            else if (room.Type == RoomType.FourD)
+            {
+                // 4DX: 6 rows, 10 columns (A-J), 3-4-3 split, all VIP
+                int rowCount = 6;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
+                {
+                    // Left section: A-C
+                    for (int colIdx = 0; colIdx <= 2; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                    // Center section: D-G
+                    for (int colIdx = 3; colIdx <= 6; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                    // Right section: H-J
+                    for (int colIdx = 7; colIdx <= 9; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                }
+                _logger.Info($"Seeded seats for 4DX room {room.Name}.");
+            }
         }
 
         if (seatList.Count > 0)
@@ -552,6 +654,7 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
+
     private async Task SeedShowTimeSeatsWithRandomStatusAsync()
     {
         var showtimes = await _context.Showtimes.ToListAsync();
@@ -590,7 +693,6 @@ public class SystemController : ControllerBase
             _logger.Info("No ShowTimeSeats to seed.");
         }
     }
-
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
