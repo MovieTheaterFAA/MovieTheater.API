@@ -516,17 +516,17 @@ public class SystemController : ControllerBase
                 int colCount = 13;
                 for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
                 {
-                    SeatType seatType;
-                    if (rowIdx == rowCount)
-                        seatType = SeatType.Couple;
-                    else if (rowIdx >= 5 && rowIdx <= 8)
-                        seatType = SeatType.VIP;
-                    else
-                        seatType = SeatType.Normal;
-
                     for (int colIdx = 0; colIdx < colCount; colIdx++)
                     {
                         string colLabel = ((char)('A' + colIdx)).ToString();
+                        SeatType seatType;
+                        if (colIdx == 12) // M (last column)
+                            seatType = SeatType.Couple;
+                        else if (colIdx >= 5 && colIdx <= 11) // F-L
+                            seatType = SeatType.VIP;
+                        else
+                            seatType = SeatType.Normal;
+
                         seatList.Add(new Seat
                         {
                             Id = Guid.NewGuid(),
@@ -562,17 +562,17 @@ public class SystemController : ControllerBase
                         colStart = 0; colEnd = 15; // A-P (16 seats)
                     }
 
-                    SeatType seatType;
-                    if (rowIdx == rowCount)
-                        seatType = SeatType.Couple;
-                    else if (rowIdx >= 5 && rowIdx <= 8)
-                        seatType = SeatType.VIP;
-                    else
-                        seatType = SeatType.Normal;
-
                     for (int colIdx = colStart; colIdx <= colEnd; colIdx++)
                     {
                         string colLabel = ((char)('A' + colIdx)).ToString();
+                        SeatType seatType;
+                        if (colIdx == colEnd) // Last column (L, O, or P)
+                            seatType = SeatType.Couple;
+                        else if (colIdx >= 5 && colIdx <= colEnd - 1) // F to one before last
+                            seatType = SeatType.VIP;
+                        else
+                            seatType = SeatType.Normal;
+
                         seatList.Add(new Seat
                         {
                             Id = Guid.NewGuid(),
