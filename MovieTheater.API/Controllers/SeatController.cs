@@ -139,9 +139,7 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get seat list and status by showtime
-        /// </summary>
+
         [HttpGet("showtime/{id}")]
         [ProducesResponseType(typeof(List<ShowTimeSeatDto>), 200)]
         [ProducesResponseType(typeof(object), 404)]
@@ -150,7 +148,7 @@ namespace MovieTheater.API.Controllers
             try
             {
                 var result = await _seatService.GetSeatsByShowTimeAsync(id);
-                return Ok(result);
+                return Ok(ApiResult<List<ShowTimeSeatDto>>.Success(result, "200", "Fetched seats and status by showtime successfully"));
             }
             catch (Exception ex)
             {
