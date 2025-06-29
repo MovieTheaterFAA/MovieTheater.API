@@ -424,58 +424,61 @@ public class SystemController : ControllerBase
         var showtimes = new List<ShowTime>();
         var random = new Random();
 
-        foreach (var room in rooms)
+        var today = DateTime.UtcNow.Date;
+        var endOfJuly = new DateTime(today.Year, 7, 31);
+
+        foreach (var movie in movies)
         {
-            // For each room, keep a list of scheduled time windows to prevent overlap
-            var scheduledWindows = new List<(DateTime Start, DateTime End)>();
+            if (!movie.RunningTime.HasValue) continue;
 
-            // Shuffle movies to randomize order per room
-            var shuffledMovies = movies.OrderBy(_ => random.Next()).ToList();
+            // Pick 2 random, distinct cinema rooms for this movie
+            var selectedRooms = rooms.OrderBy(_ => random.Next()).Take(2).ToList();
 
-            // Start from a base hour for the room type
-            int baseHour = room.Type switch
+            foreach (var room in selectedRooms)
             {
-                RoomType.IMAX => 10,
-                RoomType.FourD => 12,
-                RoomType.TwoD => 14,
-                _ => 16
-            };
-            var day = DateTime.UtcNow.Date;
+                // For each room, keep a list of scheduled time windows to prevent overlap
+                var scheduledWindows = new List<(DateTime Start, DateTime End)>();
 
-            foreach (var movie in shuffledMovies)
-            {
-                if (!movie.RunningTime.HasValue) continue;
-
-                // Try to find a non-overlapping start time within a reasonable range (e.g., 10:00-22:00)
-                bool scheduled = false;
-                for (int hour = baseHour; hour <= 22; hour++)
+                // Start scheduling from today to end of July
+                var currentDay = today;
+                int baseHour = room.Type switch
                 {
-                    var start = day.AddHours(hour).AddMinutes(random.Next(0, 2) * 15); // add 0 or 15 min for some randomness
-                    var duration = TimeSpan.FromMinutes(movie.RunningTime.Value + 15); // movie + 15 min rest
-                    var end = start.Add(duration);
+                    RoomType.IMAX => 10,
+                    RoomType.FourD => 12,
+                    RoomType.TwoD => 14,
+                    _ => 16
+                };
 
-                    // Check for overlap with already scheduled showtimes in this room
-                    bool overlap = scheduledWindows.Any(w => w.Start < end && start < w.End);
-                    if (!overlap)
+                while (currentDay <= endOfJuly)
+                {
+                    // Try to find a non-overlapping start time within a reasonable range (e.g., 10:00-22:00)
+                    bool scheduled = false;
+                    for (int hour = baseHour; hour <= 22; hour++)
                     {
-                        showtimes.Add(new ShowTime
+                        var start = currentDay.AddHours(hour).AddMinutes(random.Next(0, 2) * 15); // add 0 or 15 min for some randomness
+                        var duration = TimeSpan.FromMinutes(movie.RunningTime.Value + 15); // movie + 15 min rest
+                        var end = start.Add(duration);
+
+                        // Check for overlap with already scheduled showtimes in this room on this day
+                        bool overlap = scheduledWindows.Any(w => w.Start < end && start < w.End);
+                        if (!overlap)
                         {
-                            Id = Guid.NewGuid(),
-                            CinemaRoomId = room.Id,
-                            MovieId = movie.Id,
-                            ShowDate = start,
-                            Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
-                            CreatedAt = DateTime.UtcNow,
-                            CreatedBy = Guid.Empty // System seed
-                        });
-                        scheduledWindows.Add((start, end));
-                        scheduled = true;
-                        break;
+                            showtimes.Add(new ShowTime
+                            {
+                                Id = Guid.NewGuid(),
+                                CinemaRoomId = room.Id,
+                                MovieId = movie.Id,
+                                ShowDate = start,
+                                Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = Guid.Empty // System seed
+                            });
+                            scheduledWindows.Add((start, end));
+                            scheduled = true;
+                            break;
+                        }
                     }
-                }
-                if (!scheduled)
-                {
-                    _logger.Warn($"Could not schedule non-overlapping showtime for movie '{movie.Name}' in room '{room.Name}'.");
+                    currentDay = currentDay.AddDays(1);
                 }
             }
         }
@@ -483,7 +486,7 @@ public class SystemController : ControllerBase
         await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
 
-        _logger.Success($"Seeded {showtimes.Count} non-overlapping showtimes for all rooms and movies.");
+        _logger.Success($"Seeded {showtimes.Count} non-overlapping showtimes for all movies in random 2 cinema rooms each, from today to end of July.");
     }
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {
