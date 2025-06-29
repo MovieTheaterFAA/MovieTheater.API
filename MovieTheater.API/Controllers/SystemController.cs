@@ -559,7 +559,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(1),
             EndTime = DateTime.UtcNow.AddDays(30),
             Detail = "Enjoy the hottest movies and exclusive deals all summer long!",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fsummer-blockbuster.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2024/112024/Happy_Day_Oct_28_N_O_350x495.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Buy 1 Get 1 Free", DiscountValue = 0.5m, Detail = "Buy one ticket, get one free for select movies." },
@@ -575,7 +575,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(10),
             EndTime = DateTime.UtcNow.AddDays(40),
             Detail = "Celebrate Mid-Autumn with special screenings and mooncake treats.",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fmid-autumn.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2025/042025/full_01.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Mooncake Gift", DiscountValue = 0.05m, Detail = "Free mooncake with every ticket." },
@@ -591,7 +591,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(20),
             EndTime = DateTime.UtcNow.AddDays(50),
             Detail = "Ring in the New Year with a marathon of blockbuster hits.",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fnewyear.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2025/052025/350x495_4_.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Marathon Pass", DiscountValue = 0.4m, Detail = "40% off for all-day marathon passes." },
