@@ -36,6 +36,7 @@ public class SystemController : ControllerBase
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
+            await SeedShowTimeSeatsWithRandomStatusAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -500,8 +501,8 @@ public class SystemController : ControllerBase
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
-        var rowCount = 5;
-        var seatsPerRow = 10;
+        var rowCount = 10; // 1-10
+        var colCount = 13; // A-M
         var seatList = new List<Seat>();
 
         foreach (var room in rooms)
@@ -510,32 +511,34 @@ public class SystemController : ControllerBase
             var existing = await _context.Seats.AnyAsync(s => s.CinemaRoomId == room.Id);
             if (existing) continue;
 
-            for (int rowIdx = 0; rowIdx < rowCount; rowIdx++)
+            for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
             {
-                string rowLabel = ((char)('A' + rowIdx)).ToString();
+                // Determine seat type by row
                 SeatType seatType;
-                if (rowIdx == 0)
+                if (rowIdx == 1)
                     seatType = SeatType.Couple;
-                else if (rowIdx == rowCount / 2)
+                else if (rowIdx >= 2 && rowIdx <= 6)
                     seatType = SeatType.VIP;
                 else
                     seatType = SeatType.Normal;
 
-                for (int seatNum = 1; seatNum <= seatsPerRow; seatNum++)
+                for (int colIdx = 0; colIdx < colCount; colIdx++)
                 {
+                    string colLabel = ((char)('A' + colIdx)).ToString();
+
                     seatList.Add(new Seat
                     {
                         Id = Guid.NewGuid(),
                         CinemaRoomId = room.Id,
-                        Row = rowLabel,
-                        Number = seatNum,
+                        Row = colLabel,
+                        Number = rowIdx,
                         Type = seatType,
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = Guid.Empty // System seed
                     });
                 }
             }
-            _logger.Info($"Seeded {rowCount * seatsPerRow} seats for room {room.Name}.");
+            _logger.Info($"Seeded {rowCount * colCount} seats for room {room.Name}.");
         }
 
         if (seatList.Count > 0)
@@ -549,6 +552,45 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
+    private async Task SeedShowTimeSeatsWithRandomStatusAsync()
+    {
+        var showtimes = await _context.Showtimes.ToListAsync();
+        var allSeats = await _context.Seats.ToListAsync();
+        var random = new Random();
+        var seatStatusValues = Enum.GetValues(typeof(SeatStatus)).Cast<SeatStatus>().ToArray();
+        var showTimeSeats = new List<ShowTimeSeat>();
+
+        foreach (var showtime in showtimes)
+        {
+            // Get seats for the cinema room of this showtime
+            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
+
+            foreach (var seat in seatsInRoom)
+            {
+                showTimeSeats.Add(new ShowTimeSeat
+                {
+                    Id = Guid.NewGuid(),
+                    ShowTimeId = showtime.Id,
+                    SeatId = seat.Id,
+                    Status = seatStatusValues[random.Next(seatStatusValues.Length)],
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty // System seed
+                });
+            }
+        }
+
+        if (showTimeSeats.Count > 0)
+        {
+            await _context.ShowTimeSeats.AddRangeAsync(showTimeSeats);
+            await _context.SaveChangesAsync();
+            _logger.Success($"Seeded {showTimeSeats.Count} ShowTimeSeats with random status.");
+        }
+        else
+        {
+            _logger.Info("No ShowTimeSeats to seed.");
+        }
+    }
+
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
