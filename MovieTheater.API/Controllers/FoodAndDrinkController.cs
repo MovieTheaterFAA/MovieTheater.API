@@ -103,6 +103,27 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("image")]
+        [Consumes("multipart/form-data")]
+        [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResult<FoodAndDrinkResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> CreateFoodAndDrinkWithImage([FromForm] FoodAndDrinkWithImageRequestDto request)
+        {
+            try
+            {
+                var result = await _foodAndDrinkService.AddFoodAndDrinkWithImageAsync(request);
+                return Ok(ApiResult<FoodAndDrinkResponseDto>.Success(result, "200", "Created successfully"));
+            }
+            catch (Exception ex)
+            {
+                var status = ExceptionUtils.ExtractStatusCode(ex);
+                var error = ExceptionUtils.CreateErrorResponse<FoodAndDrinkResponseDto>(ex);
+                return StatusCode(status, error);
+            }
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(

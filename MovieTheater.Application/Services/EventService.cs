@@ -21,14 +21,16 @@ namespace MovieTheater.Application.Services
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
+        private readonly IBlobService _blobService;
 
-        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
+        public EventService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService, IBlobService blobService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
             _redisService = redisService;
+            _blobService = blobService;
         }
 
         public async Task<EventResponseDto?> AddEventAsync(EventRequestDto dto)
@@ -428,6 +430,85 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Error($"[AutoCleanup] Error while cleaning up expired events: {ex.Message}");
             }
+        }
+
+        public async Task<EventResponseDto?> AddEventWithImageAsync(EventWithImageRequestDto dto)
+        {
+            _loggerService.Info($"[AddEventWithImageAsync] Start adding event: {dto.Name}");
+
+            var existingEvent = await _unitOfWork.Events.FirstOrDefaultAsync(e => e.Name == dto.Name && !e.IsDeleted);
+            if (existingEvent != null)
+            {
+                _loggerService.Warn($"[AddEventWithImageAsync] Event with name {dto.Name} already exists.");
+                throw new InvalidOperationException("Event with this name already exists.");
+            }
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            var newEvent = new Event
+            {
+                Name = dto.Name,
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime,
+                Detail = dto.Detail,
+                Image = null
+            };
+
+            await _unitOfWork.Events.AddAsync(newEvent);
+            await _unitOfWork.SaveChangesAsync();
+
+            string? imageUrl = null;
+            if (dto.File != null && dto.File.Length > 0)
+            {
+                var safeFileName = Path.GetFileName(dto.File.FileName);
+                var folder = $"event-images/{newEvent.Id}";
+                var objectName = $"{folder}/{safeFileName}";
+
+                using var stream = dto.File.OpenReadStream();
+                await _blobService.UploadFileAsync(safeFileName, stream, folder, CancellationToken.None);
+                imageUrl = await _blobService.GetPreviewUrlAsync(objectName);
+
+                if (imageUrl == null)
+                    throw new Exception("Could not generate preview URL.");
+
+                newEvent.Image = imageUrl;
+                await _unitOfWork.Events.Update(newEvent);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            await _redisService.RemoveByPatternAsync("event:list:");
+
+            var logData = new
+            {
+                newEvent.Name,
+                newEvent.StartTime,
+                newEvent.EndTime,
+                newEvent.Detail,
+                newEvent.Image
+            };
+
+            await _auditLogService.LogAsync(
+                adminId,
+                AuditActionType.Create,
+                "Event",
+                newEvent.Id,
+                null,
+                logData,
+                JsonSerializer.Serialize(logData),
+                "Admin created new event with image."
+            );
+
+            _loggerService.Success($"[AddEventWithImageAsync] Event {newEvent.Name} created.");
+
+            return new EventResponseDto
+            {
+                Id = newEvent.Id,
+                Name = newEvent.Name,
+                StartTime = newEvent.StartTime,
+                EndTime = newEvent.EndTime,
+                Detail = newEvent.Detail,
+                Image = newEvent.Image
+            };
         }
     }
 
