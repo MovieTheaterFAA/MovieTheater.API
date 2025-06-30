@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
 using MovieTheater.Domain.DTOs.BlobDTOs;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Security.Claims;
 
 namespace MovieTheater.API.Controllers
 {
@@ -195,6 +195,7 @@ namespace MovieTheater.API.Controllers
                 food.ImageUrl = previewUrl;
                 _dbContext.FoodAndDrinks.Update(food);
                 await _dbContext.SaveChangesAsync(ct);
+                await _redisService.RemoveByPatternAsync("fooddrink:list:");
 
                 return Ok(ApiResult<string>.Success(previewUrl, "200", "Food and drink image uploaded successfully."));
             }
