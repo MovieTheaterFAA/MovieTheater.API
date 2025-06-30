@@ -102,24 +102,7 @@ namespace MovieTheater.Application.Services
             """;
 
             var response = await _geminiService.GenerateResponseAsync(contextPrompt);
-
-            if (!string.IsNullOrWhiteSpace(groupId))
-            {
-                await BroadcastChatbotResponseAsync(groupId, response);
-            }
-
             return response;
-        }
-
-        public async Task BroadcastChatbotResponseAsync(string groupId, string response)
-        {
-            await _chatbotHub.Clients.Group(groupId)
-                .SendAsync("ReceiveChatbotResponse", new
-                {
-                    GroupId = groupId,
-                    Response = response,
-                    Timestamp = DateTime.UtcNow
-                });
         }
 
         /// <summary>
