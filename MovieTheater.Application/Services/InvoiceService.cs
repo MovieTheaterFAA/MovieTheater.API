@@ -148,9 +148,7 @@ namespace MovieTheater.Application.Services
                 }
 
                 // Get the booking
-                var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId,
-                    b => b.BookingSeats,
-                    b => b.BookingFoods);
+                var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
 
                 if (booking == null)
                 {
@@ -173,9 +171,7 @@ namespace MovieTheater.Application.Services
                 _loggerService.Success($"Invoice created successfully with ID: {invoice.Id}");
 
                 // Get the newly created invoice with all the relationships
-                invoice = await _unitOfWork.Invoices.GetByIdAsync(invoice.Id,
-                    i => i.Booking,
-                    i => i.Payments);
+                invoice = await _unitOfWork.Invoices.GetByIdAsync(invoice.Id);
 
                 var result = await MapToDto(invoice);
                 return result;
@@ -322,15 +318,6 @@ namespace MovieTheater.Application.Services
                 InvoiceDate = invoice.InvoiceDate,
                 Amount = invoice.Amount,
                 Status = invoice.Status,
-                Payments = invoice.Payments?.Select(p => new PaymentDto
-                {
-                    Id = p.Id,
-                    PaymentDate = p.PaymentDate,
-                    Amount = p.Amount,
-                    Provider = p.Provider,
-                    PaymentReference = p.PaymentReference,
-                    Status = p.Status
-                }).ToList() ?? new List<PaymentDto>(),
                 Booking = new BookingSummaryDto
                 {
                     Id = booking.Id,

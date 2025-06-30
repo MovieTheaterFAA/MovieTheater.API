@@ -108,19 +108,28 @@ public class BookingService : IBookingService
             var selectedSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
                 sts => sts.ShowTimeId == request.ShowTimeId && request.SeatIds.Contains(sts.SeatId));
 
+            decimal totalAmount = 0;
+
             // Check if any selected seat is already booked
             if (selectedSeats.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
             {
                 _loggerService.Warn($"Attempted to book unavailable seats for showtime: {request.ShowTimeId}");
                 throw new InvalidOperationException("One or more selected seats are not available");
             }
-
+            foreach (var seat in selectedSeats)
+            {
+                totalAmount += GetSeatPrice(seat.Seat);
+            }
             // Get food items
             var foodItems = new List<FoodAndDrink>();
             if (request.FoodItems.Any())
             {
                 foodItems = await _unitOfWork.FoodAndDrinks.GetAllAsync(
                     f => request.FoodItems.Select(fi => fi.FoodId).Contains(f.Id));
+            }
+            foreach (var food in foodItems)
+            {
+                totalAmount += food.Price * request.FoodItems.First(fi => fi.FoodId == food.Id).Quantity;
             }
 
             // Create the booking
@@ -130,14 +139,15 @@ public class BookingService : IBookingService
                 ShowtimeId = request.ShowTimeId,
                 BookingDate = DateTime.UtcNow,
                 Status = "Created",
-                BookingSeats = request.SeatIds.Select(seatId => new BookingSeat
-                {
-                    SeatId = seatId
-                }).ToList(),
+                TotalAmount = totalAmount,
                 BookingFoods = request.FoodItems.Select(fi => new BookingFood
                 {
                     FoodAndDrinkId = fi.FoodId,
                     Quantity = fi.Quantity
+                }).ToList(),
+                BookingSeats = selectedSeats.Select(seat => new BookingSeat
+                {
+                    SeatId = seat.SeatId
                 }).ToList()
             };
 
@@ -152,8 +162,8 @@ public class BookingService : IBookingService
                     SeatId = seat.SeatId,
                     Status = SeatStatus.Booked
                 };
+                await _unitOfWork.ShowTimeSeats.AddAsync(ShowTimeSeat);
             }
-            await _unitOfWork.ShowTimeSeats.AddRangeAsync(selectedSeats.ToList());
 
             await _unitOfWork.SaveChangesAsync();
             _loggerService.Success($"Booking created successfully with ID: {booking.Id}");

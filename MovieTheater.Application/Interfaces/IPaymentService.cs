@@ -2,7 +2,7 @@
 {
     public interface IPaymentService
     {
-        Task<string> CreateCheckoutSessionAsync(Guid invoiceId, decimal amount, string currency = "vnd");
+        Task<string> CreateCheckoutSessionAsync(Guid invoiceId);
         Task<bool> VerifyPaymentAsync(string sessionId);
         Task<string> InitiatePaymentAsync(Guid invoiceId);
     }

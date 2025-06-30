@@ -30,12 +30,18 @@ namespace MovieTheater.Application.Services
             _loggerService.Info("Stripe payment service initialized");
         }
 
-        public async Task<string> CreateCheckoutSessionAsync(Guid invoiceId, decimal amount, string currency = "vnd")
+        public async Task<string> CreateCheckoutSessionAsync(Guid invoiceId)
         {
             try
             {
-                _loggerService.Info($"Creating Stripe checkout session for invoice: {invoiceId}, amount: {amount}");
-
+                _loggerService.Info($"Creating Stripe checkout session for invoice: {invoiceId}");
+                var invoice = await _unitOfWork.Invoices.GetByIdAsync(invoiceId);
+                if (invoice == null)
+                {
+                    _loggerService.Warn($"Invoice {invoiceId} not found");
+                    throw new KeyNotFoundException($"Invoice with ID {invoiceId} not found");
+                }
+                var amount = invoice.Amount;
                 // Validate amount
                 if (amount <= 0)
                 {
@@ -52,7 +58,7 @@ namespace MovieTheater.Application.Services
                             PriceData = new SessionLineItemPriceDataOptions
                             {
                                 UnitAmount = (long)(amount * 100), // Stripe requires amount in smallest currency unit
-                                Currency = currency,
+                                Currency = "VND",
                                 ProductData = new SessionLineItemPriceDataProductDataOptions
                                 {
                                     Name = "Movie Theater Tickets",
@@ -181,10 +187,7 @@ namespace MovieTheater.Application.Services
                     TimeSpan.FromMinutes(20));
 
                 // Create Stripe checkout session
-                var checkoutUrl = await CreateCheckoutSessionAsync(
-                    invoiceId,
-                    invoice.Amount
-                );
+                var checkoutUrl = await CreateCheckoutSessionAsync(invoiceId);
 
                 _loggerService.Success($"Payment initiated for invoice {invoiceId}");
                 return checkoutUrl;
