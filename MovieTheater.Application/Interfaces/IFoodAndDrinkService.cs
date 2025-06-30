@@ -15,6 +15,7 @@ namespace MovieTheater.Application.Interfaces
         Task<FoodAndDrinkResponseDto> UpdateFoodAndDrinkAsync(Guid id, FoodAndDrinkRequestDto dto);
         Task<FoodAndDrinkResponseDto> AddFoodAndDrinkAsync(FoodAndDrinkRequestDto dto);
         Task<bool> DeleteFoodAndDrinkAsync(Guid foodAndDrinkId);
+        Task<FoodAndDrinkResponseDto> AddFoodAndDrinkWithImageAsync(FoodAndDrinkWithImageRequestDto dto);
 
     }
 }

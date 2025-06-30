@@ -48,6 +48,35 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("image")]
+        [Consumes("multipart/form-data")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Add a new event",
+            Description = "Creates a new event with the provided information. Requires Admin privileges.")]
+        [ProducesResponseType(typeof(ApiResult<EventResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> CreateEventWithImage([FromForm] EventWithImageRequestDto request)
+        {
+            try
+            {
+                var result = await _eventService.AddEventWithImageAsync(request);
+                return Ok(ApiResult<EventResponseDto>.Success(result, "200", "Event created successfully."));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResult<string>.Failure("400", ex.Message));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<EventResponseDto>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
         [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(

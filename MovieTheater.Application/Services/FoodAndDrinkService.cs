@@ -17,14 +17,16 @@ namespace MovieTheater.Application.Services
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
+        private readonly IBlobService _blobService;
 
-        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
+        public FoodAndDrinkService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService, IBlobService blobService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
             _redisService = redisService;
+            _blobService = blobService;
         }
 
         public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, FoodType? type = null)
@@ -358,5 +360,87 @@ namespace MovieTheater.Application.Services
             return existingFoodAndDrink != null;
         }
 
+        public async  Task<FoodAndDrinkResponseDto> AddFoodAndDrinkWithImageAsync(FoodAndDrinkWithImageRequestDto dto)
+        {
+            _loggerService.Info($"[AddFoodAndDrinkWithImageAsync] Adding: {dto.Name}");
+
+            if (await FoodAndDrinkExistsAsync(dto.Name))
+                throw ErrorHelper.Conflict("Food or drink already exists.");
+
+            var food = new FoodAndDrink
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                Price = dto.Price,
+                Type = dto.Type,
+                IsAvailable = dto.IsAvailable,
+                ImageUrl = null
+            };
+
+            await _unitOfWork.FoodAndDrinks.AddAsync(food);
+            await _unitOfWork.SaveChangesAsync(); 
+
+            if (dto.File != null && dto.File.Length > 0)
+            {
+                try
+                {
+                    var safeName = Path.GetFileName(dto.File.FileName);
+                    var folder = $"food/drink/combo-images/{food.Id}";
+                    var objectName = $"{folder}/{safeName}";
+
+                    using var stream = dto.File.OpenReadStream();
+                    await _blobService.UploadFileAsync(safeName, stream, folder, CancellationToken.None);
+
+                    var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+                    if (previewUrl == null)
+                        throw new Exception("Failed to get preview URL.");
+
+                    food.ImageUrl = previewUrl;
+                    await _unitOfWork.FoodAndDrinks.Update(food);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _loggerService.Error($"[AddFoodAndDrinkWithImageAsync] Upload failed. {ex}");
+                    throw;
+                }
+            }
+
+            await _redisService.RemoveByPatternAsync("fooddrink:list:");
+
+            var adminId = _claimsService.GetCurrentUserId;
+
+            var newData = new
+            {
+                food.Name,
+                food.Description,
+                food.Price,
+                food.Type,
+                food.ImageUrl,
+                food.IsAvailable
+            };
+
+            await _auditLogService.LogAsync(
+                adminId,
+                AuditActionType.Create,
+                "FoodAndDrink",
+                food.Id,
+                null,
+                newData,
+                JsonSerializer.Serialize(newData),
+                "Admin created food/drink with image"
+            );
+
+            return new FoodAndDrinkResponseDto
+            {
+                Id = food.Id,
+                Name = food.Name,
+                Description = food.Description,
+                Price = food.Price,
+                Type = food.Type,
+                ImageUrl = food.ImageUrl,
+                IsAvailable = food.IsAvailable
+            };
+        }
     }
 }

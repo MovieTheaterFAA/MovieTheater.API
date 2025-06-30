@@ -9,6 +9,7 @@ namespace MovieTheater.Application.Interfaces
         Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto);
 
         Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto);
+        Task<MovieResponseDto> AddMovieWithImagesAndCastsAsync(MovieWithImagesAndCastsRequestDto dto);
 
         Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
             string? search,
@@ -21,7 +22,6 @@ namespace MovieTheater.Application.Interfaces
             );
 
         Task<MovieResponseDto> GetMovieDetailAsync(Guid movieId);
-
         Task<List<MovieResponseDto>> GetMovieByNameAsync(string? Name);
         Task<bool> DeleteMovieAsync(Guid movieId);
     }
