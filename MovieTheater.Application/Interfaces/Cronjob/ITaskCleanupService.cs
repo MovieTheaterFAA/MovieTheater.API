@@ -5,5 +5,9 @@
         Task<int> CleanupPastShowTimesAsync();
 
         Task<int> CleanupExpiredEventsAsync();
+
+        Task<int> CreateBirthdayPromotionsAsync();
+        Task<int> CleanupExpiredOrDeletedShowTimeSeatsAsync();
+
     }
 }

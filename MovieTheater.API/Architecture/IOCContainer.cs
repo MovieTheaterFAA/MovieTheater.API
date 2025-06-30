@@ -5,9 +5,11 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Interfaces.Cronjob;
 using MovieTheater.Application.Interfaces.ThirdParty;
 using MovieTheater.Application.Services;
 using MovieTheater.Application.Services.Commons;
+using MovieTheater.Application.Services.Cronjob;
 using MovieTheater.Application.Services.ThirdParty;
 using MovieTheater.Domain;
 using MovieTheater.Infrastructure;
@@ -142,6 +144,7 @@ public static class IocContainer
         services.AddScoped<IChatbotService, ChatbotService>();
         services.AddScoped<IDataAnalyzerService, DataAnalyzerService>();
         services.AddScoped<IGeminiService, GeminiService>();
+        services.AddScoped<ITaskCleanupService, TaskCleanupService>();
 
         services.AddHttpContextAccessor();
 

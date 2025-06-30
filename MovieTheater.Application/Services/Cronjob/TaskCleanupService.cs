@@ -58,6 +58,40 @@ namespace MovieTheater.Application.Services.Cronjob
             return expiredEvents.Count;
         }
 
+        public async Task<int> CleanupExpiredOrDeletedShowTimeSeatsAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            var expiredOrDeletedShowTimeIds = await _unitOfWork.ShowTimes
+                .GetQueryable()
+                .Where(st => st.IsDeleted || st.ShowDate < now)
+                .Select(st => st.Id)
+                .ToListAsync();
+
+            if (!expiredOrDeletedShowTimeIds.Any())
+            {
+                _loggerService.Info("[TaskCleanupSerivce] No expired or deleted showtimes found for ShowTimeSeat cleanup.");
+                return 0;
+            }
+
+            var showTimeSeatsToDelete = await _unitOfWork.ShowTimeSeats
+                .GetQueryable()
+                .Where(sts => expiredOrDeletedShowTimeIds.Contains(sts.ShowTimeId))
+                .ToListAsync();
+
+            if (!showTimeSeatsToDelete.Any())
+            {
+                _loggerService.Info("[TaskCleanupService] No ShowTimeSeat records to delete.");
+                return 0;
+            }
+
+            await _unitOfWork.ShowTimeSeats.SoftRemoveRange(showTimeSeatsToDelete);
+            var affected = await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[TaskCleanupService] Deleted {affected} ShowTimeSeat records for expired or deleted showtimes.");
+            return affected;
+        }
+
         public async Task<int> CleanupPastShowTimesAsync()
         {
             var now = DateTime.UtcNow;
@@ -77,6 +111,56 @@ namespace MovieTheater.Application.Services.Cronjob
 
             _loggerService.Success($"[TaskCleanupService] Soft deleted {showTimesToDelete.Count} past showtimes.");
             return showTimesToDelete.Count;
+        }
+
+        public async Task<int> CreateBirthdayPromotionsAsync()
+        {
+            var today = DateTime.UtcNow;
+            _loggerService.Info("[TaskCleanupService] Start checking birthday promotions for today.");
+
+            var birthdayEvent = await _unitOfWork.Events
+                .GetQueryable()
+                .FirstOrDefaultAsync(e => e.Name == "Happy Birthday - Special Gift" && !e.IsDeleted);
+
+            if (birthdayEvent == null)
+            {
+                _loggerService.Warn("[TaskCleanupService] Birthday event not found. No birthday promotions will be available.");
+                return 0;
+            }
+
+            var members = await _unitOfWork.Users
+                .GetQueryable()
+                .Where(u => u.Role == RoleType.Member && !u.IsDeleted && u.DateOfBirth.HasValue)
+                .ToListAsync();
+
+            if (!members.Any())
+            {
+                _loggerService.Info("[TaskCleanupService] No members found to check for birthday promotions.");
+                return 0;
+            }
+
+            int birthdayCount = 0;
+            foreach (var member in members)
+            {
+                if (member.DateOfBirth.HasValue &&
+                    member.DateOfBirth.Value.Month == today.Month &&
+                    member.DateOfBirth.Value.Day == today.Day)
+                {
+                    birthdayCount++;
+                    _loggerService.Info($"[TaskCleanupService] Member '{member.FullName}' (Email: {member.Email}) has birthday today and is eligible for the birthday promotion.");
+                }
+            }
+
+            if (birthdayCount == 0)
+            {
+                _loggerService.Info("[TaskCleanupService] No members have birthday today. No birthday promotions to activate.");
+            }
+            else
+            {
+                _loggerService.Success($"[TaskCleanupService] {birthdayCount} member(s) have birthday today and can use the birthday promotion.");
+            }
+
+            return birthdayCount;
         }
     }
 }

@@ -59,5 +59,49 @@ namespace MovieTheater.API.Controllers.Cronjob
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpPost("birthday-promotions")]
+        [SwaggerOperation(
+            Summary = "Create birthday promotions",
+            Description = "Create birthday promotions for users with upcoming birthdays. Intended for scheduled tasks or manual execution."
+        )]
+        [ProducesResponseType(typeof(ApiResult<int>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> CreateBirthdayPromotions()
+        {
+            try
+            {
+                var count = await _cleanupService.CreateBirthdayPromotionsAsync();
+                return Ok(ApiResult<int>.Success(count, "200", $"Created {count} birthday promotions."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPost("expired-or-deleted-showtimeseats")]
+        [SwaggerOperation(
+            Summary = "Cleanup ShowTimeSeat for expired or deleted showtimes",
+            Description = "Delete all ShowTimeSeat records where the associated showtime is expired (ShowDate < now) or has been soft deleted. Intended for scheduled cleanup tasks or manual maintenance."
+        )]
+        [ProducesResponseType(typeof(ApiResult<int>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> CleanupExpiredOrDeletedShowTimeSeats()
+        {
+            try
+            {
+                var count = await _cleanupService.CleanupExpiredOrDeletedShowTimeSeatsAsync();
+                return Ok(ApiResult<int>.Success(count, "200", $"Deleted {count} ShowTimeSeat records for expired or deleted showtimes."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }

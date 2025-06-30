@@ -744,6 +744,18 @@ public class SystemController : ControllerBase
                 new Promotion { Title = "Lucky Draw", DiscountValue = 0.05m, Detail = "Enter lucky draw with every purchase." },
                 new Promotion { Title = "VIP Upgrade", DiscountValue = 0.3m, Detail = "Upgrade to VIP seats at 30% off." }
             }
+        },
+        new Event
+        { 
+            Name = "Happy Birthday - Special Gift",
+            StartTime = DateTime.UtcNow,
+            EndTime = DateTime.UtcNow.AddYears(10),
+            Detail = "Celebrate your birthday with MovieTheater! Enjoy a free ticket or 50% off during your birthday week.",
+            Image = "https://m.media-amazon.com/images/I/91x6DRQyTkL._UF894,1000_QL80_.jpg",
+            Promotions = new List<Promotion>
+            {
+                new Promotion { Title = "Birthday Week Discount", DiscountValue = 0.2m, Detail = "Enjoy 20% off for up to 1 tickets during your birthday week." }
+            }
         }
     };
 
