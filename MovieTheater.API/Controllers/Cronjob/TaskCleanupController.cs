@@ -37,5 +37,27 @@ namespace MovieTheater.API.Controllers.Cronjob
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpPost("expired-events")]
+        [SwaggerOperation(
+            Summary = "Cleanup expired events",
+            Description = "Soft delete all events that have ended (EndTime before now) and their associated promotions. Intended for scheduled cleanup tasks or manual maintenance."
+        )]
+        [ProducesResponseType(typeof(ApiResult<int>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> CleanupExpiredEvents()
+        {
+            try
+            {
+                var count = await _cleanupService.CleanupExpiredEventsAsync();
+                return Ok(ApiResult<int>.Success(count, "200", $"Soft deleted {count} expired events."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }

@@ -51,7 +51,6 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-builder.Services.AddHostedService<EventAutoCleanupBackgroundService>();
 
 builder.Services.AddSignalR(options =>
 {

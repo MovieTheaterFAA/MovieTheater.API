@@ -3,5 +3,7 @@
     public interface ITaskCleanupService
     {
         Task<int> CleanupPastShowTimesAsync();
+
+        Task<int> CleanupExpiredEventsAsync();
     }
 }
