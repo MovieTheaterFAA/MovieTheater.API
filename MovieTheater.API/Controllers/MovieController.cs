@@ -137,6 +137,28 @@ namespace MovieTheater.API.Controllers
             }
         }
 
+        [HttpPost("image")]
+        [Authorize(Policy = "AdminPolicy")]
+        [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResult<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResult<string>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateMovieWithImagesAndCasts([FromForm] MovieWithImagesAndCastsRequestDto request)
+        {
+            try
+            {
+                var result = await _movieService.AddMovieWithImagesAndCastsAsync(request);
+                return Ok(ApiResult<MovieResponseDto>.Success(result, "200", "Movie created successfully."));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResult<string>.Failure("400", ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResult<string>.Failure("500", "An unexpected error occurred."));
+            }
+        }
         [HttpPut("{id}")]
         [Authorize]
         [SwaggerOperation(

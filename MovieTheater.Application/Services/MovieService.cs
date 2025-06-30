@@ -5,6 +5,7 @@ using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.Json;
+using System.Threading.Tasks.Dataflow;
 
 namespace MovieTheater.Application.Services
 {
@@ -15,14 +16,16 @@ namespace MovieTheater.Application.Services
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
+        private readonly IBlobService _blobService;
 
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService, IBlobService blobService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
             _redisService = redisService;
+            _blobService = blobService;
         }
 
         public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
@@ -210,7 +213,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
             _loggerService.Info($"[AddMovieAsync] Start adding movie {movieRequestDto.Name}");
@@ -328,7 +330,165 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
+        public async Task<MovieResponseDto> AddMovieWithImagesAndCastsAsync(MovieWithImagesAndCastsRequestDto dto)
+        {
+            try
+            {
+                _loggerService.Info($"[AddMovieWithImagesAndCastsAsync] Creating movie: {dto.Name}");
 
+                if (dto.ToDate < dto.FromDate)
+                {
+                    _loggerService.Warn("[AddMovieWithImagesAndCastsAsync] ToDate is earlier than FromDate.");
+                    throw new InvalidOperationException("ToDate must be greater than or equal to FromDate.");
+                }
+
+                var movie = new Movie
+                {
+                    Name = dto.Name,
+                    FromDate = dto.FromDate,
+                    ToDate = dto.ToDate,
+                    Director = dto.Director,
+                    RunningTime = dto.RunningTime,
+                    TrailerUrl = dto.TrailerUrl,
+                    Genres = dto.Genres,
+                    Description = dto.Description,
+                    Status = dto.Status,
+                    Rating = dto.Rating,
+                    PosterImage = string.Empty,
+                    BackgroundImage = string.Empty,
+                    Actors = new List<string>(),
+                    ActorsUrl = new List<string>()
+                };
+
+                // Step 1: Tạo movie ban đầu để lấy Id
+                await _unitOfWork.Movies.AddAsync(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                CancellationToken ct = CancellationToken.None;
+
+                // Step 2: Upload Poster Image
+                if (dto.PosterImageFile is { Length: > 0 })
+                {
+                    var folder = $"movies/{movie.Id}/poster";
+                    var fileName = $"{Guid.NewGuid()}_{dto.PosterImageFile.FileName}";
+                    using var stream = dto.PosterImageFile.OpenReadStream();
+                    await _blobService.UploadFileAsync(fileName, stream, folder, ct);
+                    var url = await _blobService.GetPreviewUrlAsync($"{folder}/{fileName}");
+                    if (url != null) movie.PosterImage = url;
+                }
+
+                // Step 3: Upload Background Image
+                if (dto.BackgroundImageFile is { Length: > 0 })
+                {
+                    var folder = $"movies/{movie.Id}/background";
+                    var fileName = $"{Guid.NewGuid()}_{dto.BackgroundImageFile.FileName}";
+                    using var stream = dto.BackgroundImageFile.OpenReadStream();
+                    await _blobService.UploadFileAsync(fileName, stream, folder, ct);
+                    var url = await _blobService.GetPreviewUrlAsync($"{folder}/{fileName}");
+                    if (url != null) movie.BackgroundImage = url;
+                }
+
+                // Step 4: Upload Cast Images with ActorNames and ActorFiles arrays
+                if (dto.ActorNames != null && dto.ActorFiles != null &&
+                    dto.ActorNames.Length > 0 && dto.ActorNames.Length == dto.ActorFiles.Length)
+                {
+                    for (int i = 0; i < dto.ActorNames.Length; i++)
+                    {
+                        var actorName = dto.ActorNames[i]?.Trim();
+                        var file = dto.ActorFiles[i];
+
+                        if (string.IsNullOrWhiteSpace(actorName) ||
+                            actorName.Equals("string", StringComparison.OrdinalIgnoreCase) ||
+                            actorName.Length < 2 || file == null || file.Length == 0)
+                            continue;
+
+                        // Check trùng tên diễn viên
+                        if (movie.Actors.Any(a => a.Equals(actorName, StringComparison.OrdinalIgnoreCase)))
+                            continue;
+
+                        var safeActor = actorName.Replace(" ", "_").ToLowerInvariant();
+                        var folder = $"movies/{movie.Id}/cast/{safeActor}";
+                        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                        using var stream = file.OpenReadStream();
+
+                        await _blobService.UploadFileAsync(fileName, stream, folder, ct);
+                        var url = await _blobService.GetPreviewUrlAsync($"{folder}/{fileName}");
+
+                        if (url != null)
+                        {
+                            movie.Actors.Add(actorName);
+                            movie.ActorsUrl.Add(url);
+                        }
+                    }
+                }
+
+                // Step 5: Cập nhật lại movie sau khi upload ảnh
+                await _unitOfWork.Movies.Update(movie);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _redisService.RemoveByPatternAsync("movie:list:");
+                await _redisService.RemoveAsync($"movie:detail:{movie.Id}");
+
+                var adminId = _claimsService.GetCurrentUserId;
+                var newData = new
+                {
+                    movie.Name,
+                    movie.FromDate,
+                    movie.ToDate,
+                    movie.Director,
+                    movie.RunningTime,
+                    movie.TrailerUrl,
+                    movie.Description,
+                    movie.PosterImage,
+                    movie.BackgroundImage,
+                    movie.Actors,
+                    movie.ActorsUrl,
+                    movie.Rating,
+                    movie.Status,
+                    movie.Genres
+                };
+
+                await _auditLogService.LogAsync(
+                    adminId,
+                    AuditActionType.Create,
+                    "Movie",
+                    movie.Id,
+                    null,
+                    newData,
+                    JsonSerializer.Serialize(newData),
+                    "Admin created movie with images and cast."
+                );
+
+                return new MovieResponseDto
+                {
+                    Id = movie.Id,
+                    Name = movie.Name,
+                    FromDate = movie.FromDate,
+                    ToDate = movie.ToDate,
+                    Director = movie.Director,
+                    RunningTime = movie.RunningTime,
+                    TrailerUrl = movie.TrailerUrl,
+                    Description = movie.Description,
+                    PosterImage = movie.PosterImage,
+                    BackgroundImage = movie.BackgroundImage,
+                    Actors = movie.Actors,
+                    ActorsUrl = movie.ActorsUrl,
+                    Rating = movie.Rating,
+                    Status = movie.Status,
+                    Genres = movie.Genres
+                };
+            }
+            catch (InvalidOperationException ex)
+            {
+                _loggerService.Warn($"[AddMovieWithImagesAndCastsAsync] Validation error: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[AddMovieWithImagesAndCastsAsync] Unexpected error occurred: {ex.Message}");
+                throw;
+            }
+        }
         public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
             try
