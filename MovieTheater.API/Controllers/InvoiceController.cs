@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Domain.DTOs.InvoiceDTOs;
-using MovieTheater.Domain.DTOs.PaymentDTOs;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers
@@ -119,22 +118,5 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("payment")]
-        public async Task<ActionResult<PaymentDto>> ProcessPayment([FromBody] CreatePaymentRequest request)
-        {
-            try
-            {
-                var payment = await _invoiceService.ProcessPaymentAsync(request);
-                return Ok(payment);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
-        }
     }
 }

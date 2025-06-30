@@ -34,16 +34,6 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
-                var invoice = await _invoiceService.GetInvoiceByIdAsync(request.InvoiceId);
-
-                if (invoice == null)
-                    return NotFound("Invoice not found");
-
-                // Check if the user owns this invoice or is an admin
-                if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
-                    return Forbid();
-
-                // Generate checkout session URL
                 var sessionUrl = await _paymentService.InitiatePaymentAsync(request.InvoiceId);
 
                 return Ok(new { url = sessionUrl });
@@ -64,7 +54,6 @@ namespace MovieTheater.API.Controllers
 
                 if (isValid)
                 {
-                    // Redirect to a success page on the frontend
                     return Redirect($"https://movietheaterfe.ae-tao-fullstack-api.site/payment/thankyou?success=true&session_id={session_id}");
                 }
 

@@ -98,28 +98,32 @@ public class BookingService : IBookingService
             _loggerService.Info($"Starting booking creation for user: {userId}, showtime: {request.ShowTimeId}");
 
             // Validate the seats are available
-            var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowTimeId, st => st.ShowTimeSeats);
+            var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowTimeId);
             if (showTime == null)
             {
                 _loggerService.Warn($"Invalid showtime ID: {request.ShowTimeId}");
                 throw new ArgumentException("Invalid showtime");
             }
 
-            var selectedSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
+            var existSeat = await _unitOfWork.ShowTimeSeats.GetAllAsync(
                 sts => sts.ShowTimeId == request.ShowTimeId && request.SeatIds.Contains(sts.SeatId));
 
             decimal totalAmount = 0;
 
             // Check if any selected seat is already booked
-            if (selectedSeats.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
+            if (existSeat.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
             {
                 _loggerService.Warn($"Attempted to book unavailable seats for showtime: {request.ShowTimeId}");
                 throw new InvalidOperationException("One or more selected seats are not available");
             }
+
+            var selectedSeats = await _unitOfWork.Seats.GetAllAsync(s => request.SeatIds.Contains(s.Id));
+
             foreach (var seat in selectedSeats)
             {
-                totalAmount += GetSeatPrice(seat.Seat);
+                totalAmount += GetSeatPrice(seat);
             }
+
             // Get food items
             var foodItems = new List<FoodAndDrink>();
             if (request.FoodItems.Any())
@@ -147,7 +151,7 @@ public class BookingService : IBookingService
                 }).ToList(),
                 BookingSeats = selectedSeats.Select(seat => new BookingSeat
                 {
-                    SeatId = seat.SeatId
+                    SeatId = seat.Id
                 }).ToList()
             };
 
@@ -159,7 +163,7 @@ public class BookingService : IBookingService
                 var ShowTimeSeat = new ShowTimeSeat
                 {
                     ShowTimeId = request.ShowTimeId,
-                    SeatId = seat.SeatId,
+                    SeatId = seat.Id,
                     Status = SeatStatus.Booked
                 };
                 await _unitOfWork.ShowTimeSeats.AddAsync(ShowTimeSeat);

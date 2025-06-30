@@ -1,5 +1,4 @@
 ﻿using MovieTheater.Domain.DTOs.BookingDTOs;
-using MovieTheater.Domain.DTOs.PaymentDTOs;
 
 namespace MovieTheater.Domain.DTOs.InvoiceDTOs
 {
@@ -10,7 +9,6 @@ namespace MovieTheater.Domain.DTOs.InvoiceDTOs
         public DateTime InvoiceDate { get; set; }
         public decimal Amount { get; set; }
         public string Status { get; set; }
-        public List<PaymentDto> Payments { get; set; } = new();
         public BookingSummaryDto Booking { get; set; }
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using MovieTheater.API.Configuration;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
-using MovieTheater.Domain.DTOs.PaymentDTOs;
 using Stripe;
 using Stripe.Checkout;
 using System.Text.Json;
@@ -14,16 +13,16 @@ namespace MovieTheater.API.Controllers
     [Route("api/[controller]")]
     public class StripeWebhookController : ControllerBase
     {
-        private readonly IInvoiceService _invoiceService;
+        private readonly IPaymentService _paymentService;
         private readonly ILoggerService _loggerService;
         private readonly string _endpointSecret;
 
         public StripeWebhookController(
-            IInvoiceService invoiceService,
+            IPaymentService paymentService,
             ILoggerService loggerService,
             IOptions<StripeSettings> stripeSettings)
         {
-            _invoiceService = invoiceService;
+            _paymentService = paymentService;
             _loggerService = loggerService;
             _endpointSecret = stripeSettings.Value.WebhookSecret;
 
@@ -68,37 +67,28 @@ namespace MovieTheater.API.Controllers
                 if (stripeEvent.Type == "checkout.session.completed")
                 {
                     var session = stripeEvent.Data.Object as Session;
-
-                    // Extract the invoice ID from the metadata
-                    if (session.Metadata.TryGetValue("invoiceId", out string invoiceIdStr) &&
-                        Guid.TryParse(invoiceIdStr, out Guid invoiceId))
+                    if (session != null)
                     {
-                        var paymentRequest = new CreatePaymentRequest
+                        if (session.Metadata != null &&
+                            session.Metadata.TryGetValue("invoiceId", out string? invoiceIdStr) &&
+                            !string.IsNullOrEmpty(invoiceIdStr) &&
+                            Guid.TryParse(invoiceIdStr, out Guid invoiceId))
                         {
-                            InvoiceId = invoiceId,
-                            Amount = session.AmountTotal.Value / 100m, // Convert from cents
-                            Provider = "Stripe",
-                            SessionId = session.Id
-                        };
-
-                        await _invoiceService.ProcessPaymentAsync(paymentRequest);
-                        _loggerService.Success($"Payment processed for invoice {invoiceId}, session {session.Id}");
-                    }
-                    else
-                    {
-                        _loggerService.Warn($"Could not extract invoice ID from session metadata: {JsonSerializer.Serialize(session.Metadata)}");
+                            await _paymentService.VerifyPaymentAsync(session.Id);
+                            _loggerService.Success($"Payment processed for invoice {invoiceId}, session {session.Id}");
+                        }
+                        else
+                        {
+                            _loggerService.Warn($"Could not extract invoice ID from session metadata: {JsonSerializer.Serialize(session.Metadata)}");
+                        }
                     }
                 }
                 else if (stripeEvent.Type == "checkout.session.expired")
                 {
                     var session = stripeEvent.Data.Object as Session;
-                    _loggerService.Warn($"Payment session expired: {session.Id}");
-
-                    // You might want to update the invoice status or notify the user
-                    if (session.Metadata.TryGetValue("invoiceId", out string invoiceIdStr) &&
-                        Guid.TryParse(invoiceIdStr, out Guid invoiceId))
+                    if (session != null)
                     {
-                        await _invoiceService.UpdateInvoiceStatusAsync(invoiceId, "PaymentFailed");
+                        _loggerService.Warn($"Payment session expired: {session.Id}");
                     }
                 }
 

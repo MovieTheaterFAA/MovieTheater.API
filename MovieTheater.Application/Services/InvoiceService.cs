@@ -1,9 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using MovieTheater.Application.Interfaces;
+﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.BookingDTOs;
 using MovieTheater.Domain.DTOs.InvoiceDTOs;
-using MovieTheater.Domain.DTOs.PaymentDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
 
@@ -32,22 +30,15 @@ namespace MovieTheater.Application.Services
 
             try
             {
-                string cacheKey = $"invoice:detail:{id}";
-                var cached = await _redisService.GetAsync<InvoiceDto>(cacheKey);
-                if (cached != null) return cached;
-
-                var invoice = await _unitOfWork.Invoices.GetByIdAsync(id,
-                    i => i.Booking,
-                    i => i.Payments);
+                var invoice = await _unitOfWork.Invoices.GetByIdAsync(id);
 
                 if (invoice == null)
                 {
                     _loggerService.Warn($"No invoice found with ID: {id}");
-                    return null;
+                    throw new KeyNotFoundException($"Invoice with ID {id} not found");
                 }
 
                 var result = await MapToDto(invoice);
-                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
                 return result;
             }
             catch (Exception ex)
@@ -110,9 +101,7 @@ namespace MovieTheater.Application.Services
 
                 // Get all invoices for those bookings
                 var invoices = await _unitOfWork.Invoices.GetAllAsync(
-                    i => bookingIds.Contains(i.BookingId),
-                    i => i.Booking,
-                    i => i.Payments);
+                    i => bookingIds.Contains(i.BookingId));
 
                 var tasks = invoices.Select(MapToDto);
                 var result = await Task.WhenAll(tasks);
@@ -215,9 +204,7 @@ namespace MovieTheater.Application.Services
                 _loggerService.Success($"Invoice {id} status updated to {status}");
 
                 // Get the updated invoice with all relationships
-                invoice = await _unitOfWork.Invoices.GetByIdAsync(id,
-                    i => i.Booking,
-                    i => i.Payments);
+                invoice = await _unitOfWork.Invoices.GetByIdAsync(id);
 
                 var result = await MapToDto(invoice);
                 return result;
@@ -229,71 +216,6 @@ namespace MovieTheater.Application.Services
             }
         }
 
-        public async Task<PaymentDto> ProcessPaymentAsync(CreatePaymentRequest request)
-        {
-            if (request.InvoiceId == Guid.Empty)
-            {
-                _loggerService.Warn("Attempted to process payment with an empty invoice GUID.");
-                throw new ArgumentException("Invalid invoice ID.");
-            }
-
-            try
-            {
-                _loggerService.Info($"Starting payment processing for invoice: {request.InvoiceId}");
-
-                var invoice = await _unitOfWork.Invoices.GetByIdAsync(request.InvoiceId, i => i.Payments);
-                if (invoice == null)
-                {
-                    _loggerService.Warn($"No invoice found with ID: {request.InvoiceId}");
-                    throw new KeyNotFoundException($"Invoice with ID {request.InvoiceId} not found");
-                }
-
-                // Create a new payment
-                var payment = new Payment
-                {
-                    InvoiceId = request.InvoiceId,
-                    PaymentDate = DateTime.UtcNow,
-                    Amount = request.Amount,
-                    Provider = request.Provider,
-                    PaymentReference = GeneratePaymentReference(),
-                    Status = "Completed" // Initial status, could be "Processing" depending on your flow
-                };
-
-                await _unitOfWork.Payments.AddAsync(payment);
-
-                // Check if payment completes the invoice amount
-                decimal totalPaid = invoice.Payments.Sum(p => p.Amount) + request.Amount;
-                if (totalPaid >= invoice.Amount)
-                {
-                    invoice.Status = "Paid";
-                    await _unitOfWork.Invoices.Update(invoice);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-
-                // Clear caches
-                await _redisService.RemoveAsync($"invoice:detail:{request.InvoiceId}");
-                await _redisService.RemoveAsync($"invoice:booking:{invoice.BookingId}");
-                await _redisService.RemoveByPatternAsync("invoices:user:*");
-
-                _loggerService.Success($"Payment processed successfully for invoice {request.InvoiceId}, payment ID: {payment.Id}");
-
-                return new PaymentDto
-                {
-                    Id = payment.Id,
-                    PaymentDate = payment.PaymentDate,
-                    Amount = payment.Amount,
-                    Provider = payment.Provider,
-                    PaymentReference = payment.PaymentReference,
-                    Status = payment.Status
-                };
-            }
-            catch (Exception ex)
-            {
-                _loggerService.Error($"Error processing payment for invoice {request.InvoiceId}: {ex.Message}");
-                throw;
-            }
-        }
 
         private async Task<InvoiceDto> MapToDto(Invoice invoice)
         {
@@ -309,7 +231,17 @@ namespace MovieTheater.Application.Services
             DateTime showDate = showtime?.ShowDate ?? DateTime.MinValue;
 
             // Get seat count
-            int seatCount = booking.BookingSeats?.Count ?? 0;
+            int seatCount;
+            var bookingSeats = await _unitOfWork.BookingSeats.GetAllAsync(bs => bs.BookingId == booking.Id);
+            if (bookingSeats == null || !bookingSeats.Any())
+            {
+                _loggerService.Warn($"No booking seats found for booking ID: {booking.Id}");
+                throw new KeyNotFoundException($"No seats found for booking ID {booking.Id}");
+            }
+            else
+            {
+                seatCount = bookingSeats.Count();
+            }
 
             return new InvoiceDto
             {

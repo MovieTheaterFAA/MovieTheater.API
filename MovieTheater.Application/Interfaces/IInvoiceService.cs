@@ -1,5 +1,4 @@
 ﻿using MovieTheater.Domain.DTOs.InvoiceDTOs;
-using MovieTheater.Domain.DTOs.PaymentDTOs;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -10,6 +9,5 @@ namespace MovieTheater.Application.Interfaces
         Task<IEnumerable<InvoiceDto>> GetUserInvoicesAsync(Guid userId);
         Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId);
         Task<InvoiceDto> UpdateInvoiceStatusAsync(Guid id, string status);
-        Task<PaymentDto> ProcessPaymentAsync(CreatePaymentRequest request);
     }
 }
