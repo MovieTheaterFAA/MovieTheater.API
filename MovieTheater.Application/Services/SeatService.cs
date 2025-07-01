@@ -2,12 +2,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Hubs;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
