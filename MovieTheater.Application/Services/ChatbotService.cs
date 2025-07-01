@@ -1,8 +1,8 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
+using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.ThirdParty;
-using MovieTheater.Infrastructure.Hubs;
 
 namespace MovieTheater.Application.Services
 {

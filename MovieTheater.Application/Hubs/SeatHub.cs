@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 
-namespace MovieTheater.Infrastructure.Hubs
+namespace MovieTheater.Application.Hubs
 {
     public class SeatHub : Hub
     {

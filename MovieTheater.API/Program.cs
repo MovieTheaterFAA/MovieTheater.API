@@ -1,9 +1,13 @@
-﻿using MovieTheater.API.Architecture;
+using MovieTheater.API.Architecture;
 using MovieTheater.API.Configuration;
+using Stripe;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MovieTheater.API.Architecture;
+using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
-using MovieTheater.Infrastructure.Hubs;
-using Stripe;
 using SwaggerThemes;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
@@ -86,7 +90,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                 "https://movietheaterfe.ae-tao-fullstack-api.site", // Production
                 "http://localhost:3000",                             // Local dev
-                "http://localhost:3001"                             // Local dev
+                "http://localhost:3001",                             // Local dev
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
