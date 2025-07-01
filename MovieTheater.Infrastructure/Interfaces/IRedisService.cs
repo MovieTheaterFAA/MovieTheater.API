@@ -7,5 +7,6 @@
         Task SetAsync<T>(string key, T value, TimeSpan? expiration = null);
         Task RemoveAsync(string key);
         Task RemoveByPatternAsync(string pattern);
+        Task<IEnumerable<string>> GetKeysByPatternAsync(string pattern);
     }
 }

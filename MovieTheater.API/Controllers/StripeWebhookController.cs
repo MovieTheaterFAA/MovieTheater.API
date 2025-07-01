@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MovieTheater.API.Configuration;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Infrastructure.Interfaces;
 using Stripe;
 using Stripe.Checkout;
 using System.Text.Json;
@@ -15,15 +16,18 @@ namespace MovieTheater.API.Controllers
     {
         private readonly IPaymentService _paymentService;
         private readonly ILoggerService _loggerService;
+        private readonly IRedisService _redisService;
         private readonly string _endpointSecret;
 
         public StripeWebhookController(
             IPaymentService paymentService,
             ILoggerService loggerService,
+            IRedisService redisService,
             IOptions<StripeSettings> stripeSettings)
         {
             _paymentService = paymentService;
             _loggerService = loggerService;
+            _redisService = redisService;
             _endpointSecret = stripeSettings.Value.WebhookSecret;
 
             if (string.IsNullOrEmpty(_endpointSecret))
@@ -89,6 +93,28 @@ namespace MovieTheater.API.Controllers
                     if (session != null)
                     {
                         _loggerService.Warn($"Payment session expired: {session.Id}");
+
+                        // Extract invoice ID and process the failed payment
+                        if (session.Metadata.TryGetValue("invoiceId", out string invoiceIdStr) &&
+                            Guid.TryParse(invoiceIdStr, out Guid invoiceId))
+                        {
+                            await _paymentService.ProcessFailPaymentAsync(invoiceId);
+                            _loggerService.Warn($"Payment failure processed for invoice {invoiceId}, session {session.Id}");
+                        }
+                        else
+                        {
+                            // Try to get from Redis if not in metadata
+                            var cachedInvoiceId = await _redisService.GetAsync<string>($"stripe:session:{session.Id}");
+                            if (!string.IsNullOrEmpty(cachedInvoiceId) && Guid.TryParse(cachedInvoiceId, out invoiceId))
+                            {
+                                await _paymentService.ProcessFailPaymentAsync(invoiceId);
+                                _loggerService.Warn($"Payment failure processed for invoice {invoiceId}, session {session.Id}");
+                            }
+                            else
+                            {
+                                _loggerService.Error($"Could not find invoice ID for expired session: {session.Id}");
+                            }
+                        }
                     }
                 }
 

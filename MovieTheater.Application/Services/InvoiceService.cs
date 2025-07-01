@@ -261,10 +261,5 @@ namespace MovieTheater.Application.Services
                 }
             };
         }
-
-        private string GeneratePaymentReference()
-        {
-            return $"PAY-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 8)}";
-        }
     }
 }
