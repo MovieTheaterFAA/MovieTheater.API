@@ -32,6 +32,7 @@ namespace MovieTheater.Domain
         public DbSet<FoodAndDrink> FoodAndDrinks { get; set; }
         public DbSet<BookingFood> BookingFoods { get; set; }
         public DbSet<ShowTimeSeat> ShowTimeSeats { get; set; }
+        public DbSet<TicketFoodAndDrink> TicketFoodAndDrinks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -161,6 +162,18 @@ namespace MovieTheater.Domain
                 .WithMany(seat => seat.ShowTimeSeats)
                 .HasForeignKey(sts => sts.SeatId);
 
+            modelBuilder.Entity<TicketFoodAndDrink>()
+                .HasKey(tf => new { tf.TicketId, tf.FoodAndDrinkId });
+
+            modelBuilder.Entity<TicketFoodAndDrink>()
+                .HasOne(tf => tf.Ticket)
+                .WithMany(t => t.TicketFoodAndDrinks)
+                .HasForeignKey(tf => tf.TicketId);
+
+            modelBuilder.Entity<TicketFoodAndDrink>()
+                .HasOne(tf => tf.FoodAndDrink)
+                .WithMany(fd => fd.TicketFoodAndDrinks)
+                .HasForeignKey(tf => tf.FoodAndDrinkId);
 
             // Promotions, Otp: standalone, no relationships with other entities
         }

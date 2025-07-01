@@ -11,5 +11,6 @@ namespace MovieTheater.Domain.Entities
         public string? ImageUrl { get; set; }
         public bool IsAvailable { get; set; } = true;
         public ICollection<BookingFood> BookingFoods { get; set; }
+        public ICollection<TicketFoodAndDrink> TicketFoodAndDrinks { get; set; }
     }
 }

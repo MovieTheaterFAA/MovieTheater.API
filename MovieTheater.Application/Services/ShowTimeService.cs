@@ -100,7 +100,7 @@ namespace MovieTheater.Application.Services
                 {
                     MovieId = entry.MovieId,
                     CinemaRoomId = dto.CinemaRoomId,
-                    ShowDate = entry.StartTime,
+                    ShowDate = DateTime.SpecifyKind(entry.StartTime, DateTimeKind.Utc),
                     Duration = duration,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _claimsService.GetCurrentUserId
