@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.ThirdParty;
 using MovieTheater.Infrastructure.Hubs;
@@ -103,19 +102,6 @@ namespace MovieTheater.Application.Services
 
             var response = await _geminiService.GenerateResponseAsync(contextPrompt);
             return response;
-        }
-
-        /// <summary>
-        /// Extracts a number (e.g. "top 3", "top 10") from the prompt, or returns null if not found.
-        /// </summary>
-        private int? ExtractTopNumber(string prompt)
-        {
-            var match = Regex.Match(prompt, @"top\s*(\d+)", RegexOptions.IgnoreCase);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int top))
-            {
-                return top;
-            }
-            return null;
         }
     }
 }

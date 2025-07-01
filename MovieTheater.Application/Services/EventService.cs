@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MovieTheater.Application.Interfaces;
@@ -11,6 +9,7 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -33,76 +32,75 @@ namespace MovieTheater.Application.Services
             _blobService = blobService;
         }
 
-        public async Task<EventResponseDto?> AddEventAsync(EventRequestDto dto)
+        public async Task<EventResponseDto?> AddEventAsync(EventWithImageRequestDto dto)
         {
-            _loggerService.Info($"[AddEventAsync] Start adding event: {dto.Name}");
+            _loggerService.Info($"[AddEventWithImageAsync] Start adding event: {dto.Name}");
 
-            // Kiểm tra sự kiện có tồn tại với tên đã cho chưa
             var existingEvent = await _unitOfWork.Events.FirstOrDefaultAsync(e => e.Name == dto.Name && !e.IsDeleted);
             if (existingEvent != null)
             {
-                _loggerService.Warn($"[AddEventAsync] Event with name {dto.Name} already exists.");
+                _loggerService.Warn($"[AddEventWithImageAsync] Event with name {dto.Name} already exists.");
                 throw new InvalidOperationException("Event with this name already exists.");
             }
 
             var adminId = _claimsService.GetCurrentUserId;
 
-            // Tạo đối tượng Event từ DTO
             var newEvent = new Event
             {
                 Name = dto.Name,
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
                 Detail = dto.Detail,
+                Image = null
             };
 
-            var newData = new
-            {
-                newEvent.Name,
-                newEvent.StartTime,
-                newEvent.EndTime,
-                newEvent.Detail,
-                newEvent.Image,
-            };
-
-            var changgedFields = JsonSerializer.Serialize(new
-            {
-                newEvent.Name,
-                newEvent.StartTime,
-                newEvent.EndTime,
-                newEvent.Detail,
-                newEvent.Image,
-            });
-
-            // Thêm sự kiện vào cơ sở dữ liệu
             await _unitOfWork.Events.AddAsync(newEvent);
+            await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("event:list:");
 
-            try
+            string? imageUrl = null;
+            if (dto.File != null && dto.File.Length > 0)
             {
+                var safeFileName = Path.GetFileName(dto.File.FileName);
+                var folder = $"event-images/{newEvent.Id}";
+                var objectName = $"{folder}/{safeFileName}";
+
+                using var stream = dto.File.OpenReadStream();
+                await _blobService.UploadFileAsync(safeFileName, stream, folder, CancellationToken.None);
+                imageUrl = await _blobService.GetPreviewUrlAsync(objectName);
+
+                if (imageUrl == null)
+                    throw new Exception("Could not generate preview URL.");
+
+                newEvent.Image = imageUrl;
+                await _unitOfWork.Events.Update(newEvent);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveByPatternAsync("event:list:");
-            }
-            catch (DbUpdateException dbEx)
-            {
-                _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
-                throw;
             }
 
-            await _auditLogService.LogAsync
-                (
+            await _redisService.RemoveByPatternAsync("event:list:");
+
+            var logData = new
+            {
+                newEvent.Name,
+                newEvent.StartTime,
+                newEvent.EndTime,
+                newEvent.Detail,
+                newEvent.Image
+            };
+
+            await _auditLogService.LogAsync(
                 adminId,
                 AuditActionType.Create,
                 "Event",
                 newEvent.Id,
                 null,
-                newData,
-                changgedFields,
-                "Admin created new event."
-                );
+                logData,
+                JsonSerializer.Serialize(logData),
+                "Admin created new event with image."
+            );
 
-            _loggerService.Success($"[AddEventAsync] Event {newEvent.Name} added successfully.");
+            _loggerService.Success($"[AddEventWithImageAsync] Event {newEvent.Name} created.");
 
-            // Trả về DTO chứa thông tin của sự kiện đã thêm
             return new EventResponseDto
             {
                 Id = newEvent.Id,
@@ -110,6 +108,7 @@ namespace MovieTheater.Application.Services
                 StartTime = newEvent.StartTime,
                 EndTime = newEvent.EndTime,
                 Detail = newEvent.Detail,
+                Image = newEvent.Image
             };
         }
 
@@ -432,84 +431,6 @@ namespace MovieTheater.Application.Services
             }
         }
 
-        public async Task<EventResponseDto?> AddEventWithImageAsync(EventWithImageRequestDto dto)
-        {
-            _loggerService.Info($"[AddEventWithImageAsync] Start adding event: {dto.Name}");
-
-            var existingEvent = await _unitOfWork.Events.FirstOrDefaultAsync(e => e.Name == dto.Name && !e.IsDeleted);
-            if (existingEvent != null)
-            {
-                _loggerService.Warn($"[AddEventWithImageAsync] Event with name {dto.Name} already exists.");
-                throw new InvalidOperationException("Event with this name already exists.");
-            }
-
-            var adminId = _claimsService.GetCurrentUserId;
-
-            var newEvent = new Event
-            {
-                Name = dto.Name,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
-                Detail = dto.Detail,
-                Image = null
-            };
-
-            await _unitOfWork.Events.AddAsync(newEvent);
-            await _unitOfWork.SaveChangesAsync();
-
-            string? imageUrl = null;
-            if (dto.File != null && dto.File.Length > 0)
-            {
-                var safeFileName = Path.GetFileName(dto.File.FileName);
-                var folder = $"event-images/{newEvent.Id}";
-                var objectName = $"{folder}/{safeFileName}";
-
-                using var stream = dto.File.OpenReadStream();
-                await _blobService.UploadFileAsync(safeFileName, stream, folder, CancellationToken.None);
-                imageUrl = await _blobService.GetPreviewUrlAsync(objectName);
-
-                if (imageUrl == null)
-                    throw new Exception("Could not generate preview URL.");
-
-                newEvent.Image = imageUrl;
-                await _unitOfWork.Events.Update(newEvent);
-                await _unitOfWork.SaveChangesAsync();
-            }
-
-            await _redisService.RemoveByPatternAsync("event:list:");
-
-            var logData = new
-            {
-                newEvent.Name,
-                newEvent.StartTime,
-                newEvent.EndTime,
-                newEvent.Detail,
-                newEvent.Image
-            };
-
-            await _auditLogService.LogAsync(
-                adminId,
-                AuditActionType.Create,
-                "Event",
-                newEvent.Id,
-                null,
-                logData,
-                JsonSerializer.Serialize(logData),
-                "Admin created new event with image."
-            );
-
-            _loggerService.Success($"[AddEventWithImageAsync] Event {newEvent.Name} created.");
-
-            return new EventResponseDto
-            {
-                Id = newEvent.Id,
-                Name = newEvent.Name,
-                StartTime = newEvent.StartTime,
-                EndTime = newEvent.EndTime,
-                Detail = newEvent.Detail,
-                Image = newEvent.Image
-            };
-        }
     }
 
     public class EventAutoCleanupBackgroundService : BackgroundService
