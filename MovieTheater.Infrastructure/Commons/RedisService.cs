@@ -48,5 +48,28 @@ namespace MovieTheater.Infrastructure.Commons
                     await _database.KeyDeleteAsync(keys);
             }
         }
+
+        // New method to get keys by pattern
+        public async Task<IEnumerable<string>> GetKeysByPatternAsync(string pattern)
+        {
+            var keys = new List<string>();
+
+            // Use Task.Run for the synchronous Keys operation
+            await Task.Run(() =>
+            {
+                foreach (var endpoint in _connection.GetEndPoints())
+                {
+                    var server = _connection.GetServer(endpoint);
+                    var redisKeys = server.Keys(pattern: $"{pattern}*").ToArray();
+
+                    foreach (var redisKey in redisKeys)
+                    {
+                        keys.Add(redisKey.ToString());
+                    }
+                }
+            });
+
+            return keys;
+        }
     }
 }

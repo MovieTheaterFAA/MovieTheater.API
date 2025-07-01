@@ -5,6 +5,6 @@
         Available = 0,
         Booked = 1,
         Sold = 2,
-        Holding = 3,
+        Holding = 3
     }
 }

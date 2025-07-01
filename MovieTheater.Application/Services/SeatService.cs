@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
@@ -9,6 +7,8 @@ using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -302,17 +302,43 @@ namespace MovieTheater.Application.Services
                 var now = DateTime.UtcNow;
                 var expireAt = now.AddMinutes(5);
 
+                var seatOwnedCount = 0;
+
+                var requestedSeatIds = seatIds.ToHashSet();
+
                 var currentHeldCount = _holdingSeats
-                    .Count(h => h.Key.showTimeId == showTimeId && h.Value.userId == userId && h.Value.expireAt > now);
+                    .Where(h => h.Key.showTimeId == showTimeId &&
+                          h.Value.userId == userId &&
+                          h.Value.expireAt > now)
+                    .Count(h => !requestedSeatIds.Contains(h.Key.seatId));
+
+                seatOwnedCount += currentHeldCount;
+
+                var bookings = await _unitOfWork.Bookings.GetQueryable()
+                    .Where(b => b.MemberId == userId && b.ShowtimeId == showTimeId && (b.Status == "Completed" || b.Status == "Created"))
+                    .ToListAsync();
+
+                if (bookings.Any())
+                {
+                    foreach (var booking in bookings)
+                    {
+                        var bookingSeats = await _unitOfWork.BookingSeats.GetQueryable()
+                            .Where(bs => bs.BookingId == booking.Id)
+                            .ToListAsync();
+                        seatOwnedCount += bookingSeats.Count;
+                    }
+                }
 
                 var newSeatCount = seatIds
-                    .Where(seatId =>
-                        !_holdingSeats.TryGetValue((seatId, showTimeId), out var holdInfo) ||
-                        holdInfo.userId != userId ||
-                        holdInfo.expireAt <= now)
-                    .ToList();
+                .Where(seatId =>
+                    !_holdingSeats.TryGetValue((seatId, showTimeId), out var holdInfo) ||
+                    holdInfo.userId != userId ||
+                    holdInfo.expireAt <= now)
+                .Count();
 
-                if (currentHeldCount + newSeatCount.Count > 8)
+                seatOwnedCount += newSeatCount;
+
+                if (seatOwnedCount > 8)
                 {
                     _loggerService.Warn($"User {userId} is trying to hold more than 8 seats for showtime {showTimeId}.");
                     return new List<SeatResponseDto>();
@@ -357,14 +383,14 @@ namespace MovieTheater.Application.Services
                         holdInfo.expireAt > now && holdInfo.userId != userId)
                     {
                         _loggerService.Warn($"Seat {seatId} is already held by another user.");
-                        continue;
+                        throw new InvalidOperationException($"Seat {seatId} is already held by another user.");
                     }
 
                     if (showTimeSeats.TryGetValue(seatId, out var sts) &&
                         (sts.Status == SeatStatus.Booked || sts.Status == SeatStatus.Sold))
                     {
                         _loggerService.Warn($"Seat {seatId} is already {sts.Status}.");
-                        continue;
+                        throw new InvalidOperationException($"Seat {seatId} is already {sts.Status}.");
                     }
                     _holdingSeats[(seatId, showTimeId)] = (userId, expireAt);
 

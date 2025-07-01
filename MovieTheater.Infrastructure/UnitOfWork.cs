@@ -19,7 +19,12 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<FoodAndDrink> foodAndDrinks,
         IGenericRepository<Event> events,
         IGenericRepository<Seat> seats,
-        IGenericRepository<ShowTimeSeat> showTimeSeats)
+        IGenericRepository<ShowTimeSeat> showTimeSeats,
+        IGenericRepository<Booking> bookings,
+        IGenericRepository<BookingFood> bookingFoods,
+        IGenericRepository<BookingSeat> bookingSeats,
+        IGenericRepository<Invoice> invoices,
+        IGenericRepository<Payment> payments)
     {
         _dbContext = dbContext;
         Users = userRepository;
@@ -33,6 +38,11 @@ public class UnitOfWork : IUnitOfWork
         Events = events;
         Seats = seats;
         ShowTimeSeats = showTimeSeats;
+        Bookings = bookings;
+        BookingFoods = bookingFoods;
+        BookingSeats = bookingSeats;
+        Invoices = invoices;
+        Payments = payments;
     }
 
     public IGenericRepository<User> Users { get; }
@@ -54,6 +64,11 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Event> Events { get; }
     public IGenericRepository<Seat> Seats { get; }
     public IGenericRepository<ShowTimeSeat> ShowTimeSeats { get; }
+    public IGenericRepository<Booking> Bookings { get; }
+    public IGenericRepository<BookingFood> BookingFoods { get; }
+    public IGenericRepository<BookingSeat> BookingSeats { get; }
+    public IGenericRepository<Invoice> Invoices { get; }
+    public IGenericRepository<Payment> Payments { get; }
 
     public void Dispose()
     {
