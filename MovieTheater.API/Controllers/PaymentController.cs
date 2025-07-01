@@ -8,7 +8,7 @@ using MovieTheater.Domain.DTOs.PaymentDTOs;
 namespace MovieTheater.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payment")]
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;

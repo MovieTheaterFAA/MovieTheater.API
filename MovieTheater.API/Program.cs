@@ -1,13 +1,9 @@
 using MovieTheater.API.Architecture;
 using MovieTheater.API.Configuration;
-using Stripe;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using MovieTheater.API.Architecture;
 using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
+using Stripe;
 using SwaggerThemes;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
@@ -27,26 +23,10 @@ builder.Configuration
 // Configure Stripe settings
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 
-// Temporary debug code - REMOVE AFTER DEBUGGING
-Console.WriteLine("======= ENVIRONMENT VARIABLES =======");
-foreach (var env in Environment.GetEnvironmentVariables().Keys)
-{
-    if (env.ToString().Contains("Stripe"))
-    {
-        Console.WriteLine($"{env}: {Environment.GetEnvironmentVariable(env.ToString())?[..4]}...");
-    }
-}
-Console.WriteLine("====================================");
-
 // Validate Stripe configuration
 var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
 var stripePublishableKey = builder.Configuration["Stripe:PublishableKey"];
 var stripeWebhookSecret = builder.Configuration["Stripe:WebhookSecret"];
-
-// Log Stripe key status - first few characters only for security
-Console.WriteLine($"Stripe Secret Key: {(string.IsNullOrEmpty(stripeSecretKey) ? "MISSING" : stripeSecretKey[..6] + "...")}");
-Console.WriteLine($"Stripe Publishable Key: {(string.IsNullOrEmpty(stripePublishableKey) ? "MISSING" : stripePublishableKey[..6] + "...")}");
-Console.WriteLine($"Stripe Webhook Secret: {(string.IsNullOrEmpty(stripeWebhookSecret) ? "MISSING" : stripeWebhookSecret[..6] + "...")}");
 
 // Set Stripe API key
 StripeConfiguration.ApiKey = stripeSecretKey;
@@ -71,16 +51,16 @@ builder.Services.AddTransient<IStripeClient, StripeClient>(s =>
 
     return new StripeClient(stripeSecretKey, httpClient: sysHttpClient);
 });
+
 builder.Services.AddSingleton(serviceProvider => stripeWebhookSecret ?? string.Empty);
 if (string.IsNullOrEmpty(stripeSecretKey))
 {
-    Console.WriteLine("⚠️ CRITICAL: Stripe Secret Key is missing! Payment processing will fail.");
-    // In production, you might want to throw an exception here to prevent the app from starting
+    Console.WriteLine("CRITICAL: Stripe Secret Key is missing! Payment processing will fail.");
 }
 
 if (string.IsNullOrEmpty(stripeWebhookSecret))
 {
-    Console.WriteLine("⚠️ WARNING: Stripe Webhook Secret is missing! Webhook validation will be disabled.");
+    Console.WriteLine("WARNING: Stripe Webhook Secret is missing! Webhook validation will be disabled.");
 }
 builder.Services.AddCors(options =>
 {
@@ -90,7 +70,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                 "https://movietheaterfe.ae-tao-fullstack-api.site", // Production
                 "http://localhost:3000",                             // Local dev
-                "http://localhost:3001",                             // Local dev
+                "http://localhost:3001"                             // Local dev
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -144,7 +124,8 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "MovieTheater API v1");
         c.RoutePrefix = string.Empty;
         c.InjectStylesheet("/swagger-ui/custom-theme.css");
-        c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.Dracula)}</style>";  // Config theme của swagger
+        c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.Dracula)}</style>";
+        // Config theme của swagger
     });
 }
 

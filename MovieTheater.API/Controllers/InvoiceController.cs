@@ -1,13 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.InvoiceDTOs;
 using MovieTheater.Infrastructure.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/invoice")]
     [Authorize]
     public class InvoiceController : ControllerBase
     {
@@ -21,102 +23,116 @@ namespace MovieTheater.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<InvoiceDto>> GetInvoice(Guid id)
+        [SwaggerOperation(Summary = "Get invoice details by invoice ID")]
+        public async Task<IActionResult> GetInvoice(Guid id)
         {
             try
             {
                 var invoice = await _invoiceService.GetInvoiceByIdAsync(id);
                 if (invoice == null)
-                    return NotFound();
+                    return NotFound(ApiResult<object>.Failure("404", "Invoice not found"));
 
                 // Check if the user owns this invoice or is an admin
                 if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
                     return Forbid();
 
-                return Ok(invoice);
+                return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Fetched invoice successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
-        [HttpGet("booking/{bookingId}")]
-        public async Task<ActionResult<InvoiceDto>> GetInvoiceByBooking(Guid bookingId)
+        [HttpGet("booking/{id}")]
+        [SwaggerOperation(Summary = "Get invoice by booking ID")]
+        public async Task<IActionResult> GetInvoiceByBooking(Guid bookingId)
         {
             try
             {
                 var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(bookingId);
                 if (invoice == null)
-                    return NotFound();
+                    return NotFound(ApiResult<object>.Failure("404", "Invoice not found"));
 
                 // Check if the user owns this invoice or is an admin
                 if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
                     return Forbid();
 
-                return Ok(invoice);
+                return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Fetched invoice by booking successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
         [HttpGet("user")]
-        public async Task<ActionResult<IEnumerable<InvoiceDto>>> GetUserInvoices()
+        [SwaggerOperation(Summary = "Get all invoices for the current user")]
+        public async Task<IActionResult> GetUserInvoices()
         {
             try
             {
                 var userId = _claimsService.GetCurrentUserId;
                 var invoices = await _invoiceService.GetUserInvoicesAsync(userId);
-                return Ok(invoices);
+                return Ok(ApiResult<IEnumerable<InvoiceDto>>.Success(invoices, "200", "Fetched user invoices successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
-        [HttpPost("booking/{bookingId}")]
-        public async Task<ActionResult<InvoiceDto>> CreateInvoice(Guid bookingId)
+        [HttpPost("booking/{id}")]
+        [SwaggerOperation(Summary = "Create an invoice for a booking")]
+        public async Task<IActionResult> CreateInvoice(Guid bookingId)
         {
             try
             {
                 var invoice = await _invoiceService.CreateInvoiceAsync(bookingId);
-                return CreatedAtAction(nameof(GetInvoice), new { id = invoice.Id }, invoice);
+                return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Created invoice successfully"));
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(ex.Message);
+                return NotFound(ApiResult<object>.Failure("404", ex.Message));
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(ApiResult<object>.Failure("400", ex.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
         [HttpPut("{id}/status")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<InvoiceDto>> UpdateInvoiceStatus(Guid id, [FromBody] InvoiceStatusUpdateRequest request)
+        [SwaggerOperation(Summary = "Update invoice status (Admin only)")]
+        public async Task<IActionResult> UpdateInvoiceStatus(Guid id, [FromBody] InvoiceStatusUpdateRequest request)
         {
             try
             {
                 var invoice = await _invoiceService.UpdateInvoiceStatusAsync(id, request.Status);
-                return Ok(invoice);
+                return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Updated invoice status successfully"));
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(ex.Message);
+                return NotFound(ApiResult<object>.Failure("404", ex.Message));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
-
     }
 }
