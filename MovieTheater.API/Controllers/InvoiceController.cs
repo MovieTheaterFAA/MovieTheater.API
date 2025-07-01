@@ -52,7 +52,7 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
-                var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(bookingId);
+                var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(id);
                 if (invoice == null)
                     return NotFound(ApiResult<object>.Failure("404", "Invoice not found"));
 
