@@ -1,6 +1,6 @@
-﻿using System.ComponentModel;
+﻿using MovieTheater.Domain.Enums;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Domain.DTOs.AdminDTOs
 {
@@ -26,7 +26,7 @@ namespace MovieTheater.Domain.DTOs.AdminDTOs
 
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email format.")]
-        [StringLength(28, ErrorMessage = "Email cannot exceed 28 characters.")]
+        [StringLength(100, ErrorMessage = "Email cannot exceed 28 characters.")]
         [DefaultValue("default@example.com")]
         public string Email { get; set; }
 
@@ -37,7 +37,7 @@ namespace MovieTheater.Domain.DTOs.AdminDTOs
         [DefaultValue("0123456789")]
         public string PhoneNumber { get; set; }
 
-        [StringLength(28, ErrorMessage = "Address cannot exceed 28 characters.")]
+        [StringLength(300, ErrorMessage = "Address cannot exceed 28 characters.")]
         [DefaultValue("Default Address")]
         public string? Address { get; set; }
 

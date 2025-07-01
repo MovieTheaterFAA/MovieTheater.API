@@ -11,7 +11,7 @@ using System.Text.Json;
 namespace MovieTheater.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/stripe-webhook")]
     public class StripeWebhookController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
