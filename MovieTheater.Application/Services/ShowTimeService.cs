@@ -31,6 +31,20 @@ namespace MovieTheater.Application.Services
         {
             _loggerService.Info($"[AddBatchShowTimesAsync] Start adding showtimes for room {dto.CinemaRoomId}");
 
+            // Business rule: Only allow adding showtimes for movies in the next week (not in the current week)
+            var today = DateTime.UtcNow.Date;
+            var startOfThisWeek = today.AddDays(-(int)today.DayOfWeek);
+            var startOfNextWeek = startOfThisWeek.AddDays(7);
+
+            // All showtimes must be in next week (>= startOfNextWeek and < startOfNextWeek + 7)
+            foreach (var entry in dto.ShowTimes)
+            {
+                if (entry.StartTime.Date < startOfNextWeek || entry.StartTime.Date >= startOfNextWeek.AddDays(7))
+                {
+                    throw new InvalidOperationException("Showtimes can only be added for the next week (not in the current week).");
+                }
+            }
+
             var room = await _unitOfWork.CinemaRooms.GetByIdAsync(dto.CinemaRoomId);
             if (room == null)
                 throw new InvalidOperationException("Cinema room not found.");
@@ -39,6 +53,38 @@ namespace MovieTheater.Application.Services
             var movies = await _unitOfWork.Movies.GetQueryable()
                             .Where(m => movieIds.Contains(m.Id))
                             .ToDictionaryAsync(m => m.Id);
+
+            // ===== Overlap validation for batch =====
+            // Prepare a list of (start, end) for each showtime in the batch
+            var showtimeWindows = new List<(DateTime Start, DateTime End)>();
+            foreach (var entry in dto.ShowTimes)
+            {
+                if (!movies.TryGetValue(entry.MovieId, out var movie))
+                    throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
+
+                var runningTime = movie.RunningTime ?? 0;
+                var duration = TimeSpan.FromMinutes(runningTime + 15); // movie + rest
+                var start = entry.StartTime;
+                var end = start.Add(duration);
+
+                showtimeWindows.Add((start, end));
+            }
+
+            // Check for overlap in the batch
+            for (int i = 0; i < showtimeWindows.Count; i++)
+            {
+                for (int j = i + 1; j < showtimeWindows.Count; j++)
+                {
+                    var a = showtimeWindows[i];
+                    var b = showtimeWindows[j];
+                    // If a starts before b ends and b starts before a ends, they overlap
+                    if (a.Start < b.End && b.Start < a.End)
+                    {
+                        throw new InvalidOperationException("Showtimes in the batch cannot overlap. Please check the start times and durations.");
+                    }
+                }
+            }
+            // === End overlap validation ===
 
             var showTimes = new List<ShowTime>();
 
@@ -54,7 +100,7 @@ namespace MovieTheater.Application.Services
                 {
                     MovieId = entry.MovieId,
                     CinemaRoomId = dto.CinemaRoomId,
-                    ShowDate = entry.StartTime,
+                    ShowDate = DateTime.SpecifyKind(entry.StartTime, DateTimeKind.Utc),
                     Duration = duration,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _claimsService.GetCurrentUserId

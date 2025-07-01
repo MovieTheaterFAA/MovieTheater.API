@@ -36,6 +36,7 @@ public class SystemController : ControllerBase
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
+            //await SeedShowTimeSeatsWithRandomStatusAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -424,47 +425,82 @@ public class SystemController : ControllerBase
         var showtimes = new List<ShowTime>();
         var random = new Random();
 
-        foreach (var room in rooms)
+        var today = DateTime.UtcNow.Date;
+        var endOfJuly = new DateTime(today.Year, 7, 31);
+
+        foreach (var movie in movies)
         {
-            foreach (var movie in movies)
+            if (!movie.RunningTime.HasValue) continue;
+
+            // Pick 2 random, distinct cinema rooms for this movie
+            var selectedRooms = rooms.OrderBy(_ => random.Next()).Take(2).ToList();
+
+            foreach (var room in selectedRooms)
             {
-                if (!movie.RunningTime.HasValue) continue;
-
-                // Randomize showtime start hour based on room type
-                int baseHour = room.Type switch
+                var currentDay = today;
+                while (currentDay <= endOfJuly)
                 {
-                    RoomType.IMAX => 10,
-                    RoomType.FourD => 12,
-                    RoomType.TwoD => 14,
-                    _ => 16
-                };
-                int randomHour = baseHour + random.Next(0, 5); // e.g. 10-14 for IMAX, 12-16 for 4D, etc.
+                    // For each day, schedule multiple showtimes from 8AM to midnight
+                    var scheduledWindows = new List<(DateTime Start, DateTime End)>();
+                    var startHour = 8;
+                    var endHour = 24;
+                    var runningTime = movie.RunningTime.Value;
+                    var restTime = 15; // 15 minutes rest after each show
 
-                var showDate = DateTime.UtcNow.Date.AddHours(randomHour);
+                    var hour = startHour;
+                    while (hour < endHour)
+                    {
+                        // Randomize minute (0, 15, 30, 45) for some variety
+                        var minute = random.Next(0, 4) * 15;
+                        var start = currentDay.AddHours(hour).AddMinutes(minute);
 
-                showtimes.Add(new ShowTime
-                {
-                    Id = Guid.NewGuid(),
-                    CinemaRoomId = room.Id,
-                    MovieId = movie.Id,
-                    ShowDate = showDate,
-                    Duration = TimeSpan.FromMinutes(movie.RunningTime.Value),
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = Guid.Empty // System seed
-                });
+                        // Calculate end time (movie duration + rest)
+                        var duration = TimeSpan.FromMinutes(runningTime);
+                        var totalDuration = duration.Add(TimeSpan.FromMinutes(restTime));
+                        var end = start.Add(totalDuration);
+
+                        // Check for overlap with already scheduled showtimes for this day/room/movie
+                        bool overlap = scheduledWindows.Any(w => w.Start < end && start < w.End);
+                        if (!overlap && end.Hour <= endHour)
+                        {
+                            showtimes.Add(new ShowTime
+                            {
+                                Id = Guid.NewGuid(),
+                                CinemaRoomId = room.Id,
+                                MovieId = movie.Id,
+                                ShowDate = start,
+                                Duration = duration,
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = Guid.Empty // System seed
+                            });
+                            scheduledWindows.Add((start, end));
+                            // Move hour forward to after this showtime (plus rest)
+                            hour = end.Hour;
+                            // If the end minute is not 0, move to next quarter
+                            if (end.Minute > 0)
+                            {
+                                hour = end.Hour;
+                            }
+                        }
+                        else
+                        {
+                            // If overlap or out of range, try next 15-min slot
+                            hour += 1;
+                        }
+                    }
+                    currentDay = currentDay.AddDays(1);
+                }
             }
         }
 
         await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
 
-        _logger.Success($"Seeded {showtimes.Count} showtimes for all rooms and movies.");
+        _logger.Success($"Seeded {showtimes.Count} non-overlapping showtimes for all movies in random 2 cinema rooms each, from today to end of July, with multiple showtimes per day.");
     }
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
-        var rowCount = 5;
-        var seatsPerRow = 10;
         var seatList = new List<Seat>();
 
         foreach (var room in rooms)
@@ -473,32 +509,138 @@ public class SystemController : ControllerBase
             var existing = await _context.Seats.AnyAsync(s => s.CinemaRoomId == room.Id);
             if (existing) continue;
 
-            for (int rowIdx = 0; rowIdx < rowCount; rowIdx++)
+            if (room.Type == RoomType.TwoD)
             {
-                string rowLabel = ((char)('A' + rowIdx)).ToString();
-                SeatType seatType;
-                if (rowIdx == 0)
-                    seatType = SeatType.Couple;
-                else if (rowIdx == rowCount / 2)
-                    seatType = SeatType.VIP;
-                else
-                    seatType = SeatType.Normal;
-
-                for (int seatNum = 1; seatNum <= seatsPerRow; seatNum++)
+                // 2D: 10 rows, 13 columns (A-M)
+                int rowCount = 10;
+                int colCount = 13;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
                 {
-                    seatList.Add(new Seat
+                    for (int colIdx = 0; colIdx < colCount; colIdx++)
                     {
-                        Id = Guid.NewGuid(),
-                        CinemaRoomId = room.Id,
-                        Row = rowLabel,
-                        Number = seatNum,
-                        Type = seatType,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedBy = Guid.Empty // System seed
-                    });
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        SeatType seatType;
+                        if (colIdx == 12) // M (last column)
+                            seatType = SeatType.Couple;
+                        else if (colIdx >= 5 && colIdx <= 11) // F-L
+                            seatType = SeatType.VIP;
+                        else
+                            seatType = SeatType.Normal;
+
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = seatType,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
                 }
+                _logger.Info($"Seeded {rowCount * colCount} seats for 2D room {room.Name}.");
             }
-            _logger.Info($"Seeded {rowCount * seatsPerRow} seats for room {room.Name}.");
+            else if (room.Type == RoomType.IMAX)
+            {
+                // IMAX: 12 rows, variable columns
+                int rowCount = 12;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
+                {
+                    int colStart = 0;
+                    int colEnd = 0;
+                    if (rowIdx >= 1 && rowIdx <= 4)
+                    {
+                        colStart = 0; colEnd = 11; // A-L (12 seats)
+                    }
+                    else if (rowIdx >= 5 && rowIdx <= 8)
+                    {
+                        colStart = 0; colEnd = 14; // A-O (15 seats)
+                    }
+                    else // 9-12
+                    {
+                        colStart = 0; colEnd = 15; // A-P (16 seats)
+                    }
+
+                    for (int colIdx = colStart; colIdx <= colEnd; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        SeatType seatType;
+                        if (colIdx == colEnd) // Last column (L, O, or P)
+                            seatType = SeatType.Couple;
+                        else if (colIdx >= 5 && colIdx <= colEnd - 1) // F to one before last
+                            seatType = SeatType.VIP;
+                        else
+                            seatType = SeatType.Normal;
+
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = seatType,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                }
+                _logger.Info($"Seeded seats for IMAX room {room.Name}.");
+            }
+            else if (room.Type == RoomType.FourD)
+            {
+                // 4DX: 6 rows, 10 columns (A-J), 3-4-3 split, all VIP
+                int rowCount = 6;
+                for (int rowIdx = 1; rowIdx <= rowCount; rowIdx++)
+                {
+                    // Left section: A-C
+                    for (int colIdx = 0; colIdx <= 2; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                    // Center section: D-G
+                    for (int colIdx = 3; colIdx <= 6; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                    // Right section: H-J
+                    for (int colIdx = 7; colIdx <= 9; colIdx++)
+                    {
+                        string colLabel = ((char)('A' + colIdx)).ToString();
+                        seatList.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            CinemaRoomId = room.Id,
+                            Row = colLabel,
+                            Number = rowIdx,
+                            Type = SeatType.VIP,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = Guid.Empty // System seed
+                        });
+                    }
+                }
+                _logger.Info($"Seeded seats for 4DX room {room.Name}.");
+            }
         }
 
         if (seatList.Count > 0)
@@ -512,6 +654,45 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
+
+    private async Task SeedShowTimeSeatsWithRandomStatusAsync()
+    {
+        var showtimes = await _context.Showtimes.ToListAsync();
+        var allSeats = await _context.Seats.ToListAsync();
+        var random = new Random();
+        var seatStatusValues = Enum.GetValues(typeof(SeatStatus)).Cast<SeatStatus>().ToArray();
+        var showTimeSeats = new List<ShowTimeSeat>();
+
+        foreach (var showtime in showtimes)
+        {
+            // Get seats for the cinema room of this showtime
+            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
+
+            foreach (var seat in seatsInRoom)
+            {
+                showTimeSeats.Add(new ShowTimeSeat
+                {
+                    Id = Guid.NewGuid(),
+                    ShowTimeId = showtime.Id,
+                    SeatId = seat.Id,
+                    Status = seatStatusValues[random.Next(seatStatusValues.Length)],
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty // System seed
+                });
+            }
+        }
+
+        if (showTimeSeats.Count > 0)
+        {
+            await _context.ShowTimeSeats.AddRangeAsync(showTimeSeats);
+            await _context.SaveChangesAsync();
+            _logger.Success($"Seeded {showTimeSeats.Count} ShowTimeSeats with random status.");
+        }
+        else
+        {
+            _logger.Info("No ShowTimeSeats to seed.");
+        }
+    }
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
@@ -522,7 +703,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(1),
             EndTime = DateTime.UtcNow.AddDays(30),
             Detail = "Enjoy the hottest movies and exclusive deals all summer long!",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fsummer-blockbuster.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2024/112024/Happy_Day_Oct_28_N_O_350x495.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Buy 1 Get 1 Free", DiscountValue = 0.5m, Detail = "Buy one ticket, get one free for select movies." },
@@ -538,7 +719,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(10),
             EndTime = DateTime.UtcNow.AddDays(40),
             Detail = "Celebrate Mid-Autumn with special screenings and mooncake treats.",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fmid-autumn.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2025/042025/full_01.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Mooncake Gift", DiscountValue = 0.05m, Detail = "Free mooncake with every ticket." },
@@ -554,7 +735,7 @@ public class SystemController : ControllerBase
             StartTime = DateTime.UtcNow.AddDays(20),
             EndTime = DateTime.UtcNow.AddDays(50),
             Detail = "Ring in the New Year with a marathon of blockbuster hits.",
-            Image = "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=event%2Fnewyear.jpg&version_id=null",
+            Image = "https://iguov8nhvyobj.vcdn.cloud/media/wysiwyg/2025/052025/350x495_4_.jpg",
             Promotions = new List<Promotion>
             {
                 new Promotion { Title = "Marathon Pass", DiscountValue = 0.4m, Detail = "40% off for all-day marathon passes." },

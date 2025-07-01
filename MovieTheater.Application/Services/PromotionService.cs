@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -6,7 +7,6 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
 
@@ -16,13 +16,15 @@ public class PromotionService : IPromotionService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClaimsService _claimsService;
     private readonly IAuditLogService _auditLogService;
+    private readonly IRedisService _redisService;
 
-    public PromotionService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService)
+    public PromotionService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
         _claimsService = claimsService;
         _auditLogService = auditLogService;
+        _redisService = redisService;
     }
 
     public async Task<PromotionResponseDto?> AddPromotionAsync(PromotionRequestDto dto)
@@ -78,6 +80,7 @@ public class PromotionService : IPromotionService
             // Thêm chương trình khuyến mãi vào cơ sở dữ liệu
             await _unitOfWork.Promotions.AddAsync(promotion);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("event:list:");
 
             await _auditLogService.LogAsync
             (
@@ -90,7 +93,6 @@ public class PromotionService : IPromotionService
             changedFields,
             "Admin created new promotion."
             );
-
 
             _loggerService.Success($"[AddPromotionAsync] Promotion {promotion.Title} added successfully.");
 
@@ -109,9 +111,8 @@ public class PromotionService : IPromotionService
             _loggerService.Error($"DbUpdateException: {dbEx.InnerException?.Message ?? dbEx.Message}");
             throw;
         }
-
-
     }
+
     public async Task<bool> DeletePromotionAsync(Guid promotionId)
     {
         try
@@ -130,6 +131,7 @@ public class PromotionService : IPromotionService
 
             await _unitOfWork.Promotions.SoftRemove(promotion);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("event:list:");
 
             var newData = new
             {
@@ -164,6 +166,7 @@ public class PromotionService : IPromotionService
             return false;
         }
     }
+
     public async Task<PromotionResponseDto?> UpdatePromotionAsync(Guid promotionId, PromotionUpdateDto dto)
     {
         try
@@ -240,6 +243,7 @@ public class PromotionService : IPromotionService
 
             await _unitOfWork.Promotions.Update(promotion);
             await _unitOfWork.SaveChangesAsync();
+            await _redisService.RemoveByPatternAsync("event:list:");
 
             var newData = new
             {
