@@ -48,7 +48,7 @@ namespace MovieTheater.API.Controllers
 
         [HttpGet("booking/{id}")]
         [SwaggerOperation(Summary = "Get invoice by booking ID")]
-        public async Task<IActionResult> GetInvoiceByBooking(Guid bookingId)
+        public async Task<IActionResult> GetInvoiceByBooking(Guid id)
         {
             try
             {
@@ -90,11 +90,11 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("booking/{id}")]
         [SwaggerOperation(Summary = "Create an invoice for a booking")]
-        public async Task<IActionResult> CreateInvoice(Guid bookingId)
+        public async Task<IActionResult> CreateInvoice(Guid id)
         {
             try
             {
-                var invoice = await _invoiceService.CreateInvoiceAsync(bookingId);
+                var invoice = await _invoiceService.CreateInvoiceAsync(id);
                 return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Created invoice successfully"));
             }
             catch (KeyNotFoundException ex)
