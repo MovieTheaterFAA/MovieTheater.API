@@ -3,7 +3,6 @@
 public class ApiResult
 {
     public bool IsSuccess { get; set; }
-    public bool IsFailure => !IsSuccess;
     public ResponseContent Value { get; set; }
     public ErrorContent Error { get; set; }
 
@@ -39,7 +38,6 @@ public class ApiResult
 public class ApiResult<T>
 {
     public bool IsSuccess { get; set; }
-    public bool IsFailure => !IsSuccess;
     public ResponseDataContent<T> Value { get; set; }
     public ErrorContent Error { get; set; }
 
