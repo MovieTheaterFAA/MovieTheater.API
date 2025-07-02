@@ -182,6 +182,11 @@ namespace MovieTheater.API.Controllers
             {
                 var result = await _movieService.DeleteMovieAsync(id);
 
+                if(!result)
+                {
+                    return NotFound(ApiResult<object>.Failure("404", $"Movie with ID {id} not found."));
+                }
+
                 return Ok(ApiResult<bool>.Success(result, "200", "Movie updated successfully."));
             }
             catch (Exception ex)
