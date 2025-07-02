@@ -10,5 +10,7 @@ namespace MovieTheater.Application.Interfaces
         Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime? date = null);
 
         Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime? date, Guid? movieId, Guid? roomId);
+
+        Task<int> DeleteShowTimesByDateAsync(DateTime date);
     }
 }

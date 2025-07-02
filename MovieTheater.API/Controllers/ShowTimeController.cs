@@ -101,5 +101,37 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpDelete("by-date")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+            Summary = "Delete all showtimes by date",
+            Description = "Deletes all showtimes for a specific date. Requires Admin privileges."
+        )]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> DeleteShowTimesByDate(
+        [FromQuery, SwaggerParameter("Show date (yyyy-MM-dd)")] DateTime date)
+        {
+            try
+            {
+                if (date.Kind == DateTimeKind.Unspecified)
+                    date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
+                var deletedCount = await _showTimeService.DeleteShowTimesByDateAsync(date);
+                if (deletedCount == 0)
+                    return NotFound(ApiResult<object>.Failure("404", $"No showtimes found for date {date:yyyy-MM-dd}."));
+
+                return Ok(ApiResult<object>.Success(null, "200", $"Deleted {deletedCount} showtimes for date {date:yyyy-MM-dd}."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }

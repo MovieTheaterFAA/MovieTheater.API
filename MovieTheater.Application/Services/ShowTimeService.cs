@@ -146,6 +146,49 @@ namespace MovieTheater.Application.Services
             }).ToList();
         }
 
+        public async Task<int> DeleteShowTimesByDateAsync(DateTime date)
+        {
+            _loggerService.Info($"[DeleteShowTimesByDateAsync] Deleting showtimes for date: {date:yyyy-MM-dd}");
+
+            var showTimes = await _unitOfWork.ShowTimes.GetAllAsync(st => st.ShowDate.Date == date.Date && !st.IsDeleted);
+            if (showTimes == null || !showTimes.Any())
+            {
+                _loggerService.Warn($"[DeleteShowTimesByDateAsync] No showtimes found for date: {date:yyyy-MM-dd}");
+                return 0;
+            }
+
+            int deletedCount = 0;
+            foreach (var showTime in showTimes)
+            {
+                // Soft delete (if supported)
+                var result = await _unitOfWork.ShowTimes.SoftRemove(showTime);
+                if (result) deletedCount++;
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Invalidate related cache
+            await _redisService.RemoveByPatternAsync("showtime:date:*");
+            await _redisService.RemoveByPatternAsync("showtime:movie:*");
+
+            // Audit log
+            await _unitOfWork.AuditLogs.AddAsync(new AuditLog
+            {
+                AdminId = _claimsService.GetCurrentUserId,
+                ActionType = AuditActionType.Delete.ToString(),
+                EntityType = "ShowTime",
+                EntityId = Guid.Empty,
+                OldValue = System.Text.Json.JsonSerializer.Serialize(showTimes),
+                NewValue = null,
+                ChangedFields = $"ShowDate: {date:yyyy-MM-dd}",
+                Timestamp = DateTime.UtcNow,
+                Reason = $"Deleted all showtimes for date {date:yyyy-MM-dd}"
+            });
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[DeleteShowTimesByDateAsync] Deleted {deletedCount} showtimes for date: {date:yyyy-MM-dd}");
+            return deletedCount;
+        }
+
         public async Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime? date, Guid? movieId, Guid? roomId)
         {
             try
