@@ -184,7 +184,7 @@ namespace MovieTheater.API.Controllers
 
                 if(!result)
                 {
-                    return BadRequest(ApiResult<object>.Failure("404", $"Movie with ID {id} not found."));
+                    return NotFound(ApiResult<object>.Failure("404", $"Movie with ID {id} not found."));
                 }
 
                 return Ok(ApiResult<bool>.Success(result, "200", "Movie updated successfully."));
