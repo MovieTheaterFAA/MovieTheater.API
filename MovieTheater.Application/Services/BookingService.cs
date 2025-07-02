@@ -20,7 +20,7 @@ public class BookingService : IBookingService
         _redisService = redisService;
     }
 
-    public async Task<BookingDto> GetBookingByIdAsync(Guid id)
+    public async Task<BookingResponseDto> GetBookingByIdAsync(Guid id)
     {
         if (id == Guid.Empty)
         {
@@ -30,22 +30,87 @@ public class BookingService : IBookingService
 
         try
         {
-            string cacheKey = $"booking:detail:{id}";
-            var cached = await _redisService.GetAsync<BookingDto>(cacheKey);
-            if (cached != null) return cached;
+            //string cacheKey = $"booking:detail:{id}";
+            //var cached = await _redisService.GetAsync<BookingResponseDto>(cacheKey);
+            //if (cached != null) return cached;
 
-            var booking = await _unitOfWork.Bookings.GetByIdAsync(id,
+            var bookingWithDetails = await _unitOfWork.Bookings.GetByIdAsync(
+                id,
                 b => b.BookingSeats,
-                b => b.BookingFoods);
+                b => b.BookingFoods,
+                b => b.Member,
+                b => b.Showtime);
 
-            if (booking == null)
+            if (bookingWithDetails == null)
             {
                 _loggerService.Warn($"No booking found with ID: {id}");
-                return null;
+                throw new KeyNotFoundException($"Booking with ID {id} not found.");
+            }
+            _loggerService.Info($"Booking found with ID: {id}, User ID: {bookingWithDetails.MemberId}");
+
+            var member = bookingWithDetails.Member;
+            if (member == null)
+            {
+                _loggerService.Warn($"No member found for booking ID: {id}");
+                throw new KeyNotFoundException($"Member for booking ID {id} not found.");
             }
 
-            var result = MapToDto(booking);
-            await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+            var showTime = bookingWithDetails.Showtime;
+            if (showTime == null)
+            {
+                _loggerService.Warn($"No showtime found for booking ID: {id}");
+                throw new KeyNotFoundException($"Showtime for booking ID {id} not found.");
+            }
+
+            var movie = await _unitOfWork.Movies.GetByIdAsync(showTime.MovieId);
+            if (movie == null)
+            {
+                _loggerService.Warn($"No movie found for showtime ID: {showTime.Id}");
+                throw new KeyNotFoundException($"Movie for showtime ID {showTime.Id} not found.");
+            }
+
+            var bookingSeats = bookingWithDetails.BookingSeats;
+
+            if (bookingSeats == null || !bookingSeats.Any())
+            {
+                _loggerService.Warn($"No seats found for booking ID: {id}");
+                throw new KeyNotFoundException($"No seats found for booking ID {id}.");
+            }
+
+            var Seats = await _unitOfWork.Seats.GetAllAsync(s => bookingSeats.Select(bs => bs.SeatId).Contains(s.Id));
+
+            var Foods = new List<FoodAndDrink>();
+            var bookingFoods = bookingWithDetails.BookingFoods;
+            if (bookingFoods != null || bookingFoods.Any())
+            {
+                Foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(
+                    f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id));
+            }
+
+
+            var result = new BookingResponseDto
+            {
+                Id = bookingWithDetails.Id,
+                MemberName = member.FullName,
+                Movie = movie.Name,
+                BookingDate = bookingWithDetails.BookingDate,
+                TotalAmount = bookingWithDetails.TotalAmount,
+                Status = bookingWithDetails.Status,
+                BookingSeats = Seats.Select(seat => new BookingSeatDto
+                {
+                    SeatId = seat.Id,
+                    Row = seat.Row,
+                    Number = seat.Number
+                }).ToList(),
+                BookingFoods = Foods.Select(food => new BookingFoodDto
+                {
+                    FoodId = food.Id,
+                    Name = food.Name,
+                    Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                    Price = food.Price
+                }).ToList()
+            };
+            //await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
             return result;
         }
         catch (Exception ex)
@@ -55,7 +120,7 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<IEnumerable<BookingDto>> GetUserBookingsAsync(Guid userId)
+    public async Task<IEnumerable<BookingResponseDto>> GetUserBookingsAsync(Guid userId)
     {
         if (userId == Guid.Empty)
         {
@@ -65,23 +130,230 @@ public class BookingService : IBookingService
 
         try
         {
-            string cacheKey = $"booking:user:{userId}";
-            var cached = await _redisService.GetAsync<IEnumerable<BookingDto>>(cacheKey);
-            if (cached != null) return cached;
+            //string cacheKey = $"booking:user:{userId}";
+            //var cached = await _redisService.GetAsync<IEnumerable<BookingResponseDto>>(cacheKey);
+            //if (cached != null) return cached;
+
+            _loggerService.Info($"Fetching bookings for user ID: {userId}");
 
             var bookings = await _unitOfWork.Bookings.GetAllAsync(
                 b => b.MemberId == userId,
                 b => b.BookingSeats,
-                b => b.BookingFoods);
+                b => b.BookingFoods,
+                b => b.Member,
+                b => b.Showtime);
 
-            var result = bookings.Select(MapToDto).ToList();
-            await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+            if (!bookings.Any())
+            {
+                _loggerService.Info($"No bookings found for user ID: {userId}");
+                return new List<BookingResponseDto>();
+            }
+
+            var result = new List<BookingResponseDto>();
+
+            foreach (var booking in bookings)
+            {
+                var showTime = booking.Showtime;
+                if (showTime == null)
+                {
+                    _loggerService.Warn($"No showtime found for booking ID: {booking.Id}");
+                    throw new KeyNotFoundException($"Showtime for booking ID {booking.Id} not found.");
+                }
+
+                var movie = await _unitOfWork.Movies.GetByIdAsync(showTime.MovieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"No movie found for showtime ID: {showTime.Id}");
+                    throw new KeyNotFoundException($"Movie for showtime ID {showTime.Id} not found.");
+                }
+
+                var member = booking.Member;
+                if (member == null)
+                {
+                    _loggerService.Warn($"No member found for booking ID: {booking.Id}");
+                    throw new KeyNotFoundException($"Member for booking ID {booking.Id} not found.");
+                }
+
+                var bookingSeats = booking.BookingSeats;
+                if (bookingSeats == null || !bookingSeats.Any())
+                {
+                    _loggerService.Warn($"No seats found for booking ID: {booking.Id}");
+                }
+
+                var seatIds = bookingSeats.Select(bs => bs.SeatId).ToList();
+                var seats = await _unitOfWork.Seats.GetAllAsync(s => seatIds.Contains(s.Id));
+
+                var foods = new List<FoodAndDrink>();
+                var bookingFoods = booking.BookingFoods;
+                if (bookingFoods != null && bookingFoods.Any())
+                {
+                    var foodIds = bookingFoods.Select(bf => bf.FoodAndDrinkId).ToList();
+                    foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => foodIds.Contains(f.Id));
+                }
+
+                var bookingDto = new BookingResponseDto
+                {
+                    Id = booking.Id,
+                    MemberName = member.FullName,
+                    Movie = movie.Name,
+                    BookingDate = booking.BookingDate,
+                    Status = booking.Status,
+                    TotalAmount = booking.TotalAmount,
+                    BookingSeats = seats.Select(seat => new BookingSeatDto
+                    {
+                        SeatId = seat.Id,
+                        Row = seat.Row,
+                        Number = seat.Number
+                    }).ToList(),
+                    BookingFoods = foods.Select(food => new BookingFoodDto
+                    {
+                        FoodId = food.Id,
+                        Name = food.Name,
+                        Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                        Price = food.Price
+                    }).ToList()
+                };
+
+                result.Add(bookingDto);
+            }
+
+            _loggerService.Success($"Successfully retrieved {result.Count} bookings for user ID: {userId}");
+            //await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
             return result;
         }
         catch (Exception ex)
         {
             _loggerService.Error($"An unexpected error occurred while fetching bookings for user ID {userId}: {ex.Message}");
             throw;
+        }
+    }
+
+    public async Task<Pagination<BookingResponseDto>> GetAllBookingsAsync(int page = 1, int pageSize = 10, BookingStatus? status = null,
+    string? sortBy = null, bool isDescending = false, string? search = null)
+    {
+        try
+        {
+            _loggerService.Info($"Fetching bookings - Page {page}, PageSize {pageSize}, Status: {status}, Search: {search}");
+
+            //string cacheKey = $"booking:list:{search}:{sortBy}:{isDescending}:{page}:{pageSize}:{status}";
+            //var cached = await _redisService.GetAsync<Pagination<BookingResponseDto>>(cacheKey);
+            //if (cached != null) return cached;
+
+            var bookings = await _unitOfWork.Bookings.GetAllAsync(b => !b.IsDeleted);
+            var query = bookings.AsQueryable();
+
+            // Apply status filter if provided
+            if (status.HasValue)
+            {
+                string statusString = status.ToString();
+                query = query.Where(b => b.Status.Equals(statusString, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Apply search filter if provided
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var lowerSearch = search.ToLower();
+                query = query.Where(b =>
+                    b.Id.ToString().ToLower().Contains(lowerSearch) ||
+                    b.Member.FullName.ToString().ToLower().Contains(lowerSearch));
+            }
+
+            var totalItems = query.Count();
+
+            // Apply sorting
+            query = sortBy?.ToLower() switch
+            {
+                "date" => isDescending ? query.OrderByDescending(b => b.BookingDate) : query.OrderBy(b => b.BookingDate),
+                "amount" => isDescending ? query.OrderByDescending(b => b.TotalAmount) : query.OrderBy(b => b.TotalAmount),
+                _ => isDescending ? query.OrderByDescending(b => b.BookingDate) : query.OrderBy(b => b.BookingDate)
+            };
+
+            // Apply pagination
+            var pagedItems = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // Load complete related data for each booking
+            var result = new List<BookingResponseDto>();
+
+            foreach (var booking in pagedItems)
+            {
+                // Get full booking details including seats and foods
+                var completeBooking = await _unitOfWork.Bookings.GetByIdAsync(booking.Id,
+                    b => b.BookingSeats,
+                    b => b.BookingFoods,
+                    b => b.Member,
+                    b => b.Showtime);
+
+                var member = completeBooking.Member;
+                if (member == null)
+                {
+                    _loggerService.Warn($"No member found for booking ID: {completeBooking.Id}");
+                    continue;
+                }
+
+                var showTime = completeBooking.Showtime;
+                if (showTime == null)
+                {
+                    _loggerService.Warn($"No showtime found for booking ID: {completeBooking.Id}");
+                    continue;
+                }
+
+                var movie = await _unitOfWork.Movies.GetByIdAsync(showTime.MovieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"No movie found for showtime ID: {showTime.Id}");
+                    continue;
+                }
+
+                var bookingSeats = completeBooking.BookingSeats;
+                var seats = await _unitOfWork.Seats.GetAllAsync(s => bookingSeats.Select(bs => bs.SeatId).Contains(s.Id));
+
+                var foods = new List<FoodAndDrink>();
+                var bookingFoods = completeBooking.BookingFoods;
+                if (bookingFoods != null && bookingFoods.Any())
+                {
+                    foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(
+                        f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id));
+                }
+
+                var bookingDto = new BookingResponseDto
+                {
+                    Id = completeBooking.Id,
+                    MemberName = member.FullName,
+                    Movie = movie.Name,
+                    BookingDate = completeBooking.BookingDate,
+                    Status = completeBooking.Status,
+                    TotalAmount = completeBooking.TotalAmount,
+                    BookingSeats = seats.Select(seat => new BookingSeatDto
+                    {
+                        SeatId = seat.Id,
+                        Row = seat.Row,
+                        Number = seat.Number
+                    }).ToList(),
+                    BookingFoods = foods.Select(food => new BookingFoodDto
+                    {
+                        FoodId = food.Id,
+                        Name = food.Name,
+                        Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                        Price = food.Price
+                    }).ToList()
+                };
+
+                result.Add(bookingDto);
+            }
+
+            var response = new Pagination<BookingResponseDto>(result, totalItems, page, pageSize);
+            //await _redisService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(5));
+            _loggerService.Success($"Retrieved {result.Count} bookings on page {page} successfully.");
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Failed to retrieve bookings. Exception: {ex.Message}");
+            throw new Exception("An error occurred while retrieving booking items. Please try again later.");
         }
     }
 
@@ -190,99 +462,6 @@ public class BookingService : IBookingService
         }
     }
 
-    //public async Task<BookingResult> CreateBookingWithInvoiceAsync(Guid userId, CreateBookingRequest request)
-    //{
-    //    if (string.IsNullOrEmpty(request.ReservationCode))
-    //    {
-    //        _loggerService.Warn("Attempted to create booking without reservation code");
-    //        throw new ArgumentException("Reservation code is required");
-    //    }
-
-    //    try
-    //    {
-    //        // Begin transaction
-    //        await using var transaction = await _unitOfWork.BeginTransactionAsync();
-
-    //        // Verify reservation is valid
-    //        var reservation = await _redisService.GetAsync<SeatReservation>($"reservation:{request.ReservationCode}");
-    //        if (reservation == null || reservation.ExpiryTime < DateTime.UtcNow)
-    //        {
-    //            _loggerService.Warn($"Reservation {request.ReservationCode} not found or expired");
-    //            throw new InvalidOperationException("Seat reservation has expired");
-    //        }
-
-    //        // Create the booking
-    //        var booking = new Booking
-    //        {
-    //            MemberId = userId,
-    //            ShowtimeId = request.ShowTimeId,
-    //            BookingDate = DateTime.UtcNow,
-    //            ReservationCode = request.ReservationCode,
-    //            Status = BookingStatus.Created,
-    //            BookingSeats = request.SeatIds.Select(seatId => new BookingSeat
-    //            {
-    //                SeatId = seatId
-    //            }).ToList(),
-    //            BookingFoods = request.FoodItems.Select(fi => new BookingFood
-    //            {
-    //                FoodAndDrinkId = fi.FoodId,
-    //                Quantity = fi.Quantity
-    //            }).ToList()
-    //        };
-
-    //        await _unitOfWork.Bookings.AddAsync(booking);
-    //        await _unitOfWork.SaveChangesAsync();
-
-    //        // Create invoice
-    //        var invoice = new Invoice
-    //        {
-    //            BookingId = booking.Id,
-    //            InvoiceDate = DateTime.UtcNow,
-    //            Amount = CalculateTotalAmount(booking),
-    //            Status = "Pending"
-    //        };
-
-    //        await _unitOfWork.Invoices.AddAsync(invoice);
-    //        await _unitOfWork.SaveChangesAsync();
-
-    //        // Update seat status to Booked only after successful invoice creation
-    //        var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
-    //            sts => sts.ShowTimeId == request.ShowTimeId &&
-    //                  sts.ReservationCode == request.ReservationCode);
-
-    //        foreach (var seat in showTimeSeats)
-    //        {
-    //            seat.Status = SeatStatus.Booked;
-    //            seat.ReservationCode = null;
-    //            seat.ReservationExpiry = null;
-    //        }
-
-    //        await _unitOfWork.ShowTimeSeats.UpdateRange(showTimeSeats.ToList());
-    //        await _unitOfWork.SaveChangesAsync();
-
-    //        // Commit transaction
-    //        await transaction.CommitAsync();
-
-    //        // Clear reservation from Redis
-    //        await _redisService.RemoveAsync($"reservation:{request.ReservationCode}");
-
-    //        _loggerService.Success($"Successfully created booking {booking.Id} with invoice {invoice.Id}");
-
-    //        return new BookingResult
-    //        {
-    //            BookingId = booking.Id,
-    //            InvoiceId = invoice.Id,
-    //            Amount = invoice.Amount,
-    //            Status = booking.Status
-    //        };
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        _loggerService.Error($"Error creating booking with invoice: {ex.Message}");
-    //        throw;
-    //    }
-    //}
-
     public async Task<bool> CancelBookingAsync(Guid bookingId)
     {
         if (bookingId == Guid.Empty)
@@ -331,73 +510,6 @@ public class BookingService : IBookingService
             throw;
         }
     }
-
-    //public async Task<ReservationResult> ReserveSeatsAsync(Guid showTimeId, List<Guid> seatIds, TimeSpan reservationDuration = default)
-    //{
-    //    if (reservationDuration == default)
-    //        reservationDuration = TimeSpan.FromMinutes(10);
-
-    //    try
-    //    {
-    //        _loggerService.Info($"Attempting to reserve {seatIds.Count} seats for showtime {showTimeId}");
-
-    //        var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
-    //            sts => sts.ShowTimeId == showTimeId && seatIds.Contains(sts.SeatId));
-
-    //        // Check if any seats are already reserved or booked
-    //        if (showTimeSeats.Any(s => s.Status != SeatStatus.Available))
-    //        {
-    //            var unavailableSeats = showTimeSeats.Where(s => s.Status != SeatStatus.Available)
-    //                .Select(s => s.SeatId).ToList();
-
-    //            _loggerService.Warn($"Attempted to reserve unavailable seats: {string.Join(", ", unavailableSeats)}");
-    //            return new ReservationResult { Success = false, UnavailableSeats = unavailableSeats };
-    //        }
-
-    //        // Create reservation code
-    //        var reservationCode = OtpGenerator.GenerateAlphanumeric(8);
-    //        var expiryTime = DateTime.UtcNow.Add(reservationDuration);
-
-    //        // Update seat status to Reserved
-    //        foreach (var seat in showTimeSeats)
-    //        {
-    //            seat.Status = SeatStatus.Reserved;
-    //            seat.ReservationCode = reservationCode;
-    //            seat.ReservationExpiry = expiryTime;
-    //        }
-
-    //        await _unitOfWork.ShowTimeSeats.UpdateRange(showTimeSeats.ToList());
-    //        await _unitOfWork.SaveChangesAsync();
-
-    //        // Store reservation in Redis for quick access
-    //        var reservation = new SeatReservation
-    //        {
-    //            ReservationCode = reservationCode,
-    //            ShowTimeId = showTimeId,
-    //            SeatIds = seatIds,
-    //            ExpiryTime = expiryTime
-    //        };
-
-    //        await _redisService.SetAsync(
-    //            $"reservation:{reservationCode}",
-    //            reservation,
-    //            reservationDuration);
-
-    //        _loggerService.Success($"Successfully reserved seats with code {reservationCode}");
-
-    //        return new ReservationResult
-    //        {
-    //            Success = true,
-    //            ReservationCode = reservationCode,
-    //            ExpiryTime = expiryTime
-    //        };
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        _loggerService.Error($"Error reserving seats: {ex.Message}");
-    //        throw;
-    //    }
-    //}
 
     private BookingDto MapToDto(Booking booking)
     {
