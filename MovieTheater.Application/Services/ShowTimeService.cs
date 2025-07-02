@@ -109,7 +109,8 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.ShowTimes.AddRangeAsync(showTimes);
             await _unitOfWork.SaveChangesAsync();
-            await _redisService.RemoveAsync($"showtime:room:{dto.CinemaRoomId}:date:{dto.ShowTimes.First().StartTime:yyyyMMdd}");
+            await _redisService.RemoveByPatternAsync("showtime:date:*");
+            await _redisService.RemoveByPatternAsync("showtime:movie:*");
 
             // Audit log: log only primitive properties
             var newShowTimeData = showTimes.Select(st => new
@@ -205,7 +206,6 @@ namespace MovieTheater.Application.Services
                 throw new InvalidOperationException("An error occurred while retrieving showtimes.", ex);
             }
         }
-
 
         //============================ User =============================
         public async Task<List<ShowtimeResponseDTO>> GetShowTimesByMovieAndDateAsync(Guid movieId, DateTime? date = null)
