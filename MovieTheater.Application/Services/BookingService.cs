@@ -41,7 +41,7 @@ public class BookingService : IBookingService
                 b => b.Member,
                 b => b.Showtime);
 
-            if (bookingWithDetails == null)
+            if (bookingWithDetails == null || bookingWithDetails.IsDeleted)
             {
                 _loggerService.Warn($"No booking found with ID: {id}");
                 throw new KeyNotFoundException($"Booking with ID {id} not found.");
@@ -77,16 +77,16 @@ public class BookingService : IBookingService
                 throw new KeyNotFoundException($"No seats found for booking ID {id}.");
             }
 
-            var Seats = await _unitOfWork.Seats.GetAllAsync(s => bookingSeats.Select(bs => bs.SeatId).Contains(s.Id));
+            var Seats = await _unitOfWork.Seats.GetAllAsync(s =>
+                bookingSeats.Select(bs => bs.SeatId).Contains(s.Id) && !s.IsDeleted);
 
             var Foods = new List<FoodAndDrink>();
             var bookingFoods = bookingWithDetails.BookingFoods;
             if (bookingFoods != null || bookingFoods.Any())
             {
                 Foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(
-                    f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id));
+                    f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id) && !f.IsDeleted);
             }
-
 
             var result = new BookingResponseDto
             {
@@ -137,7 +137,7 @@ public class BookingService : IBookingService
             _loggerService.Info($"Fetching bookings for user ID: {userId}");
 
             var bookings = await _unitOfWork.Bookings.GetAllAsync(
-                b => b.MemberId == userId,
+                b => b.MemberId == userId && !b.IsDeleted,
                 b => b.BookingSeats,
                 b => b.BookingFoods,
                 b => b.Member,
@@ -181,14 +181,14 @@ public class BookingService : IBookingService
                 }
 
                 var seatIds = bookingSeats.Select(bs => bs.SeatId).ToList();
-                var seats = await _unitOfWork.Seats.GetAllAsync(s => seatIds.Contains(s.Id));
+                var seats = await _unitOfWork.Seats.GetAllAsync(s => seatIds.Contains(s.Id) && !s.IsDeleted);
 
                 var foods = new List<FoodAndDrink>();
                 var bookingFoods = booking.BookingFoods;
                 if (bookingFoods != null && bookingFoods.Any())
                 {
                     var foodIds = bookingFoods.Select(bf => bf.FoodAndDrinkId).ToList();
-                    foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => foodIds.Contains(f.Id));
+                    foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => foodIds.Contains(f.Id) && !f.IsDeleted);
                 }
 
                 var bookingDto = new BookingResponseDto
@@ -249,13 +249,24 @@ public class BookingService : IBookingService
                 query = query.Where(b => b.Status.Equals(statusString, StringComparison.OrdinalIgnoreCase));
             }
 
-            // Apply search filter if provided
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var lowerSearch = search.ToLower();
+
+                var memberIds = (await _unitOfWork.Users.GetAllAsync(u =>
+                    !u.IsDeleted && u.FullName != null && u.FullName.ToLower().Contains(lowerSearch)))
+                    .Select(u => u.Id)
+                    .ToList();
+
+                var showtimeIds = (await _unitOfWork.ShowTimes.GetAllAsync(st =>
+                    !st.IsDeleted && st.Movie != null && !st.Movie.IsDeleted &&
+                    st.Movie.Name != null && st.Movie.Name.ToLower().Contains(lowerSearch)))
+                    .Select(st => st.Id)
+                    .ToList();
+
                 query = query.Where(b =>
-                    b.Id.ToString().ToLower().Contains(lowerSearch) ||
-                    b.Member.FullName.ToString().ToLower().Contains(lowerSearch));
+                    memberIds.Contains(b.MemberId) ||
+                    showtimeIds.Contains(b.ShowtimeId));
             }
 
             var totalItems = query.Count();
@@ -308,14 +319,14 @@ public class BookingService : IBookingService
                 }
 
                 var bookingSeats = completeBooking.BookingSeats;
-                var seats = await _unitOfWork.Seats.GetAllAsync(s => bookingSeats.Select(bs => bs.SeatId).Contains(s.Id));
+                var seats = await _unitOfWork.Seats.GetAllAsync(s => bookingSeats.Select(bs => bs.SeatId).Contains(s.Id) && !s.IsDeleted);
 
                 var foods = new List<FoodAndDrink>();
                 var bookingFoods = completeBooking.BookingFoods;
                 if (bookingFoods != null && bookingFoods.Any())
                 {
                     foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(
-                        f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id));
+                        f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id) && !f.IsDeleted);
                 }
 
                 var bookingDto = new BookingResponseDto
@@ -475,9 +486,10 @@ public class BookingService : IBookingService
             _loggerService.Info($"Starting booking cancellation for ID: {bookingId}");
 
             var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId, b => b.BookingSeats);
-            if (booking == null)
+
+            if (booking == null || booking.IsDeleted)
             {
-                _loggerService.Warn($"No booking found with ID: {bookingId}");
+                _loggerService.Warn($"No booking found with ID: {bookingId} or booking is already deleted");
                 return false;
             }
 
