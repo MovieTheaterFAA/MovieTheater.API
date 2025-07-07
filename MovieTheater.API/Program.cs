@@ -148,7 +148,4 @@ app.UseSession();
 app.MapHub<SeatHub>("/seatHubs");
 app.MapHub<ChatbotHub>("/chatbotHubs");
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok("Healthy!"));
-
 app.Run();
