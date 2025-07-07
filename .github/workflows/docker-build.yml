@@ -46,7 +46,7 @@ jobs:
             docker compose pull                                                     # Kéo image mới nhất từ Docker Hub
 
             echo "Backing up previous image tag..."
-            docker image tag movietheater-api:latest movietheater-api:backup || true  # Gắn tag dự phòng để rollback nếu cần
+            docker image tag ch1mple/movietheater-api:latest ch1mple/movietheater-api:backup || true
 
             echo "Restarting container..."
             docker compose up -d                                                    # Chạy hoặc restart container với image mới
