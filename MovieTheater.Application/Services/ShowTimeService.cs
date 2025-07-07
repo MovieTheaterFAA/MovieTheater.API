@@ -109,8 +109,39 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.ShowTimes.AddRangeAsync(showTimes);
             await _unitOfWork.SaveChangesAsync();
-            await _redisService.RemoveByPatternAsync("showtime:date:*");
-            await _redisService.RemoveByPatternAsync("showtime:movie:*");
+
+            // Remove all related showtime caches for this room and all affected movies/dates
+            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
+            var affectedMovieIds = dto.ShowTimes.Select(st => st.MovieId).Distinct().ToList();
+
+            // Remove cache for GetShowTimesByDateAsync
+            foreach (var date in affectedDates)
+            {
+                string cacheKey = $"showtime:date:{date:yyyyMMdd}:movie:all:room:{dto.CinemaRoomId}";
+                await _redisService.RemoveAsync(cacheKey);
+
+                foreach (var movieId in affectedMovieIds)
+                {
+                    string cacheKeyMovie = $"showtime:date:{date:yyyyMMdd}:movie:{movieId}:room:{dto.CinemaRoomId}";
+                    await _redisService.RemoveAsync(cacheKeyMovie);
+                }
+            }
+
+            // Remove cache for GetShowTimesByMovieAndDateAsync
+            foreach (var movieId in affectedMovieIds)
+            {
+                foreach (var date in affectedDates)
+                {
+                    string cacheKey = $"showtime:movie:{movieId}:date:{date:yyyyMMdd}";
+                    await _redisService.RemoveAsync(cacheKey);
+                }
+                // Remove the "all" date cache for this movie
+                string cacheKeyAll = $"showtime:movie:{movieId}:all";
+                await _redisService.RemoveAsync(cacheKeyAll);
+            }
+
+            // Remove the original cache for AddBatchShowTimesAsync (if any)
+            await _redisService.RemoveAsync($"showtime:room:{dto.CinemaRoomId}:date:{dto.ShowTimes.First().StartTime:yyyyMMdd}");
 
             // Audit log: log only primitive properties
             var newShowTimeData = showTimes.Select(st => new
