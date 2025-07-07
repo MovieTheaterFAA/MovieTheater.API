@@ -55,10 +55,11 @@ namespace MovieTheater.Application.Services
                             .ToDictionaryAsync(m => m.Id);
 
             // ===== Overlap validation for batch =====
-            // Prepare a list of (start, end) for each showtime in the batch
-            var showtimeWindows = new List<(DateTime Start, DateTime End)>();
-            foreach (var entry in dto.ShowTimes)
+            // Prepare a list of (start, end, index) for each showtime in the batch
+            var showtimeWindows = new List<(DateTime Start, DateTime End, int Index)>();
+            for (int idx = 0; idx < dto.ShowTimes.Count; idx++)
             {
+                var entry = dto.ShowTimes[idx];
                 if (!movies.TryGetValue(entry.MovieId, out var movie))
                     throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
 
@@ -67,7 +68,7 @@ namespace MovieTheater.Application.Services
                 var start = entry.StartTime;
                 var end = start.Add(duration);
 
-                showtimeWindows.Add((start, end));
+                showtimeWindows.Add((start, end, idx));
             }
 
             // Check for overlap in the batch
@@ -80,6 +81,13 @@ namespace MovieTheater.Application.Services
                     // If a starts before b ends and b starts before a ends, they overlap
                     if (a.Start < b.End && b.Start < a.End)
                     {
+                        var showA = dto.ShowTimes[a.Index];
+                        var showB = dto.ShowTimes[b.Index];
+                        _loggerService.Error(
+                            $"[AddBatchShowTimesAsync] Overlap detected between showtimes: " +
+                            $"ShowA (MovieId: {showA.MovieId}, Start: {a.Start:O}, End: {a.End:O}) " +
+                            $"and ShowB (MovieId: {showB.MovieId}, Start: {b.Start:O}, End: {b.End:O})"
+                        );
                         throw new InvalidOperationException("Showtimes in the batch cannot overlap. Please check the start times and durations.");
                     }
                 }
