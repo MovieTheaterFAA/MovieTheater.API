@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using MovieTheater.Domain.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MovieTheater.Domain.Entities
 {
@@ -8,10 +9,10 @@ namespace MovieTheater.Domain.Entities
 
         [ForeignKey(nameof(BookingId))]
         public Booking Booking { get; set; }
-
         public DateTime IssuedAt { get; set; }
-
+        public string GuestPhoneNumber { get; set; } // Optional for offline tickets
         public decimal TotalPrice { get; set; }
+        public TicketType TicketType { get; set; } // Enum for Online or Offline ticket
 
         // Navigation
         public ICollection<TicketSeat> TicketSeats { get; set; }
