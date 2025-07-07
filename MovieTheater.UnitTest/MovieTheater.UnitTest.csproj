@@ -18,10 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MovieTheater.API\MovieTheater.API\MovieTheater.API.csproj" />
-    <ProjectReference Include="..\MovieTheater.API\MovieTheater.Application\MovieTheater.Application.csproj" />
-    <ProjectReference Include="..\MovieTheater.API\MovieTheater.Domain\MovieTheater.Domain.csproj" />
-    <ProjectReference Include="..\MovieTheater.API\MovieTheater.Infrastructure\MovieTheater.Infrastructure.csproj" />
+    <ProjectReference Include="..\MovieTheater.API\MovieTheater.API.csproj" />
+    <ProjectReference Include="..\MovieTheater.Application\MovieTheater.Application.csproj" />
+    <ProjectReference Include="..\MovieTheater.Domain\MovieTheater.Domain.csproj" />
+    <ProjectReference Include="..\MovieTheater.Infrastructure\MovieTheater.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
