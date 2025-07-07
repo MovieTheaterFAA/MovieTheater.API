@@ -14,6 +14,7 @@ COPY MovieTheater.API/MovieTheater.API.csproj MovieTheater.API/
 COPY MovieTheater.Application/MovieTheater.Application.csproj MovieTheater.Application/
 COPY MovieTheater.Infrastructure/MovieTheater.Infrastructure.csproj MovieTheater.Infrastructure/
 COPY MovieTheater.Domain/MovieTheater.Domain.csproj MovieTheater.Domain/
+COPY MovieTheater.UnitTest/MovieTheater.UnitTest.csproj MovieTheater.UnitTest/
 
 RUN dotnet restore MovieTheater.API/MovieTheater.API.csproj
 
