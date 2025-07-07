@@ -80,7 +80,15 @@ namespace MovieTheater.API.Controllers
         /// </summary>
         /// <param name="session_id">The Stripe session ID</param>
         /// <returns>Redirect to the appropriate frontend page</returns>
+        /// <summary>
+        /// Handles payment success callback from Stripe
+        /// </summary>
+        /// <param name="session_id">The Stripe session ID</param>
+        /// <returns>API result indicating payment verification status</returns>
         [HttpGet("success")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> PaymentSuccess([FromQuery] string session_id)
         {
             try
@@ -90,7 +98,7 @@ namespace MovieTheater.API.Controllers
                 if (string.IsNullOrEmpty(session_id))
                 {
                     _loggerService.Warn("No session ID provided");
-                    return Redirect($"{_frontendBaseUrl}/payment/thankyou?success=false&error=missing_session_id");
+                    return BadRequest(ApiResult<object>.Failure("400", "Missing session_id parameter."));
                 }
 
                 var isValid = await _paymentService.VerifyPaymentAsync(session_id);
@@ -98,16 +106,21 @@ namespace MovieTheater.API.Controllers
                 if (isValid)
                 {
                     _loggerService.Success($"Payment verified successfully for session: {session_id}");
-                    return Redirect($"{_frontendBaseUrl}/payment/thankyou?success=true&session_id={session_id}");
+                    return Ok(ApiResult<object>.Success(
+                        new { session_id },
+                        "200",
+                        "Payment verified successfully."
+                    ));
                 }
 
                 _loggerService.Warn($"Payment verification failed for session: {session_id}");
-                return Redirect($"{_frontendBaseUrl}/payment/thankyou?success=false&error=payment_verification_failed");
+                return BadRequest(ApiResult<object>.Failure("400", "Payment verification failed."));
             }
             catch (Exception ex)
             {
-                _loggerService.Error($"Error processing payment success: {ex.Message}");
-                return Redirect($"{_frontendBaseUrl}/payment/error?message={Uri.EscapeDataString(ex.Message)}");
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
             }
         }
 
@@ -121,6 +134,5 @@ namespace MovieTheater.API.Controllers
             _loggerService.Info("Payment cancelled by user");
             return Redirect($"{_frontendBaseUrl}/payment/cancelled");
         }
-
     }
 }
