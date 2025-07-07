@@ -71,24 +71,28 @@ namespace MovieTheater.Application.Services
                 showtimeWindows.Add((start, end, idx));
             }
 
-            // Check for overlap in the batch
-            for (int i = 0; i < showtimeWindows.Count; i++)
+            // Check for overlap with existing showtimes in the same room and date (any movie)
+            foreach (var entry in dto.ShowTimes)
             {
-                for (int j = i + 1; j < showtimeWindows.Count; j++)
+                var existingShowTimes = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, entry.StartTime.Date);
+
+                var movie = movies[entry.MovieId];
+                var newStart = entry.StartTime;
+                var newEnd = newStart.Add(TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15));
+
+                foreach (var existing in existingShowTimes)
                 {
-                    var a = showtimeWindows[i];
-                    var b = showtimeWindows[j];
-                    // If a starts before b ends and b starts before a ends, they overlap
-                    if (a.Start < b.End && b.Start < a.End)
+                    var existingStart = existing.ShowDate;
+                    var existingEnd = existing.ShowDate.Add(existing.Duration);
+
+                    if (newStart < existingEnd && existingStart < newEnd)
                     {
-                        var showA = dto.ShowTimes[a.Index];
-                        var showB = dto.ShowTimes[b.Index];
                         _loggerService.Error(
-                            $"[AddBatchShowTimesAsync] Overlap detected between showtimes: " +
-                            $"ShowA (MovieId: {showA.MovieId}, Start: {a.Start:O}, End: {a.End:O}) " +
-                            $"and ShowB (MovieId: {showB.MovieId}, Start: {b.Start:O}, End: {b.End:O})"
+                            $"[AddBatchShowTimesAsync] Overlap detected with existing showtime: " +
+                            $"New (MovieId: {entry.MovieId}, Start: {newStart:O}, End: {newEnd:O}) " +
+                            $"Existing (Id: {existing.Id}, MovieId: {existing.MovieId}, Start: {existingStart:O}, End: {existingEnd:O})"
                         );
-                        throw new InvalidOperationException("Showtimes in the batch cannot overlap. Please check the start times and durations.");
+                        throw new InvalidOperationException("One or more showtimes overlap with existing showtimes in this room. Please check the start times and durations.");
                     }
                 }
             }
@@ -339,6 +343,24 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"[GetShowTimesByMovieAndDateAsync] Error: {ex.Message}");
                 throw new InvalidOperationException("An error occurred while retrieving showtimes.", ex);
             }
+        }
+
+        //============================ Helper =============================
+        private async Task<List<ShowtimeResponseDTO>> GetShowTimesByRoomAndDateAsync(Guid roomId, DateTime date)
+        {
+            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.CinemaRoomId == roomId && !st.IsDeleted && st.ShowDate.Date == date.Date)
+                .OrderBy(st => st.ShowDate)
+                .ToListAsync();
+
+            return showTimes.Select(st => new ShowtimeResponseDTO
+            {
+                Id = st.Id,
+                MovieId = st.MovieId,
+                CinemaRoomId = st.CinemaRoomId,
+                ShowDate = st.ShowDate,
+                Duration = st.Duration
+            }).ToList();
         }
     }
 }
