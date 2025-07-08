@@ -85,7 +85,7 @@ namespace MovieTheater.UnitTest.Services
             };
 
             _mockRedisService.Setup(redis => redis.GetAsync<CurrentUserDto>($"user:detail:{userId}"))
-                .ReturnsAsync((CurrentUserDto)null);
+                .ReturnsAsync((CurrentUserDto)null!);
 
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
                 .ReturnsAsync(user);
@@ -128,10 +128,10 @@ namespace MovieTheater.UnitTest.Services
             var userId = Guid.NewGuid();
 
             _mockRedisService.Setup(redis => redis.GetAsync<CurrentUserDto>(It.IsAny<string>()))
-                .ReturnsAsync((CurrentUserDto)null);
+                .ReturnsAsync((CurrentUserDto)null!);
 
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
-                .ReturnsAsync((User)null);
+                .ReturnsAsync((User)null!);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
@@ -330,7 +330,7 @@ namespace MovieTheater.UnitTest.Services
             var updateDto = new UserUpdateDto { FullName = "New Name" };
 
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
-                .ReturnsAsync((User)null);
+                .ReturnsAsync((User)null!);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>

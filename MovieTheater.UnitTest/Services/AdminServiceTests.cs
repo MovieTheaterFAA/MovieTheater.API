@@ -69,7 +69,7 @@ public class AdminServiceTests
 
         // Setup user repository to return null (email doesn't exist)
         _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         // Setup user repository to return added user
         _mockUserRepository.Setup(repo => repo.AddAsync(It.IsAny<User>()))
@@ -250,7 +250,7 @@ public class AdminServiceTests
         var employeeId = Guid.NewGuid();
 
         _mockUserRepository.Setup(repo => repo.GetByIdAsync(employeeId))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         var editDto = new EditEmployeeDto { FullName = "Updated Name" };
 
@@ -331,7 +331,7 @@ public class AdminServiceTests
         var adminId = Guid.NewGuid();
 
         _mockUserRepository.Setup(repo => repo.GetByIdAsync(employeeId))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         // Act
         var result = await _adminService.DeleteEmployeeAsync(employeeId, adminId);
@@ -500,7 +500,7 @@ public class AdminServiceTests
         };
 
         _mockRedisService.Setup(redis => redis.GetAsync<GetUserDto>(It.IsAny<string>()))
-            .ReturnsAsync((GetUserDto)null);
+            .ReturnsAsync((GetUserDto)null!);
 
         _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
             .ReturnsAsync(user);
@@ -526,10 +526,10 @@ public class AdminServiceTests
         var userId = Guid.NewGuid();
 
         _mockRedisService.Setup(redis => redis.GetAsync<GetUserDto>(It.IsAny<string>()))
-            .ReturnsAsync((GetUserDto)null);
+            .ReturnsAsync((GetUserDto)null!);
 
         _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         // Act
         var result = await _adminService.GetUserDetailAsync(userId);

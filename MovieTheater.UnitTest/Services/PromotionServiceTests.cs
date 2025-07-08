@@ -66,7 +66,7 @@ namespace MovieTheater.UnitTest.Services
 
             _mockPromotionRepository.Setup(repo => repo.FirstOrDefaultAsync(
                 It.IsAny<Expression<Func<Promotion, bool>>>(), It.IsAny<Expression<Func<Promotion, object>>[]>()))
-                .ReturnsAsync((Promotion)null);
+                .ReturnsAsync((Promotion)null!);
 
             _mockPromotionRepository.Setup(repo => repo.AddAsync(It.IsAny<Promotion>()))
                 .ReturnsAsync((Promotion p) => { p.Id = promotionId; return p; });
@@ -96,7 +96,7 @@ namespace MovieTheater.UnitTest.Services
                 AuditActionType.Create,
                 "Promotion",
                 promotionId,
-                null,
+                null!,
                 It.IsAny<object>(),
                 It.IsAny<string>(),
                 It.IsAny<string>()), Times.Once);
@@ -147,10 +147,10 @@ namespace MovieTheater.UnitTest.Services
 
             _mockPromotionRepository.Setup(repo => repo.FirstOrDefaultAsync(
                 It.IsAny<Expression<Func<Promotion, bool>>>(), It.IsAny<Expression<Func<Promotion, object>>[]>()))
-                .ReturnsAsync((Promotion)null);
+                .ReturnsAsync((Promotion)null!);
 
             _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId, It.IsAny<Expression<Func<Event, object>>[]>()))
-                .ReturnsAsync((Event)null);
+                .ReturnsAsync((Event)null!);
 
             // Act & Assert
             await Assert.ThrowsAsync<KeyNotFoundException>(() => _promotionService.AddPromotionAsync(requestDto));
@@ -207,7 +207,7 @@ namespace MovieTheater.UnitTest.Services
             var promotionId = Guid.NewGuid();
 
             _mockPromotionRepository.Setup(repo => repo.GetByIdAsync(promotionId, It.IsAny<Expression<Func<Promotion, object>>[]>()))
-                .ReturnsAsync((Promotion)null);
+                .ReturnsAsync((Promotion)null!);
 
             // Act
             var result = await _promotionService.DeletePromotionAsync(promotionId);
@@ -254,7 +254,7 @@ namespace MovieTheater.UnitTest.Services
             _mockEventRepository.Setup(repo => repo.GetByIdAsync(newEventId, It.IsAny<Expression<Func<Event, object>>[]>()))
                 .ReturnsAsync(eventEntity);
             _mockPromotionRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<Promotion, bool>>>(), It.IsAny<Expression<Func<Promotion, object>>[]>()))
-                .ReturnsAsync((Promotion)null);
+                .ReturnsAsync((Promotion)null!);
             _mockPromotionRepository.Setup(repo => repo.Update(It.IsAny<Promotion>()))
                 .ReturnsAsync(true);
 
@@ -301,7 +301,7 @@ namespace MovieTheater.UnitTest.Services
             };
 
             _mockPromotionRepository.Setup(repo => repo.GetByIdAsync(promotionId, It.IsAny<Expression<Func<Promotion, object>>[]>()))
-                .ReturnsAsync((Promotion)null);
+                .ReturnsAsync((Promotion)null!);
 
             // Act & Assert
             await Assert.ThrowsAsync<Exception>(() => _promotionService.UpdatePromotionAsync(promotionId, updateDto));

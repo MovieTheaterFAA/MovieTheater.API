@@ -60,7 +60,7 @@ public class AuthServiceTests
         {
             Id = userId,
             Email = email,
-            Password = hashedPassword,
+            Password = hashedPassword!,
             UserStatus = UserStatus.Active,
             Role = RoleType.Member,
             IsEmailVerified = true
@@ -104,7 +104,7 @@ public class AuthServiceTests
         };
 
         _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => 
@@ -126,7 +126,7 @@ public class AuthServiceTests
         {
             Id = Guid.NewGuid(),
             Email = email,
-            Password = hashedPassword,
+            Password = hashedPassword!,
             UserStatus = UserStatus.Active,
             Role = RoleType.Member,
             IsEmailVerified = true
@@ -160,7 +160,7 @@ public class AuthServiceTests
         {
             Id = Guid.NewGuid(),
             Email = email,
-            Password = hashedPassword,
+            Password = hashedPassword!,
             UserStatus = UserStatus.Banned,
             Role = RoleType.Member,
             IsEmailVerified = true
@@ -194,7 +194,7 @@ public class AuthServiceTests
         {
             Id = userId,
             Email = email,
-            Password = hashedPassword,
+            Password = hashedPassword!,
             UserStatus = UserStatus.Pending,
             Role = RoleType.Member,
             IsEmailVerified = false
@@ -251,7 +251,7 @@ public class AuthServiceTests
         // Arrange
         var userId = Guid.NewGuid();
 
-        _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync((User)null);
+        _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync((User)null!);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() =>
@@ -404,7 +404,7 @@ public class AuthServiceTests
         };
 
         _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         _mockUserRepository.Setup(repo => repo.AddAsync(It.IsAny<User>()))
             .ReturnsAsync((User u) => u);
@@ -594,7 +594,7 @@ public class AuthServiceTests
         };
 
         _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         _mockUserRepository.Setup(repo => repo.AddAsync(It.IsAny<User>()))
             .ReturnsAsync((User u) => u);
