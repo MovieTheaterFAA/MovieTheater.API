@@ -16,7 +16,6 @@ namespace MovieTheater.Application.Services
         private readonly IRedisService _redisService;
         private readonly IStripeClient _stripeClient;
         private readonly string _baseUrl;
-        //private readonly string _imageBaseUrl;
 
         public StripePaymentService(
             ILoggerService loggerService,
@@ -30,15 +29,8 @@ namespace MovieTheater.Application.Services
             _redisService = redisService;
             _stripeClient = stripeClient;
 
-            // Fix S1075: Use configuration instead of hardcoded URL
             _baseUrl = configuration["PaymentSettings:FrontendBaseUrl"] ??
-                (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
-                ? "https://movietheaterfe.ae-tao-fullstack-api.site"
-                : "http://localhost:3000");
-
-            //// Lấy URL cơ sở cho hình ảnh từ cấu hình
-            //_imageBaseUrl = configuration["ImageStorage:BaseUrl"] ??
-            //    "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?prefix=";
+                "https://movietheaterfe.ae-tao-fullstack-api.site";
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
         }
@@ -86,28 +78,6 @@ namespace MovieTheater.Application.Services
 
                 string movieName = booking.Showtime.Movie.Name ?? "Unknown Movie";
 
-                //// Chuẩn bị URL hình ảnh
-                //string posterImageUrl;
-                //if (!string.IsNullOrEmpty(booking.Showtime.Movie.PosterImage))
-                //{
-                //    // Nếu PosterImage là đường dẫn tương đối hoặc ID, tạo URL đầy đủ
-                //    if (booking.Showtime.Movie.PosterImage.StartsWith("http"))
-                //    {
-                //        // Nếu PosterImage đã là URL đầy đủ, sử dụng nó trực tiếp
-                //        posterImageUrl = booking.Showtime.Movie.PosterImage;
-                //    }
-                //    else
-                //    {
-                //        // Nếu không, kết hợp với URL cơ sở
-                //        posterImageUrl = $"{_imageBaseUrl}{Uri.EscapeDataString(booking.Showtime.Movie.PosterImage)}";
-                //    }
-                //}
-                //else
-                //{
-                //    // URL mặc định nếu không có PosterImage
-                //    posterImageUrl = $"{_baseUrl}/images/default-movie-poster.jpg";
-                //}
-
                 var expiresAt = DateTime.UtcNow.AddMinutes(30);
 
                 var options = new SessionCreateOptions
@@ -125,7 +95,6 @@ namespace MovieTheater.Application.Services
                                 {
                                     Name = "Movie Theater Invoice" + $"\nDate: {invoice.InvoiceDate}",
                                     Description = $"Payment for Invoice of Movie: {movieName}",
-                                    //Images = new List<string> { posterImageUrl }
                                 }
                             },
                             Quantity = 1
@@ -184,7 +153,6 @@ namespace MovieTheater.Application.Services
                 {
                     _loggerService.Success($"Payment verified successfully for session: {sessionId}");
 
-                    // Fix CS8600: Check Metadata for null and use safe approach
                     // If invoice ID is in metadata, process payment
                     if (session.Metadata != null &&
                         session.Metadata.TryGetValue("invoiceId", out string? invoiceIdStr) &&
@@ -246,7 +214,6 @@ namespace MovieTheater.Application.Services
                 await _unitOfWork.Invoices.Update(invoice);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Set expiration time for payment - 15 minutes for Redis
                 await _redisService.SetAsync(
                     $"payment:expiry:{invoiceId}",
                     DateTime.UtcNow.AddMinutes(30),
@@ -318,7 +285,7 @@ namespace MovieTheater.Application.Services
                     }
                 }
 
-                decimal amount = invoice.Amount; // Mặc định dùng invoice amount
+                decimal amount = invoice.Amount;
 
                 // Create payment record
                 var payment = new Payment
@@ -369,14 +336,12 @@ namespace MovieTheater.Application.Services
                     invoice.Booking.Status = "PaymentFailed";
                     await _unitOfWork.Bookings.Update(invoice.Booking);
 
-                    // Lấy booking seats riêng biệt
                     var bookingSeats = await _unitOfWork.BookingSeats.GetAllAsync(bs => bs.BookingId == invoice.BookingId);
 
                     if (bookingSeats != null && bookingSeats.Any())
                     {
                         var seatIds = bookingSeats.Select(bs => bs.SeatId).ToList();
 
-                        // Lấy và cập nhật trạng thái ghế về Available
                         var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
                             sts => sts.ShowTimeId == invoice.Booking.ShowtimeId &&
                                   seatIds.Contains(sts.SeatId));
