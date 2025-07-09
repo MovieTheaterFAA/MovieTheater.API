@@ -44,7 +44,7 @@ namespace MovieTheater.API.Controllers
                 var currentUser = await _unitOfWork.Users.GetByIdAsync(currentUserId);
                 var result = await _impersonationService.StartImpersonationAsync(targetUserId, reason);
                 if (result)
-                    return Ok(ApiResult<object>.Success(null, "200", "Impersonation started."));
+                    return Ok(ApiResult<object>.Success(null!, "200", "Impersonation started."));
                 else
                     return BadRequest(ApiResult<object>.Failure("400", "Failed to impersonate."));
             }

@@ -52,6 +52,39 @@ public class AdminServiceTests
 
     }
 
+
+    [Fact]
+    public async Task AddEmployeeAsync_WhenSaveChangesFails_ReturnsUserDto()
+    {
+        // Arrange
+        var employeeDto = new AddEmployeeRequestDto { Email = "fail@example.com", FullName = "Fail" };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+        _mockUserRepository.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync(new User { Email = employeeDto.Email });
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(0);
+
+        // Act
+        var result = await _adminService.AddEmployeeAsync(employeeDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(employeeDto.Email, result.Email);
+    }
+
+    [Fact]
+    public async Task AddEmployeeAsync_WhenSendEmailFails_ThrowsException()
+    {
+        // Arrange
+        var employeeDto = new AddEmployeeRequestDto { Email = "failmail@example.com", FullName = "FailMail" };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+        _mockUserRepository.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync(new User { Email = employeeDto.Email });
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+        _mockEmailService.Setup(e => e.SendEmployeeCredentialsEmailAsync(It.IsAny<EmployeeCredentialsEmailDto>())).ThrowsAsync(new Exception("Mail error"));
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() => _adminService.AddEmployeeAsync(employeeDto));
+        Assert.Contains("Mail error", ex.Message);
+    }
+
     [Fact]
     public async Task AddEmployeeAsync_WithValidData_ReturnsUserDto()
     {
@@ -127,6 +160,20 @@ public class AdminServiceTests
     }
 
     [Fact]
+    public async Task GetListEmployeeAsync_WhenNoEmployee_ReturnsEmptyPagination()
+    {
+        // Arrange
+        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(new List<User>());
+
+        // Act
+        var result = await _adminService.GetListEmployeeAsync(null, null, false, 1, 10);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
     public async Task GetListUserAsync_ReturnsCachedResult_WhenCacheExists()
     {
         // Arrange
@@ -194,6 +241,7 @@ public class AdminServiceTests
         Assert.Equal(2, result.TotalCount);
         Assert.Equal("Employee 1", result.Items[0].FullName);
     }
+
 
     [Fact]
     public async Task EditEmployeeAsync_WithValidData_ReturnsUpdatedDto()

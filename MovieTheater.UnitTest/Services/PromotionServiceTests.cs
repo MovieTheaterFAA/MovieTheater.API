@@ -201,6 +201,44 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
+        public async Task UpdatePromotionAsync_WithExistingTitle_ThrowsConflictException()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var updateDto = new PromotionUpdateDto
+            {
+                Title = "Existing Title"
+            };
+
+            var promotion = new Promotion
+            {
+                Id = promotionId,
+                Title = "Original Title",
+                IsDeleted = false
+            };
+
+            var existingPromotion = new Promotion
+            {
+                Id = Guid.NewGuid(),
+                Title = "Existing Title",
+                IsDeleted = false
+            };
+
+            _mockPromotionRepository.Setup(repo => repo.GetByIdAsync(promotionId, It.IsAny<Expression<Func<Promotion, object>>[]>()))
+                .ReturnsAsync(promotion);
+
+            _mockPromotionRepository.Setup(repo => repo.FirstOrDefaultAsync(
+                It.IsAny<Expression<Func<Promotion, bool>>>(), It.IsAny<Expression<Func<Promotion, object>>[]>()))
+                .ReturnsAsync(existingPromotion);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _promotionService.UpdatePromotionAsync(promotionId, updateDto));
+
+            _mockPromotionRepository.Verify(repo => repo.Update(It.IsAny<Promotion>()), Times.Never);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Never);
+        }
+
+        [Fact]
         public async Task DeletePromotionAsync_WithNonExistingId_ReturnsFalse()
         {
             // Arrange
