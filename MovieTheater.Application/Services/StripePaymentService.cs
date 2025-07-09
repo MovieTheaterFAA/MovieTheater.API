@@ -16,7 +16,6 @@ namespace MovieTheater.Application.Services
         private readonly IRedisService _redisService;
         private readonly IStripeClient _stripeClient;
         private readonly string _baseUrl;
-        //private readonly string _imageBaseUrl;
 
         public StripePaymentService(
             ILoggerService loggerService,
@@ -31,14 +30,7 @@ namespace MovieTheater.Application.Services
             _stripeClient = stripeClient;
 
             // Fix S1075: Use configuration instead of hardcoded URL
-            _baseUrl = configuration["PaymentSettings:FrontendBaseUrl"] ??
-                (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production"
-                ? "https://movietheaterfe.ae-tao-fullstack-api.site"
-                : "http://localhost:3000");
-
-            //// Lấy URL cơ sở cho hình ảnh từ cấu hình
-            //_imageBaseUrl = configuration["ImageStorage:BaseUrl"] ??
-            //    "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?prefix=";
+            _baseUrl = "https://movietheaterfe.ae-tao-fullstack-api.site";
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
         }
