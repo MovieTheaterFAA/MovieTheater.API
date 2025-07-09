@@ -1,5 +1,5 @@
-﻿using MovieTheater.Domain.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using MovieTheater.Domain.Enums;
 
 namespace MovieTheater.Domain.Entities
 {
@@ -47,5 +47,6 @@ namespace MovieTheater.Domain.Entities
         public ICollection<Booking> Bookings { get; set; }
 
         public ICollection<ScoreHistory> ScoreHistory { get; set; }
+        public ICollection<ClaimedPromotion> ClaimedPromotions { get; set; }
     }
 }
