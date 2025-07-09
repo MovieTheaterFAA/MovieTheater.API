@@ -6,6 +6,7 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
 using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MovieTheater.API.Controllers;

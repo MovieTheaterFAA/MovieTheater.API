@@ -41,20 +41,9 @@ public static class IocContainer
         // 3th party services
         services.SetupRedis();
         services.SetupReSendService();
-        services.SetupVnpay();
 
         return services;
     }
-
-    // public static IServiceCollection SetupGraphQl(this IServiceCollection services)
-    // {
-    //     services
-    //         .AddGraphQLServer()
-    //         .AddErrorFilter<GraphQLErrorFilter>()
-    //         .AddQueryType<Query>();
-    //
-    //     return services;
-    // }
 
     public static IServiceCollection SetupReSendService(this IServiceCollection services)
     {
@@ -80,18 +69,6 @@ public static class IocContainer
             ConnectionMultiplexer.Connect(redisConnectionString));
 
         services.AddScoped<IRedisService, RedisService>();
-
-        return services;
-    }
-
-    public static IServiceCollection SetupVnpay(this IServiceCollection services)
-    {
-        // Xây dựng IConfiguration từ các nguồn cấu hình
-        IConfiguration configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory()) // Lấy thư mục hiện tại
-            .AddJsonFile("appsettings.json", true, true)  // Đọc appsettings.json
-            .AddEnvironmentVariables()                    // Đọc biến môi trường từ Docker
-            .Build();
 
         return services;
     }
@@ -188,7 +165,7 @@ public static class IocContainer
                             Id = "Bearer"
                         }
                     },
-                    new string[] { }
+                    Array.Empty<string>()
                 }
             };
 
@@ -233,23 +210,17 @@ public static class IocContainer
                                                                         throw new InvalidOperationException()))
                 };
             });
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy("CustomerPolicy", policy =>
-                policy.RequireRole("Customer"));
-
-            options.AddPolicy("MemberPolicy", policy =>
-                policy.RequireRole("Member"));
-
-            options.AddPolicy("EmployeePolicy", policy =>
-                policy.RequireRole("Employee"));
-
-            options.AddPolicy("AdminPolicy", policy =>
-                policy.RequireRole("Admin"));
-
-            options.AddPolicy("SystemOwnerPolicy", policy =>
+        services.AddAuthorizationBuilder()
+            .AddPolicy("CustomerPolicy", policy =>
+                policy.RequireRole("Customer"))
+            .AddPolicy("MemberPolicy", policy =>
+                policy.RequireRole("Member"))
+            .AddPolicy("EmployeePolicy", policy =>
+                policy.RequireRole("Employee"))
+            .AddPolicy("AdminPolicy", policy =>
+                policy.RequireRole("Admin"))
+            .AddPolicy("SystemOwnerPolicy", policy =>
                 policy.RequireRole("SystemOwner"));
-        });
 
         return services;
     }

@@ -1,5 +1,6 @@
 ﻿using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {

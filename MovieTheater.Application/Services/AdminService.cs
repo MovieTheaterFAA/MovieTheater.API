@@ -6,6 +6,7 @@ using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Data;
 using System.Text.Json;
@@ -227,7 +228,7 @@ public class AdminService : IAdminService
                 );
             }
 
-            var totalEmployees = employeeUsers.Count();
+            var totalEmployees = await employeeUsers.CountAsync();
 
             employeeUsers = sortBy?.ToLower() switch
             {
@@ -236,10 +237,10 @@ public class AdminService : IAdminService
                 _ => employeeUsers.OrderBy(u => u.Id)
             };
 
-            var pagedEmployees = employeeUsers
+            var pagedEmployees = await employeeUsers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             var result = pagedEmployees.Select(user => new UserDto
             {

@@ -10,6 +10,7 @@ using MovieTheater.Domain.DTOs.EventDTOs;
 using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services

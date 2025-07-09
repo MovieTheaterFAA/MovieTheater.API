@@ -5,6 +5,7 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.Json;
 
@@ -53,7 +54,7 @@ namespace MovieTheater.Application.Services
                     );
                 }
 
-                var totalItems = query.Count();
+                var totalItems = await query.CountAsync();
 
                 query = sortBy?.ToLower() switch
                 {
@@ -63,10 +64,10 @@ namespace MovieTheater.Application.Services
                     _ => query.OrderBy(f => f.Id)
                 };
 
-                var pagedItems = query
+                var pagedItems = await query
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
-                    .ToList();
+                    .ToListAsync();
 
                 var result = pagedItems.Select(f => new FoodAndDrinkResponseDto
                 {

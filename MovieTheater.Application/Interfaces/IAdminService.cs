@@ -1,6 +1,7 @@
 ﻿using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {

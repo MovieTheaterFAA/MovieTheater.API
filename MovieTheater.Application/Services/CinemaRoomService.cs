@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.CinemaRoomDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.Json;
 

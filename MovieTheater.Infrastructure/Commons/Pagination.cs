@@ -1,4 +1,6 @@
-﻿public class Pagination<T>
+﻿namespace MovieTheater.Infrastructure.Commons;
+
+public class Pagination<T>
 {
     public Pagination()
     { } // Needed for deserialization

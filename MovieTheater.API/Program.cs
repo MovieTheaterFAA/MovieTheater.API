@@ -147,4 +147,4 @@ app.UseSession();
 app.MapHub<SeatHub>("/hubs/seat");
 app.MapHub<ChatbotHub>("/hubs/chatbot");
 
-app.Run();
+await app.RunAsync();

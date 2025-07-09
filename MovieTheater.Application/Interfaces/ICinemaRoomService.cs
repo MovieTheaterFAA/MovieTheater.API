@@ -1,4 +1,5 @@
 ﻿using MovieTheater.Domain.DTOs.CinemaRoomDTOs;
+using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {

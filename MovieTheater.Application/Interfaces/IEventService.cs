@@ -1,4 +1,5 @@
 ﻿using MovieTheater.Domain.DTOs.EventDTOs;
+using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {

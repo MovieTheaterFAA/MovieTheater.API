@@ -5,9 +5,9 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.AdminDTOs;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
-
 namespace MovieTheater.API.Controllers;
 
 [Route("api/admin")]
@@ -147,7 +147,6 @@ public class AdminController : ControllerBase
 
         try
         {
-            var adminId = _claimsService.GetCurrentUserId;
 
             var result = await _adminService.EditEmployeeAsync(id, dto);
 
