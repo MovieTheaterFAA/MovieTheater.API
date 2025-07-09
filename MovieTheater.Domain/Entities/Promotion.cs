@@ -10,5 +10,6 @@
         public Guid EventId { get; set; }
 
         public Event Event { get; set; }
+        public ICollection<ClaimedPromotion> ClaimedPromotions { get; set; }
     }
 }
