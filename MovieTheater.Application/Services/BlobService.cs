@@ -170,7 +170,7 @@ namespace MovieTheater.Application.Services
             catch (Exception ex)
             {
                 _loggerService.Error($"Error generating presigned URL: {ex.Message}");
-                return null;
+                return null!;
             }
         }
 
