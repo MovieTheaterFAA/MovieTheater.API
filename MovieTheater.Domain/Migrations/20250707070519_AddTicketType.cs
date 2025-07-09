@@ -5,19 +5,21 @@
 namespace MovieTheater.Domain.Migrations
 {
     /// <inheritdoc />
-    public partial class SeatFix : Migration
+    public partial class AddTicketType : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "SeatNumber",
-                table: "Seats",
-                newName: "Row");
+            migrationBuilder.AddColumn<string>(
+                name: "GuestPhoneNumber",
+                table: "Tickets",
+                type: "text",
+                nullable: false,
+                defaultValue: "");
 
             migrationBuilder.AddColumn<int>(
-                name: "Number",
-                table: "Seats",
+                name: "TicketType",
+                table: "Tickets",
                 type: "integer",
                 nullable: false,
                 defaultValue: 0);
@@ -27,13 +29,12 @@ namespace MovieTheater.Domain.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Number",
-                table: "Seats");
+                name: "GuestPhoneNumber",
+                table: "Tickets");
 
-            migrationBuilder.RenameColumn(
-                name: "Row",
-                table: "Seats",
-                newName: "SeatNumber");
+            migrationBuilder.DropColumn(
+                name: "TicketType",
+                table: "Tickets");
         }
     }
 }

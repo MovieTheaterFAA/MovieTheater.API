@@ -115,8 +115,8 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("AllowFrontend");
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// Configure the HTTP request pipeline - REMEMBER
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -125,7 +125,6 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
         c.InjectStylesheet("/swagger-ui/custom-theme.css");
         c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.Dracula)}</style>";
-        // Config theme của swagger
     });
 }
 
@@ -145,7 +144,7 @@ app.MapControllers();
 app.UseSession();
 
 // Map SignalR hubs
-app.MapHub<SeatHub>("/seatHubs");
-app.MapHub<ChatbotHub>("/chatbotHubs");
+app.MapHub<SeatHub>("/hubs/seat");
+app.MapHub<ChatbotHub>("/hubs/chatbot");
 
 app.Run();

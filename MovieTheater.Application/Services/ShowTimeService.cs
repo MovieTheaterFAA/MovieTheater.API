@@ -55,10 +55,11 @@ namespace MovieTheater.Application.Services
                             .ToDictionaryAsync(m => m.Id);
 
             // ===== Overlap validation for batch =====
-            // Prepare a list of (start, end) for each showtime in the batch
-            var showtimeWindows = new List<(DateTime Start, DateTime End)>();
-            foreach (var entry in dto.ShowTimes)
+            // Prepare a list of (start, end, index) for each showtime in the batch
+            var showtimeWindows = new List<(DateTime Start, DateTime End, int Index)>();
+            for (int idx = 0; idx < dto.ShowTimes.Count; idx++)
             {
+                var entry = dto.ShowTimes[idx];
                 if (!movies.TryGetValue(entry.MovieId, out var movie))
                     throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
 
@@ -67,20 +68,31 @@ namespace MovieTheater.Application.Services
                 var start = entry.StartTime;
                 var end = start.Add(duration);
 
-                showtimeWindows.Add((start, end));
+                showtimeWindows.Add((start, end, idx));
             }
 
-            // Check for overlap in the batch
-            for (int i = 0; i < showtimeWindows.Count; i++)
+            // Check for overlap with existing showtimes in the same room and date (any movie)
+            foreach (var entry in dto.ShowTimes)
             {
-                for (int j = i + 1; j < showtimeWindows.Count; j++)
+                var existingShowTimes = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, entry.StartTime.Date);
+
+                var movie = movies[entry.MovieId];
+                var newStart = entry.StartTime;
+                var newEnd = newStart.Add(TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15));
+
+                foreach (var existing in existingShowTimes)
                 {
-                    var a = showtimeWindows[i];
-                    var b = showtimeWindows[j];
-                    // If a starts before b ends and b starts before a ends, they overlap
-                    if (a.Start < b.End && b.Start < a.End)
+                    var existingStart = existing.ShowDate;
+                    var existingEnd = existing.ShowDate.Add(existing.Duration);
+
+                    if (newStart < existingEnd && existingStart < newEnd)
                     {
-                        throw new InvalidOperationException("Showtimes in the batch cannot overlap. Please check the start times and durations.");
+                        _loggerService.Error(
+                            $"[AddBatchShowTimesAsync] Overlap detected with existing showtime: " +
+                            $"New (MovieId: {entry.MovieId}, Start: {newStart:O}, End: {newEnd:O}) " +
+                            $"Existing (Id: {existing.Id}, MovieId: {existing.MovieId}, Start: {existingStart:O}, End: {existingEnd:O})"
+                        );
+                        throw new InvalidOperationException("One or more showtimes overlap with existing showtimes in this room. Please check the start times and durations.");
                     }
                 }
             }
@@ -109,8 +121,39 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.ShowTimes.AddRangeAsync(showTimes);
             await _unitOfWork.SaveChangesAsync();
-            await _redisService.RemoveByPatternAsync("showtime:date:*");
-            await _redisService.RemoveByPatternAsync("showtime:movie:*");
+
+            // Remove all related showtime caches for this room and all affected movies/dates
+            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
+            var affectedMovieIds = dto.ShowTimes.Select(st => st.MovieId).Distinct().ToList();
+
+            // Remove cache for GetShowTimesByDateAsync
+            foreach (var date in affectedDates)
+            {
+                string cacheKey = $"showtime:date:{date:yyyyMMdd}:movie:all:room:{dto.CinemaRoomId}";
+                await _redisService.RemoveAsync(cacheKey);
+
+                foreach (var movieId in affectedMovieIds)
+                {
+                    string cacheKeyMovie = $"showtime:date:{date:yyyyMMdd}:movie:{movieId}:room:{dto.CinemaRoomId}";
+                    await _redisService.RemoveAsync(cacheKeyMovie);
+                }
+            }
+
+            // Remove cache for GetShowTimesByMovieAndDateAsync
+            foreach (var movieId in affectedMovieIds)
+            {
+                foreach (var date in affectedDates)
+                {
+                    string cacheKey = $"showtime:movie:{movieId}:date:{date:yyyyMMdd}";
+                    await _redisService.RemoveAsync(cacheKey);
+                }
+                // Remove the "all" date cache for this movie
+                string cacheKeyAll = $"showtime:movie:{movieId}:all";
+                await _redisService.RemoveAsync(cacheKeyAll);
+            }
+
+            // Remove the original cache for AddBatchShowTimesAsync (if any)
+            await _redisService.RemoveAsync($"showtime:room:{dto.CinemaRoomId}:date:{dto.ShowTimes.First().StartTime:yyyyMMdd}");
 
             // Audit log: log only primitive properties
             var newShowTimeData = showTimes.Select(st => new
@@ -300,6 +343,24 @@ namespace MovieTheater.Application.Services
                 _loggerService.Error($"[GetShowTimesByMovieAndDateAsync] Error: {ex.Message}");
                 throw new InvalidOperationException("An error occurred while retrieving showtimes.", ex);
             }
+        }
+
+        //============================ Helper =============================
+        private async Task<List<ShowtimeResponseDTO>> GetShowTimesByRoomAndDateAsync(Guid roomId, DateTime date)
+        {
+            var showTimes = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.CinemaRoomId == roomId && !st.IsDeleted && st.ShowDate.Date == date.Date)
+                .OrderBy(st => st.ShowDate)
+                .ToListAsync();
+
+            return showTimes.Select(st => new ShowtimeResponseDTO
+            {
+                Id = st.Id,
+                MovieId = st.MovieId,
+                CinemaRoomId = st.CinemaRoomId,
+                ShowDate = st.ShowDate,
+                Duration = st.Duration
+            }).ToList();
         }
     }
 }
