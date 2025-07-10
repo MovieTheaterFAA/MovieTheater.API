@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MovieTheater.API.Architecture;
 using MovieTheater.API.Configuration;
 using MovieTheater.Application.Hubs;
@@ -5,9 +8,6 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using Stripe;
 using SwaggerThemes;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -137,14 +137,13 @@ catch (Exception e)
     app.Logger.LogError(e, "An problem occurred during migration!");
 }
 
-// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseSession();
 
 // Map SignalR hubs
-app.MapHub<SeatHub>("/hubs/seat");
-app.MapHub<ChatbotHub>("/hubs/chatbot");
+app.MapHub<SeatHub>("/hubs/seat").RequireCors("AllowFrontend");
+app.MapHub<ChatbotHub>("/hubs/chatbot").RequireCors("AllowFrontend");
 
 app.Run();
