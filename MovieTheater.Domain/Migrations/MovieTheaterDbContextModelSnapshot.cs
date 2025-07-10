@@ -258,6 +258,51 @@ namespace MovieTheater.Domain.Migrations
                     b.ToTable("CinemaRooms");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.ClaimedPromotion", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PromotionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "PromotionId");
+
+                    b.HasIndex("PromotionId");
+
+                    b.ToTable("ClaimedPromotion");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1108,6 +1153,25 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Seat");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.ClaimedPromotion", b =>
+                {
+                    b.HasOne("MovieTheater.Domain.Entities.Promotion", "Promotion")
+                        .WithMany("ClaimedPromotions")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MovieTheater.Domain.Entities.User", "User")
+                        .WithMany("ClaimedPromotions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Promotion");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("MovieTheater.Domain.Entities.Booking", "Booking")
@@ -1300,6 +1364,11 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Showtimes");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.Promotion", b =>
+                {
+                    b.Navigation("ClaimedPromotions");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.Seat", b =>
                 {
                     b.Navigation("BookingSeats");
@@ -1326,6 +1395,8 @@ namespace MovieTheater.Domain.Migrations
             modelBuilder.Entity("MovieTheater.Domain.Entities.User", b =>
                 {
                     b.Navigation("Bookings");
+
+                    b.Navigation("ClaimedPromotions");
 
                     b.Navigation("ScoreHistory");
                 });

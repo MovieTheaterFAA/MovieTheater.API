@@ -148,7 +148,6 @@ namespace MovieTheater.Domain
             .WithMany(p => p.Promotions)
             .HasForeignKey(p => p.EventId);
 
-
             modelBuilder.Entity<ShowTimeSeat>()
                 .HasKey(sts => new { sts.ShowTimeId, sts.SeatId });
 
@@ -174,6 +173,20 @@ namespace MovieTheater.Domain
                 .HasOne(tf => tf.FoodAndDrink)
                 .WithMany(fd => fd.TicketFoodAndDrinks)
                 .HasForeignKey(tf => tf.FoodAndDrinkId);
+
+            // User ↔ Promotion (many-to-many) - ClaimedPromotion as join entity
+            modelBuilder.Entity<ClaimedPromotion>()
+                .HasKey(cp => new { cp.UserId, cp.PromotionId });
+
+            modelBuilder.Entity<ClaimedPromotion>()
+                .HasOne(cp => cp.User)
+                .WithMany(u => u.ClaimedPromotions)
+                .HasForeignKey(cp => cp.UserId);
+
+            modelBuilder.Entity<ClaimedPromotion>()
+                .HasOne(cp => cp.Promotion)
+                .WithMany(p => p.ClaimedPromotions)
+                .HasForeignKey(cp => cp.PromotionId);
 
             // Promotions, Otp: standalone, no relationships with other entities
         }

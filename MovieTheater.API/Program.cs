@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MovieTheater.API.Architecture;
 using MovieTheater.API.Configuration;
 using MovieTheater.Application.Hubs;
@@ -5,9 +8,6 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Services;
 using Stripe;
 using SwaggerThemes;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,7 +109,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("AllowFrontend");
 
-// Configure the HTTP request pipeline
+// Configure the HTTP request pipeline - REMEMBER
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
@@ -119,7 +119,6 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
         c.RoutePrefix = string.Empty;
         c.InjectStylesheet("/swagger-ui/custom-theme.css");
         c.HeadContent = $"<style>{SwaggerTheme.GetSwaggerThemeCss(Theme.Dracula)}</style>";
-        // Config theme của swagger
     });
 }
 
@@ -132,14 +131,13 @@ catch (Exception e)
     app.Logger.LogError(e, "An problem occurred during migration!");
 }
 
-// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseSession();
 
 // Map SignalR hubs
-app.MapHub<SeatHub>("/seatHubs");
-app.MapHub<ChatbotHub>("/chatbotHubs");
+app.MapHub<SeatHub>("/hubs/seat").RequireCors("AllowFrontend");
+app.MapHub<ChatbotHub>("/hubs/chatbot").RequireCors("AllowFrontend");
 
 app.Run();

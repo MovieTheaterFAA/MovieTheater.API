@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    [Migration("20250626142347_FixBookingSeat")]
-    partial class FixBookingSeat
+    [Migration("20250709050302_UpdatePromotion")]
+    partial class UpdatePromotion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -259,6 +259,51 @@ namespace MovieTheater.Domain.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CinemaRooms");
+                });
+
+            modelBuilder.Entity("MovieTheater.Domain.Entities.ClaimedPromotion", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PromotionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "PromotionId");
+
+                    b.HasIndex("PromotionId");
+
+                    b.ToTable("ClaimedPromotion");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Event", b =>
@@ -855,11 +900,18 @@ namespace MovieTheater.Domain.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("GuestPhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("IssuedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TicketType")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("numeric");
@@ -875,6 +927,48 @@ namespace MovieTheater.Domain.Migrations
                     b.HasIndex("BookingId");
 
                     b.ToTable("Tickets");
+                });
+
+            modelBuilder.Entity("MovieTheater.Domain.Entities.TicketFoodAndDrink", b =>
+                {
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FoodAndDrinkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TicketId", "FoodAndDrinkId");
+
+                    b.HasIndex("FoodAndDrinkId");
+
+                    b.ToTable("TicketFoodAndDrinks");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.TicketSeat", b =>
@@ -1062,6 +1156,25 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Seat");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.ClaimedPromotion", b =>
+                {
+                    b.HasOne("MovieTheater.Domain.Entities.Promotion", "Promotion")
+                        .WithMany("ClaimedPromotions")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MovieTheater.Domain.Entities.User", "User")
+                        .WithMany("ClaimedPromotions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Promotion");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("MovieTheater.Domain.Entities.Booking", "Booking")
@@ -1173,6 +1286,25 @@ namespace MovieTheater.Domain.Migrations
                     b.Navigation("Booking");
                 });
 
+            modelBuilder.Entity("MovieTheater.Domain.Entities.TicketFoodAndDrink", b =>
+                {
+                    b.HasOne("MovieTheater.Domain.Entities.FoodAndDrink", "FoodAndDrink")
+                        .WithMany("TicketFoodAndDrinks")
+                        .HasForeignKey("FoodAndDrinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MovieTheater.Domain.Entities.Ticket", "Ticket")
+                        .WithMany("TicketFoodAndDrinks")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FoodAndDrink");
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("MovieTheater.Domain.Entities.TicketSeat", b =>
                 {
                     b.HasOne("MovieTheater.Domain.Entities.Seat", "Seat")
@@ -1221,6 +1353,8 @@ namespace MovieTheater.Domain.Migrations
             modelBuilder.Entity("MovieTheater.Domain.Entities.FoodAndDrink", b =>
                 {
                     b.Navigation("BookingFoods");
+
+                    b.Navigation("TicketFoodAndDrinks");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Invoice", b =>
@@ -1231,6 +1365,11 @@ namespace MovieTheater.Domain.Migrations
             modelBuilder.Entity("MovieTheater.Domain.Entities.Movie", b =>
                 {
                     b.Navigation("Showtimes");
+                });
+
+            modelBuilder.Entity("MovieTheater.Domain.Entities.Promotion", b =>
+                {
+                    b.Navigation("ClaimedPromotions");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Seat", b =>
@@ -1251,12 +1390,16 @@ namespace MovieTheater.Domain.Migrations
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.Ticket", b =>
                 {
+                    b.Navigation("TicketFoodAndDrinks");
+
                     b.Navigation("TicketSeats");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.User", b =>
                 {
                     b.Navigation("Bookings");
+
+                    b.Navigation("ClaimedPromotions");
 
                     b.Navigation("ScoreHistory");
                 });

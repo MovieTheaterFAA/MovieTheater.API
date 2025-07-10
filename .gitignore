@@ -482,4 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-/.sonarqube
+
+# SonarQube
+.sonarqube/
+.scannerwork/

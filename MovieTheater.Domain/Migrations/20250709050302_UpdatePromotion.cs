@@ -6,22 +6,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MovieTheater.Domain.Migrations
 {
     /// <inheritdoc />
-    public partial class FixSeat : Migration
+    public partial class UpdatePromotion : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Status",
-                table: "Seats");
-
             migrationBuilder.CreateTable(
-                name: "ShowTimeSeat",
+                name: "ClaimedPromotion",
                 columns: table => new
                 {
-                    ShowTimeId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SeatId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PromotionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false),
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -33,39 +30,32 @@ namespace MovieTheater.Domain.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ShowTimeSeat", x => new { x.ShowTimeId, x.SeatId });
+                    table.PrimaryKey("PK_ClaimedPromotion", x => new { x.UserId, x.PromotionId });
                     table.ForeignKey(
-                        name: "FK_ShowTimeSeat_Seats_SeatId",
-                        column: x => x.SeatId,
-                        principalTable: "Seats",
+                        name: "FK_ClaimedPromotion_Promotions_PromotionId",
+                        column: x => x.PromotionId,
+                        principalTable: "Promotions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ShowTimeSeat_Showtimes_ShowTimeId",
-                        column: x => x.ShowTimeId,
-                        principalTable: "Showtimes",
+                        name: "FK_ClaimedPromotion_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ShowTimeSeat_SeatId",
-                table: "ShowTimeSeat",
-                column: "SeatId");
+                name: "IX_ClaimedPromotion_PromotionId",
+                table: "ClaimedPromotion",
+                column: "PromotionId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ShowTimeSeat");
-
-            migrationBuilder.AddColumn<int>(
-                name: "Status",
-                table: "Seats",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
+                name: "ClaimedPromotion");
         }
     }
 }
