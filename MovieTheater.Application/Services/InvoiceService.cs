@@ -38,7 +38,14 @@ namespace MovieTheater.Application.Services
                     throw new KeyNotFoundException($"Invoice with ID {id} not found");
                 }
 
+
                 var result = await MapToDto(invoice);
+                if (result == null)
+                {
+                    _loggerService.Warn($"Failed to map invoice with ID: {id} to DTO");
+                    throw new InvalidOperationException("Failed to map invoice to DTO");
+                }
+
                 return result;
             }
             catch (Exception ex)
@@ -91,22 +98,33 @@ namespace MovieTheater.Application.Services
 
             try
             {
-                string cacheKey = $"invoices:user:{userId}";
-                var cached = await _redisService.GetAsync<IEnumerable<InvoiceDto>>(cacheKey);
-                if (cached != null) return cached;
+                //string cacheKey = $"invoices:user:{userId}";
+                //var cached = await _redisService.GetAsync<IEnumerable<InvoiceDto>>(cacheKey);
+                //if (cached != null) return cached;
 
                 // Get all bookings for the user
                 var bookings = await _unitOfWork.Bookings.GetAllAsync(b => b.MemberId == userId);
+                if (bookings == null || !bookings.Any())
+                {
+                    _loggerService.Warn($"No bookings found for user ID: {userId}");
+                    return Enumerable.Empty<InvoiceDto>();
+                }
                 var bookingIds = bookings.Select(b => b.Id).ToList();
 
                 // Get all invoices for those bookings
                 var invoices = await _unitOfWork.Invoices.GetAllAsync(
                     i => bookingIds.Contains(i.BookingId));
 
-                var tasks = invoices.Select(MapToDto);
-                var result = await Task.WhenAll(tasks);
 
-                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
+
+                var result = new List<InvoiceDto>();
+                foreach (var invoice in invoices)
+                {
+                    var invoiceDto = await MapToDto(invoice);
+                    result.Add(invoiceDto);
+                }
+
+                //await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
                 return result;
             }
             catch (Exception ex)
@@ -216,11 +234,98 @@ namespace MovieTheater.Application.Services
             }
         }
 
+        public async Task<Pagination<InvoiceDto>> GetAllInvoicesAsync(int page = 1,
+                                                                      int pageSize = 10,
+                                                                      string? status = null,
+                                                                      string? sortBy = null,
+                                                                      bool isDescending = false,
+                                                                      string? search = null)
+        {
+            try
+            {
+                _loggerService.Info($"Fetching invoices - Page {page}, PageSize {pageSize}, Status: {status}, Search: {search}");
+
+                var invoices = await _unitOfWork.Invoices.GetAllAsync();
+                var query = invoices.AsQueryable();
+
+                // Filter by status if provided
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    query = query.Where(i => i.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Search by user name or movie title
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var lowerSearch = search.ToLower();
+
+                    // Find user IDs matching search
+                    var userIds = (await _unitOfWork.Users.GetAllAsync(u =>
+                        u.FullName != null && u.FullName.ToLower().Contains(lowerSearch)))
+                        .Select(u => u.Id)
+                        .ToList();
+
+                    // Find showtime IDs matching movie title
+                    var showtimeIds = (await _unitOfWork.ShowTimes.GetAllAsync(st =>
+                        st.Movie != null && st.Movie.Name != null && st.Movie.Name.ToLower().Contains(lowerSearch)))
+                        .Select(st => st.Id)
+                        .ToList();
+
+                    // Find booking IDs matching user or movie
+                    var bookingIds = (await _unitOfWork.Bookings.GetAllAsync(b =>
+                        userIds.Contains(b.MemberId) || showtimeIds.Contains(b.ShowtimeId)))
+                        .Select(b => b.Id)
+                        .ToList();
+
+                    query = query.Where(i => bookingIds.Contains(i.BookingId));
+                }
+
+                var totalItems = query.Count();
+
+                // Sorting
+                query = sortBy?.ToLower() switch
+                {
+                    "date" => isDescending ? query.OrderByDescending(i => i.InvoiceDate) : query.OrderBy(i => i.InvoiceDate),
+                    "amount" => isDescending ? query.OrderByDescending(i => i.Amount) : query.OrderBy(i => i.Amount),
+                    _ => isDescending ? query.OrderByDescending(i => i.InvoiceDate) : query.OrderBy(i => i.InvoiceDate)
+                };
+
+                // Pagination
+                var pagedItems = query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                // Map to DTOs
+                var result = new List<InvoiceDto>();
+                foreach (var invoice in pagedItems)
+                {
+                    var dto = await MapToDto(invoice);
+                    result.Add(dto);
+                }
+
+                var response = new Pagination<InvoiceDto>(result, totalItems, page, pageSize);
+                _loggerService.Success($"Retrieved {result.Count} invoices on page {page} successfully.");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Failed to retrieve invoices. Exception: {ex.Message}");
+                throw new Exception("An error occurred while retrieving invoice items. Please try again later.");
+            }
+        }
 
         private async Task<InvoiceDto> MapToDto(Invoice invoice)
         {
             var booking = invoice.Booking;
 
+            if (booking == null)
+            {
+                _loggerService.Warn($"Invoice {invoice.Id} does not have a related booking loaded.");
+                var bookingId = invoice.BookingId;
+                booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId, b => b.Member, b => b.Showtime);
+            }
             // Get member name
             var member = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
             string memberName = member?.FullName ?? "Unknown";

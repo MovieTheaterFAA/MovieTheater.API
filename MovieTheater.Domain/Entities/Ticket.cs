@@ -5,7 +5,7 @@ namespace MovieTheater.Domain.Entities
 {
     public class Ticket : BaseEntity
     {
-        public Guid BookingId { get; set; }
+        public Guid? BookingId { get; set; }
 
         [ForeignKey(nameof(BookingId))]
         public Booking Booking { get; set; }

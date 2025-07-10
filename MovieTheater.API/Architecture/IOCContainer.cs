@@ -145,6 +145,7 @@ public static class IocContainer
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IInvoiceService, InvoiceService>();
         services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<ITicketService, TicketService>();
         services.AddHostedService<PaymentExpiryService>();
         services.AddHostedService<BookingCleanupService>();
 

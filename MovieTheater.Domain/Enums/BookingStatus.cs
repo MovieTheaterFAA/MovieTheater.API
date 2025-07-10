@@ -3,7 +3,7 @@
     public enum BookingStatus
     {
         Created,
-        Confirmed,
+        PaymentFailed,
         Cancelled,
         Completed
     }
