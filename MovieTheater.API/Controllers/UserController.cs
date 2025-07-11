@@ -1,14 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
-using MovieTheater.Application.Interfaces.Commons;
-using MovieTheater.Application.Services;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.UserDTOs;
-using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
-using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers
 {
@@ -17,14 +11,10 @@ namespace MovieTheater.API.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IClaimsService _claimsService;
-        private readonly ILoggerService _loggerService;
         private readonly IImpersonationService _impersonationService;
-        public UserController(IUserService userService, IClaimsService claimsService, ILoggerService loggerService, IImpersonationService impersonationService)
+        public UserController(IUserService userService, IImpersonationService impersonationService)
         {
             _userService = userService;
-            _claimsService = claimsService;
-            _loggerService = loggerService;
             _impersonationService = impersonationService;
         }
         [HttpGet("me")]
