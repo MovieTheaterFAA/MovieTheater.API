@@ -16,13 +16,15 @@ namespace MovieTheater.Application.Services
         private readonly IRedisService _redisService;
         private readonly IStripeClient _stripeClient;
         private readonly string _baseUrl;
+        private readonly ITicketService _ticketService;
 
         public StripePaymentService(
             ILoggerService loggerService,
             IUnitOfWork unitOfWork,
             IRedisService redisService,
             IStripeClient stripeClient,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ITicketService ticketService)
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
@@ -33,6 +35,7 @@ namespace MovieTheater.Application.Services
                 "https://movietheaterfe.ae-tao-fullstack-api.site";
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
+            _ticketService = ticketService;
         }
 
         public async Task<string> CreateCheckoutSessionAsync(Guid invoiceId)
@@ -283,16 +286,22 @@ namespace MovieTheater.Application.Services
                             }
                         }
                     }
+
                 }
 
-                decimal amount = invoice.Amount;
+                var tickets = await _ticketService.GenerateTicketFromBookingAsync(invoice.BookingId);
+                if (tickets == null)
+                {
+                    _loggerService.Warn($"No tickets generated for booking {invoice.BookingId}");
+                    throw new InvalidOperationException($"No tickets generated for booking {invoice.BookingId}");
+                }
 
                 // Create payment record
                 var payment = new Payment
                 {
                     InvoiceId = invoiceId,
                     PaymentDate = DateTime.UtcNow,
-                    Amount = amount,
+                    Amount = invoice.Amount,
                     Provider = "Stripe",
                     PaymentReference = session.Id,
                     Status = "Completed"

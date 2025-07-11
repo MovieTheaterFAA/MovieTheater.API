@@ -13,9 +13,11 @@ public class TicketService : ITicketService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILoggerService _loggerService;
+
     public TicketService(
         IUnitOfWork unitOfWork,
-        ILoggerService loggerService)
+        ILoggerService loggerService
+        )
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
@@ -51,9 +53,8 @@ public class TicketService : ITicketService
             var existingTicket = await _unitOfWork.Tickets.FirstOrDefaultAsync(t => t.BookingId == bookingId && !t.IsDeleted);
             if (existingTicket != null)
             {
-                _loggerService.Info($"Ticket already exists for booking ID: {bookingId}");
-                // Return existing ticket details
-                return await GetTicketDetailsAsync(existingTicket.Id);
+                _loggerService.Warn($"Ticket already exists for booking ID: {bookingId}");
+                throw new InvalidOperationException("Ticket already exists for this booking.");
             }
 
             // Create the ticket
@@ -82,6 +83,7 @@ public class TicketService : ITicketService
                 ticket.TicketSeats.Add(new TicketSeat
                 {
                     SeatId = seat.Id,
+                    PricePerSeat = GetSeatPrice(seat)
                 });
             }
 
@@ -111,6 +113,145 @@ public class TicketService : ITicketService
         {
             _loggerService.Error($"Error generating ticket for booking {bookingId}: {ex.Message}");
             throw;
+        }
+    }
+
+    public async Task<TicketResponseDto> CreateOfflineTicketAsync(CreateOfflineTicketRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.GuestPhoneNumber))
+                throw new ArgumentException("Guest phone number is required.");
+
+            // Optionally check if user exists by phone number
+            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.GuestPhoneNumber && !u.IsDeleted);
+
+            // Validate showtime
+            var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
+            if (showtime == null)
+                throw new KeyNotFoundException("Showtime not found.");
+
+            // Validate seats
+            var seats = await _unitOfWork.Seats.GetAllAsync(s => request.SeatIds.Contains(s.Id) && !s.IsDeleted);
+            if (seats.Count() != request.SeatIds.Count)
+                throw new InvalidOperationException("Some seats are invalid or already booked.");
+
+            var ticket = new Ticket
+            {
+                BookingId = null,
+                IssuedAt = DateTime.UtcNow,
+                GuestPhoneNumber = request.GuestPhoneNumber,
+                TicketType = TicketType.Offline,
+                TicketSeats = new List<TicketSeat>(),
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink>()
+            };
+
+            foreach (var seat in seats)
+            {
+                ticket.TicketSeats.Add(new TicketSeat
+                {
+                    SeatId = seat.Id,
+                    PricePerSeat = GetSeatPrice(seat)
+                });
+            }
+
+            if (request.FoodItems != null)
+            {
+                foreach (var item in request.FoodItems)
+                {
+                    ticket.TicketFoodAndDrinks.Add(new TicketFoodAndDrink
+                    {
+                        FoodAndDrinkId = item.FoodAndDrinkId,
+                        Quantity = item.Quantity
+                    });
+                }
+            }
+
+            await _unitOfWork.Tickets.AddAsync(ticket);
+            await _unitOfWork.SaveChangesAsync();
+
+            return await GetTicketDetailsAsync(ticket.Id);
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Error creating offline ticket: {ex.Message}");
+            throw new InvalidOperationException("Failed to create offline ticket", ex);
+        }
+    }
+
+    public async Task<Pagination<TicketResponseDto>> GetAllTicketsAsync(
+        int page = 1,
+        int pageSize = 10,
+        TicketType? ticketType = null,
+        string? sortBy = null,
+        bool isDescending = false,
+        string? search = null)
+    {
+        try
+        {
+            _loggerService.Info($"Fetching tickets - Page {page}, PageSize {pageSize}, TicketType: {ticketType}, Search: {search}");
+
+            var tickets = await _unitOfWork.Tickets.GetAllAsync(t => !t.IsDeleted);
+            var query = tickets.AsQueryable();
+
+            // Filter by ticket type if provided
+            if (ticketType.HasValue)
+            {
+                query = query.Where(t => t.TicketType == ticketType.Value);
+            }
+
+            // Search by movie name, guest phone, or cinema room
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var lowerSearch = search.ToLower();
+                _loggerService.Info($"Searching tickets with term: {lowerSearch}");
+
+                // Find showtimeIds by movie name
+                var showtimeIds = (await _unitOfWork.ShowTimes.GetAllAsync(st =>
+                    !st.IsDeleted && st.Movie != null && !st.Movie.IsDeleted &&
+                    st.Movie.Name != null && st.Movie.Name.ToLower().Contains(lowerSearch)))
+                    .Select(st => st.Id)
+                    .ToList();
+
+                query = query.Where(t =>
+                    (!string.IsNullOrEmpty(t.GuestPhoneNumber) && t.GuestPhoneNumber.Contains(lowerSearch)) ||
+                    (t.Booking != null && showtimeIds.Contains(t.Booking.ShowtimeId))
+                );
+                _loggerService.Info($"Filtered tickets by search term '{lowerSearch}', total count: {query.Count()}");
+            }
+
+            var totalItems = query.Count();
+
+            // Sorting
+            query = sortBy?.ToLower() switch
+            {
+                "date" => isDescending ? query.OrderByDescending(t => t.IssuedAt) : query.OrderBy(t => t.IssuedAt),
+                "price" => isDescending ? query.OrderByDescending(t => t.TotalPrice) : query.OrderBy(t => t.TotalPrice),
+                _ => isDescending ? query.OrderByDescending(t => t.IssuedAt) : query.OrderBy(t => t.IssuedAt)
+            };
+
+            // Pagination
+            var pagedItems = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var result = new List<TicketResponseDto>();
+            foreach (var ticket in pagedItems)
+            {
+                // Use the existing method to get full ticket details
+                result.Add(await GetTicketDetailsAsync(ticket.Id));
+            }
+
+            var response = new Pagination<TicketResponseDto>(result, totalItems, page, pageSize);
+            _loggerService.Success($"Retrieved {result.Count} tickets on page {page} successfully.");
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Failed to retrieve tickets. Exception: {ex.Message}");
+            throw new Exception("An error occurred while retrieving ticket items. Please try again later.");
         }
     }
 
@@ -189,25 +330,50 @@ public class TicketService : ITicketService
         {
             _loggerService.Info($"Generating QR code for ticket ID: {ticketId}");
 
+            // Validate input
+            if (ticketId == Guid.Empty)
+            {
+                _loggerService.Warn("Attempted to generate QR code with empty ticket ID");
+                throw new ArgumentException("Invalid ticket ID", nameof(ticketId));
+            }
+
             var ticketDetails = await GetTicketDetailsAsync(ticketId);
             if (ticketDetails == null)
                 throw new KeyNotFoundException($"Ticket with ID {ticketId} not found.");
 
-            var qrPayload = new
+            var qrPayload = new QrCodePayload
             {
                 TicketId = ticketDetails.Id,
                 Hash = GenerateTicketValidationHash(ticketDetails),
                 ExpiresAt = DateTime.UtcNow.AddMinutes(30)
             };
 
-            string qrContent = JsonSerializer.Serialize(qrPayload);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false
+            };
+            string qrContent = JsonSerializer.Serialize(qrPayload, jsonOptions);
+
+            // Validate QR content size
+            if (qrContent.Length > 2953)
+            {
+                _loggerService.Warn($"QR content too large: {qrContent.Length} characters");
+                throw new InvalidOperationException("QR code content exceeds maximum size limit");
+            }
 
             using var qrGenerator = new QRCodeGenerator();
-            QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrContent, QRCodeGenerator.ECCLevel.Q);
+            using var qrCodeData = qrGenerator.CreateQrCode(qrContent, QRCodeGenerator.ECCLevel.Q);
+            using var qrCode = new Base64QRCode(qrCodeData);
 
-            var qrCode = new Base64QRCode(qrCodeData);
-            string qrBase64 = qrCode.GetGraphic(7, "Black", "White", true, Base64QRCode.ImageType.Png);
+            string qrBase64 = qrCode.GetGraphic(
+                7,
+                "Black",
+                "White",
+                true,
+                Base64QRCode.ImageType.Png);
 
+            _loggerService.Success($"QR code generated successfully for ticket ID: {ticketId}");
             return $"data:image/png;base64,{qrBase64}";
         }
         catch (Exception ex)
@@ -221,44 +387,41 @@ public class TicketService : ITicketService
     {
         try
         {
-            _loggerService.Info($"Verifying ticket QR code");
+            _loggerService.Info($"Verifying ticket QR code for ticket ID: {qrCodeData?.TicketId}");
 
-            if (qrCodeData == null)
+            if (qrCodeData == null || qrCodeData.TicketId == Guid.Empty)
             {
-                _loggerService.Warn("Invalid QR code format");
-                return new TicketVerificationResultDto
-                {
-                    IsValid = false,
-                    Message = "Invalid QR code format"
-                };
+                _loggerService.Warn("Invalid QR code format or missing ticket ID");
+                throw new ArgumentException("Invalid QR code data");
+            }
+
+            if (string.IsNullOrWhiteSpace(qrCodeData.Hash))
+            {
+                _loggerService.Warn($"Missing hash in QR code for ticket {qrCodeData.TicketId}");
+                throw new ArgumentException("QR code hash is missing");
+            }
+
+            // Check expiration first (faster check)
+            if (DateTime.UtcNow > qrCodeData.ExpiresAt)
+            {
+                _loggerService.Warn($"QR code for ticket {qrCodeData.TicketId} has expired at {qrCodeData.ExpiresAt:yyyy-MM-dd HH:mm:ss} UTC");
+                throw new InvalidOperationException("QR code has expired");
             }
 
             // Check if the ticket exists
             var ticketDetails = await GetTicketDetailsAsync(qrCodeData.TicketId);
-
-            // Verify expiration
-            if (DateTime.UtcNow > qrCodeData.ExpiresAt)
+            if (ticketDetails == null)
             {
-                _loggerService.Warn($"QR code for ticket {qrCodeData.TicketId} has expired");
-                return new TicketVerificationResultDto
-                {
-                    IsValid = false,
-                    Message = "QR code has expired",
-                    Ticket = ticketDetails
-                };
+                _loggerService.Warn($"Ticket with ID {qrCodeData.TicketId} not found");
+                throw new KeyNotFoundException($"Ticket with ID {qrCodeData.TicketId} not found.");
             }
 
-            // Validate hash
+            // Validate hash using the improved method
             string expectedHash = GenerateTicketValidationHash(ticketDetails);
             if (qrCodeData.Hash != expectedHash)
             {
-                _loggerService.Warn($"Invalid hash for ticket {qrCodeData.TicketId}");
-                return new TicketVerificationResultDto
-                {
-                    IsValid = false,
-                    Message = "Invalid ticket hash - QR code may have been tampered with",
-                    Ticket = ticketDetails
-                };
+                _loggerService.Warn($"Hash validation failed for ticket {qrCodeData.TicketId}");
+                throw new InvalidOperationException("QR code hash does not match the ticket data");
             }
 
             _loggerService.Success($"Ticket {qrCodeData.TicketId} verified successfully");
@@ -269,32 +432,39 @@ public class TicketService : ITicketService
                 Ticket = ticketDetails
             };
         }
-        catch (KeyNotFoundException ex)
-        {
-            _loggerService.Warn($"Ticket not found during verification: {ex.Message}");
-            return new TicketVerificationResultDto
-            {
-                IsValid = false,
-                Message = "Ticket not found"
-            };
-        }
         catch (Exception ex)
         {
             _loggerService.Error($"Error verifying ticket QR code: {ex.Message}");
-            throw;
+            throw new InvalidOperationException("QR code verification failed due to system error", ex);
         }
     }
 
     private string GenerateTicketValidationHash(TicketResponseDto ticket)
     {
-        // Create a simple validation hash combining ticket ID and issue time
-        // In a real application, you might want to use a more secure method
-        string dataToHash = $"{ticket.Id}";
-        using (var sha = System.Security.Cryptography.SHA256.Create())
+        try
         {
+            // Include comprehensive ticket data
+            var dataToHash = $"{ticket.Id}|{ticket.IssuedAt:yyyy-MM-dd-HH-mm-ss}|{ticket.TotalPrice}|{ticket.BookingId}";
+
+            // Use the configured HMAC secret key from settings
+            using var hmac = new System.Security.Cryptography.HMACSHA256(
+                System.Text.Encoding.UTF8.GetBytes("MovieTheater_QRCode_SecretKey_2024_VeryLongAndRandomString_ForHMACValidation_ShouldBe256BitsMinimum_NeverShareThis"));
+
+            if (hmac.Key == null || hmac.Key.Length < 32)
+            {
+                _loggerService.Warn("HMAC key is not properly configured or too short");
+                throw new InvalidOperationException("HMAC key is not properly configured");
+            }
+
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(dataToHash);
-            byte[] hash = sha.ComputeHash(bytes);
+            byte[] hash = hmac.ComputeHash(bytes);
+
             return Convert.ToBase64String(hash);
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Error generating validation hash: {ex.Message}");
+            throw new InvalidOperationException("Failed to generate validation hash", ex);
         }
     }
 
@@ -320,11 +490,17 @@ public class TicketService : ITicketService
         ticketSeats = ticket.TicketSeats.Select(ts =>
         {
             var seat = seats.FirstOrDefault(s => s.Id == ts.SeatId);
+            if (seat == null)
+            {
+                _loggerService.Warn($"Seat with ID {ts.SeatId} not found for ticket {ticketId}");
+                throw new KeyNotFoundException($"Seat with ID {ts.SeatId} not found for ticket {ticketId}.");
+            }
             return new TicketSeatDto
             {
                 SeatId = ts.SeatId,
                 Row = seat.Row,
                 Number = seat.Number,
+                PricePerSeat = ts.PricePerSeat != 0 ? ts.PricePerSeat : GetSeatPrice(seat),
             };
         }).ToList();
 
@@ -348,6 +524,11 @@ public class TicketService : ITicketService
         }
 
         var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(ticket.Booking.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
+        if (showtime == null)
+        {
+            _loggerService.Warn($"No showtime found for ticket with ID: {ticketId}");
+            throw new KeyNotFoundException($"Showtime for ticket with ID {ticketId} not found.");
+        }
 
         return new TicketResponseDto
         {
@@ -357,11 +538,26 @@ public class TicketService : ITicketService
             GuestPhoneNumber = ticket.GuestPhoneNumber,
             TotalPrice = ticket.TotalPrice,
             TicketType = ticket.TicketType.ToString(),
-            MovieName = showtime?.Movie?.Name,
-            ShowTime = showtime?.ShowDate.ToString("yyyy-MM-dd HH:mm"),
-            CinemaRoom = showtime?.CinemaRoom?.Name,
+            MovieName = showtime.Movie.Name,
+            ShowTime = showtime.ShowDate.ToString("yyyy-MM-dd HH:mm"),
+            CinemaRoom = showtime.CinemaRoom.Name,
             Seats = ticketSeats,
             FoodItems = ticketFoods
+        };
+    }
+
+    private decimal GetSeatPrice(Seat seat)
+    {
+        // Logic to determine seat price based on seat type
+        if (seat == null)
+            return 0;
+
+        return seat.Type switch
+        {
+            SeatType.Normal => 80000,  // Example prices
+            SeatType.VIP => 120000,
+            SeatType.Couple => 200000,
+            _ => 80000
         };
     }
 }

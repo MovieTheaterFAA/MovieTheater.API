@@ -8,7 +8,7 @@ namespace MovieTheater.Domain.Entities
         public Guid? BookingId { get; set; }
 
         [ForeignKey(nameof(BookingId))]
-        public Booking Booking { get; set; }
+        public Booking? Booking { get; set; }
         public DateTime IssuedAt { get; set; }
         public string GuestPhoneNumber { get; set; } // Optional for offline tickets
         public decimal TotalPrice { get; set; }
