@@ -43,7 +43,7 @@ public class TicketService : ITicketService
                 b => b.Member,
                 b => b.Showtime);
 
-            _loggerService.Info($"Booking retrieved: {booking?.Id}, Member: {booking?.Member?.PhoneNumber}, Showtime: {booking?.Showtime.Id}");
+            _loggerService.Info($"Booking retrieved: {booking?.Id}, Member: {booking?.Member?.PhoneNumber}, Showtime: {booking?.Showtime?.Id}");
 
             if (booking == null || booking.IsDeleted)
             {
@@ -66,7 +66,7 @@ public class TicketService : ITicketService
                 IssuedAt = DateTime.UtcNow,
                 GuestPhoneNumber = booking.Member.PhoneNumber,
                 TotalPrice = booking.TotalAmount,
-                ShowTimeId = booking.Showtime.Id,
+                ShowTimeId = booking.ShowtimeId,
                 TicketType = TicketType.Online,
                 TicketSeats = new List<TicketSeat>(),
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink>()

@@ -66,7 +66,6 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Invoice> Invoices { get; }
     public IGenericRepository<Payment> Payments { get; }
     public IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
-
     public IGenericRepository<Ticket> Tickets { get; }
     public void Dispose()
     {
