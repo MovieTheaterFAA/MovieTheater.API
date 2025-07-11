@@ -20,5 +20,6 @@ public interface IUnitOfWork : IDisposable
     IGenericRepository<BookingFood> BookingFoods { get; }
     IGenericRepository<Invoice> Invoices { get; }
     IGenericRepository<Payment> Payments { get; }
+    IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
     Task<int> SaveChangesAsync();
 }

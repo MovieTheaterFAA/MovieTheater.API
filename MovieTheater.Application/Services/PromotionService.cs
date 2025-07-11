@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -7,6 +6,7 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
 
@@ -112,7 +112,6 @@ public class PromotionService : IPromotionService
             throw;
         }
     }
-
     public async Task<bool> DeletePromotionAsync(Guid promotionId)
     {
         try
@@ -166,7 +165,6 @@ public class PromotionService : IPromotionService
             return false;
         }
     }
-
     public async Task<PromotionResponseDto?> UpdatePromotionAsync(Guid promotionId, PromotionUpdateDto dto)
     {
         try
@@ -289,6 +287,127 @@ public class PromotionService : IPromotionService
         catch (Exception ex)
         {
             _loggerService.Error($"[UpdatePromotionAsync] Error updating promotion{promotionId}: {ex.Message}");
+            throw;
+        }
+    }
+
+
+    public async Task<bool> ClaimPromotionAsync(Guid promotionId, Guid userId)
+    {
+        try
+        {
+            _loggerService.Info($"[ClaimPromotionAsync] User {userId} attempts to claim promotion {promotionId}");
+
+            var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId);
+            if (promotion == null)
+            {
+                _loggerService.Warn($"[ClaimPromotionAsync] Promotion {promotionId} not found.");
+                throw ErrorHelper.NotFound("Promotion not found.");
+            }
+
+            if (await HasUserClaimedPromotionAsync(promotionId, userId))
+            {
+                _loggerService.Warn($"[ClaimPromotionAsync] User {userId} already claimed promotion {promotionId}.");
+                return false;
+            }
+
+            var claimedPromotion = new ClaimedPromotion
+            {
+                PromotionId = promotionId,
+                UserId = userId,
+                ClaimedAt = DateTime.UtcNow,
+                IsUsed = false
+            };
+
+            await _unitOfWork.ClaimedPromotions.AddAsync(claimedPromotion);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[ClaimPromotionAsync] User {userId} successfully claimed promotion {promotionId}.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[ClaimPromotionAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+    public async Task<bool> UseClaimedPromotionAsync(Guid promotionId, Guid userId)
+    {
+        try
+        {
+            _loggerService.Info($"[UseClaimedPromotionAsync] User {userId} attempts to use promotion {promotionId}");
+
+            var claimed = await _unitOfWork
+                .ClaimedPromotions
+                .GetQueryable()
+                .FirstOrDefaultAsync(cp => cp.PromotionId == promotionId && cp.UserId == userId && !cp.IsUsed);
+
+            if (claimed == null)
+            {
+                _loggerService.Warn($"[UseClaimedPromotionAsync] Claimed promotion not found or already used for user {userId}, promotion {promotionId}.");
+                return false;
+            }
+
+            claimed.IsUsed = true;
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[UseClaimedPromotionAsync] User {userId} used promotion {promotionId}.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[UseClaimedPromotionAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<PromotionResponseDto>> GetClaimedPromotionsByUserAsync(Guid userId)
+    {
+        try
+        {
+            _loggerService.Info($"[GetClaimedPromotionsByUserAsync] Get claimed promotions for user {userId}");
+
+            var claimedPromotions = await _unitOfWork
+                .ClaimedPromotions
+                .GetQueryable()
+                .Include(cp => cp.Promotion)
+                .Where(cp => cp.UserId == userId && !cp.Promotion.IsDeleted)
+                .Select(cp => new PromotionResponseDto
+                {
+                    Id = cp.Promotion.Id,
+                    Title = cp.Promotion.Title,
+                    DiscountValue = cp.Promotion.DiscountValue,
+                    Detail = cp.Promotion.Detail,
+                    EventId = cp.Promotion.EventId
+                })
+                .ToListAsync();
+
+            return claimedPromotions;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetClaimedPromotionsByUserAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    //============== Helper Methods ==============
+    public async Task<bool> HasUserClaimedPromotionAsync(Guid promotionId, Guid userId)
+    {
+        try
+        {
+            _loggerService.Info($"[HasUserClaimedPromotionAsync] Check if user {userId} claimed promotion {promotionId}");
+
+            var claimed = await _unitOfWork
+                .ClaimedPromotions
+                .GetQueryable()
+                .AnyAsync(cp => cp.PromotionId == promotionId && cp.UserId == userId);
+
+            return claimed;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[HasUserClaimedPromotionAsync] Error: {ex.Message}");
             throw;
         }
     }
