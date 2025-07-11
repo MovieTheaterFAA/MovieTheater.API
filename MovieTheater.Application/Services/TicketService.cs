@@ -41,7 +41,7 @@ public class TicketService : ITicketService
                 b => b.BookingSeats,
                 b => b.BookingFoods,
                 b => b.Member,
-                b => b.Showtime.Id);
+                b => b.Showtime);
 
             _loggerService.Info($"Booking retrieved: {booking?.Id}, Member: {booking?.Member?.PhoneNumber}, Showtime: {booking?.Showtime.Id}");
 
@@ -128,28 +128,31 @@ public class TicketService : ITicketService
     {
         try
         {
+            _loggerService.Info($"Creating offline ticket for guest phone number: {request.GuestPhoneNumber}, Showtime ID: {request.ShowtimeId}");
             if (string.IsNullOrWhiteSpace(request.GuestPhoneNumber))
                 throw new ArgumentException("Guest phone number is required.");
 
             // Optionally check if user exists by phone number
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.GuestPhoneNumber && !u.IsDeleted);
+            User? user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.GuestPhoneNumber && !u.IsDeleted);
 
             // Validate showtime
             var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
             if (showtime == null)
                 throw new KeyNotFoundException("Showtime not found.");
 
+            _loggerService.Info($"Showtime found: {showtime.Id}, Movie: {showtime.Movie?.Name}, Cinema Room: {showtime.CinemaRoom?.Name}");
+
             // Validate seats
             var seats = await _unitOfWork.Seats.GetAllAsync(s => request.SeatIds.Contains(s.Id) && !s.IsDeleted);
             if (seats.Count() != request.SeatIds.Count)
-                throw new InvalidOperationException("Some seats are invalid or already booked.");
+                throw new InvalidOperationException("Some seats are invalid.");
 
             var ticket = new Ticket
             {
                 BookingId = null,
                 IssuedAt = DateTime.UtcNow,
                 GuestPhoneNumber = request.GuestPhoneNumber,
-                Showtime = showtime,
+                ShowTimeId = showtime.Id,
                 TicketType = TicketType.Offline,
                 TicketSeats = new List<TicketSeat>(),
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink>()
@@ -186,7 +189,7 @@ public class TicketService : ITicketService
                 {
                     FoodId = tf.FoodAndDrinkId,
                     Quantity = tf.Quantity,
-                    Price = _unitOfWork.FoodAndDrinks.GetByIdAsync(tf.FoodAndDrinkId).Result?.Price ?? 0
+                    Price = _unitOfWork.FoodAndDrinks.GetByIdAsync(tf.FoodAndDrinkId).Result!.Price
                 }));
 
             await _unitOfWork.Tickets.AddAsync(ticket);

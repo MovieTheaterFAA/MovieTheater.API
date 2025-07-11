@@ -163,6 +163,19 @@ namespace MovieTheater.Application.Services
                         Guid.TryParse(invoiceIdStr, out Guid invoiceId))
                     {
                         await ProcessSuccessfulPaymentAsync(invoiceId, session);
+
+                        var invoice = await _unitOfWork.Invoices.GetByIdAsync(invoiceId, i => i.Booking);
+                        _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
+                        try
+                        {
+                            await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
+                            _loggerService.Success($"Ticket generated successfully for booking {invoice.Booking.Id}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _loggerService.Error($"Error generating ticket for booking {invoice.BookingId}: {ex.Message}");
+                            throw;
+                        }
                     }
                     else
                     {
@@ -171,6 +184,18 @@ namespace MovieTheater.Application.Services
                         if (!string.IsNullOrEmpty(cachedInvoiceId) && Guid.TryParse(cachedInvoiceId, out invoiceId))
                         {
                             await ProcessSuccessfulPaymentAsync(invoiceId, session);
+                            var invoice = await _unitOfWork.Invoices.GetByIdAsync(invoiceId, i => i.Booking);
+                            _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
+                            try
+                            {
+                                await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
+                                _loggerService.Success($"Ticket generated successfully for booking {invoice.Booking.Id}");
+                            }
+                            catch (Exception ex)
+                            {
+                                _loggerService.Error($"Error generating ticket for booking {invoice.BookingId}: {ex.Message}");
+                                throw;
+                            }
                         }
                     }
 
@@ -290,16 +315,6 @@ namespace MovieTheater.Application.Services
                                 await _unitOfWork.ShowTimeSeats.Update(seat);
                             }
                         }
-                    }
-                    _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
-                    try
-                    {
-                        await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _loggerService.Error($"Error generating ticket for booking {invoice.BookingId}: {ex.Message}");
-                        throw;
                     }
                 }
 

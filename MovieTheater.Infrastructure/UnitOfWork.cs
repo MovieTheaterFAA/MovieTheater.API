@@ -45,7 +45,8 @@ public class UnitOfWork : IUnitOfWork
         BookingSeats = bookingSeats;
         Invoices = invoices;
         Payments = payments;
-        Payments = payments;
+        ClaimedPromotions = claimedPromotions;
+        Tickets = tickets;
     }
 
     public IGenericRepository<User> Users { get; }
