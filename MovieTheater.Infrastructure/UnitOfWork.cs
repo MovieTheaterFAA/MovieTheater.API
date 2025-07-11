@@ -24,7 +24,9 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<BookingFood> bookingFoods,
         IGenericRepository<BookingSeat> bookingSeats,
         IGenericRepository<Invoice> invoices,
-        IGenericRepository<Payment> payments)
+        IGenericRepository<Payment> payments,
+        IGenericRepository<ClaimedPromotion> claimedPromotions
+        )
     {
         _dbContext = dbContext;
         Users = userRepository;
@@ -43,6 +45,7 @@ public class UnitOfWork : IUnitOfWork
         BookingSeats = bookingSeats;
         Invoices = invoices;
         Payments = payments;
+        ClaimedPromotions = claimedPromotions;
     }
 
     public IGenericRepository<User> Users { get; }

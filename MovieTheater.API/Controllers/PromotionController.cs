@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieTheater.Application.Interfaces;
+using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Infrastructure.Interfaces;
@@ -14,11 +15,13 @@ namespace MovieTheater.API.Controllers
     {
         private readonly IPromotionService _promotionService;
         private readonly IClaimsService _claimsService;
+        private readonly ILoggerService _loggerService;
 
-        public PromotionController(IPromotionService promotionService, IClaimsService claimsService)
+        public PromotionController(IPromotionService promotionService, IClaimsService claimsService, ILoggerService loggerService)
         {
             _promotionService = promotionService;
             _claimsService = claimsService;
+            _loggerService = loggerService;
         }
 
         [HttpPost]
@@ -109,6 +112,11 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
+                if (_promotionService == null)
+                    _loggerService.Error("Promotion service is null in ClaimPromotion method.");
+                if (_claimsService == null)
+                    _loggerService.Error("Claims service is null in ClaimPromotion method.");
+
                 var userId = _claimsService.GetCurrentUserId;
                 var result = await _promotionService.ClaimPromotionAsync(id, userId);
                 if (!result)
