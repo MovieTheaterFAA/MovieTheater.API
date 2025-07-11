@@ -48,21 +48,13 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public IGenericRepository<User> Users { get; }
-
     public IGenericRepository<OtpStorage> OtpStorages { get; }
-
     public IGenericRepository<Movie> Movies { get; }
-
     public IGenericRepository<ShowTime> ShowTimes { get; }
-
     public IGenericRepository<Promotion> Promotions { get; }
-
     public IGenericRepository<CinemaRoom> CinemaRooms { get; }
-
     public IGenericRepository<AuditLog> AuditLogs { get; }
-
     public IGenericRepository<FoodAndDrink> FoodAndDrinks { get; }
-
     public IGenericRepository<Event> Events { get; }
     public IGenericRepository<Seat> Seats { get; }
     public IGenericRepository<ShowTimeSeat> ShowTimeSeats { get; }
@@ -71,6 +63,8 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<BookingSeat> BookingSeats { get; }
     public IGenericRepository<Invoice> Invoices { get; }
     public IGenericRepository<Payment> Payments { get; }
+    public IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
+
     public IGenericRepository<Ticket> Tickets { get; }
     public void Dispose()
     {
