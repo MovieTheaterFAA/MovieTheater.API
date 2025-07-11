@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using MovieTheater.Application.Interfaces;
 
 namespace MovieTheater.Application.Hubs
@@ -6,10 +7,13 @@ namespace MovieTheater.Application.Hubs
     public class ChatbotHub : Hub
     {
         private readonly IChatbotService _chatbotService;
+        private readonly ILogger<ChatbotHub> _logger;
 
-        public ChatbotHub(IChatbotService chatbotService)
+        public ChatbotHub(IChatbotService chatbotService, ILogger<ChatbotHub> logger)
         {
             _chatbotService = chatbotService;
+            _logger = logger;
+            _logger.LogInformation("ChatbotHub initialized.");
         }
 
         public async Task AskChatbot(string prompt, string groupId)
@@ -26,6 +30,7 @@ namespace MovieTheater.Application.Hubs
 
         public async Task JoinChatGroup(string groupId)
         {
+            _logger.LogInformation($"User {Context.ConnectionId} joining group {groupId}");
             await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
         }
 
