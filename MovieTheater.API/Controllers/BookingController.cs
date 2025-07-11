@@ -16,19 +16,13 @@ namespace MovieTheater.API.Controllers
     {
         private readonly IBookingService _bookingService;
         private readonly IClaimsService _claimsService;
-        private readonly ILoggerService _loggerService;
-        private readonly IPaymentService _paymentService;
 
         public BookingController(
             IBookingService bookingService,
-            IClaimsService claimsService,
-            ILoggerService loggerService,
-            IPaymentService paymentService)
+            IClaimsService claimsService)
         {
             _bookingService = bookingService;
             _claimsService = claimsService;
-            _loggerService = loggerService;
-            _paymentService = paymentService;
         }
 
         [HttpGet("{id}")]
@@ -118,7 +112,7 @@ namespace MovieTheater.API.Controllers
                 var result = await _bookingService.CancelBookingAsync(id);
 
                 if (result)
-                    return Ok(ApiResult<object>.Success(null, "200", "Cancelled booking successfully"));
+                    return Ok(ApiResult<object>.Success(null!, "200", "Cancelled booking successfully"));
 
                 return BadRequest(ApiResult<object>.Failure("400", "Failed to cancel booking"));
             }

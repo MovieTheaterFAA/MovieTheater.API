@@ -40,11 +40,9 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
-                var currentUserId = _claimsService.GetCurrentUserId;
-                var currentUser = await _unitOfWork.Users.GetByIdAsync(currentUserId);
                 var result = await _impersonationService.StartImpersonationAsync(targetUserId, reason);
                 if (result)
-                    return Ok(ApiResult<object>.Success(null, "200", "Impersonation started."));
+                    return Ok(ApiResult<object>.Success(null!, "200", "Impersonation started."));
                 else
                     return BadRequest(ApiResult<object>.Failure("400", "Failed to impersonate."));
             }
@@ -70,7 +68,7 @@ namespace MovieTheater.API.Controllers
             {
                 var result = await _impersonationService.StopImpersonationAsync();
                 if (result)
-                    return Ok(ApiResult<object>.Success(null, "200", "Impersonation stopped."));
+                    return Ok(ApiResult<object>.Success(null!, "200", "Impersonation stopped."));
                 else
                     return BadRequest(ApiResult<object>.Failure("400", "Not impersonating."));
             }

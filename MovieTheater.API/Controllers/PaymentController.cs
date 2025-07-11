@@ -131,6 +131,7 @@ namespace MovieTheater.API.Controllers
         [HttpGet("cancel")]
         public async Task<IActionResult> PaymentCancel()
         {
+            await Task.Yield();
             _loggerService.Info("Payment cancelled by user");
             return Redirect($"{_frontendBaseUrl}/payment/cancelled");
         }

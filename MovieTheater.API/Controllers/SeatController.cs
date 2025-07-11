@@ -89,7 +89,7 @@ namespace MovieTheater.API.Controllers
                 var success = await _seatService.SoftDeleteSeatAsync(id, adminId);
                 if (!success)
                     return NotFound(ApiResult<object>.Failure("404", "Seat not found"));
-                return Ok(ApiResult<object>.Success(null, "200", "Deleted seat successfully"));
+                return Ok(ApiResult<object>.Success(null!, "200", "Deleted seat successfully"));
             }
             catch (Exception ex)
             {
@@ -110,7 +110,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(object), 409)]
         public async Task<IActionResult> HoldSeatsAsync([FromBody] HoldSeatsRequestDto request)
         {
-            if (request == null || request.SeatIds == null || !request.SeatIds.Any())
+            if (request == null || request.SeatIds == null || request.SeatIds.Count() == 0)
                 return BadRequest(new { Message = "Invalid request data." });
 
             try
@@ -118,7 +118,7 @@ namespace MovieTheater.API.Controllers
                 var userId = _claimsService.GetCurrentUserId;
 
                 var heldSeats = await _seatService.HoldSeatsAsync(userId, request.ShowTimeId, request.SeatIds);
-                if (heldSeats.Any())
+                if (heldSeats.Count() != 0)
                 {
                     return Ok(new
                     {

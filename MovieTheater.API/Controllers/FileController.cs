@@ -14,14 +14,14 @@ namespace MovieTheater.API.Controllers
     public class FileController : ControllerBase
     {
         private readonly IBlobService _blobService;
-        private readonly ILogger<FileController> _loggerService;
+        private readonly ILogger<FileController> _logger;
         private readonly MovieTheaterDbContext _dbContext;
         private readonly IRedisService _redisService;
 
         public FileController(IBlobService blobService, ILogger<FileController> logger, MovieTheaterDbContext dbContext, IRedisService redisService)
         {
             _blobService = blobService;
-            _loggerService = logger;
+            _logger = logger;
             _dbContext = dbContext;
             _redisService = redisService;
         }
@@ -64,7 +64,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate presigned URL for object '{objectName}'.");
+                    _logger.LogError($"Failed to generate presigned URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -86,12 +86,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
+                _logger.LogWarning("Upload was cancelled by the client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "Error uploading avatar.");
+                _logger.LogError(ex, "Error uploading avatar.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An unexpected error occurred while uploading the avatar."));
             }
         }
@@ -128,7 +128,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate presigned URL for object '{objectName}'.");
+                    _logger.LogError($"Failed to generate presigned URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -141,12 +141,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
+                _logger.LogWarning("Upload was cancelled by the client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "Error uploading event image.");
+                _logger.LogError(ex, "Error uploading event image.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An unexpected error occurred while uploading the event image."));
             }
         }
@@ -187,7 +187,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate preview URL for object '{objectName}'.");
+                    _logger.LogError($"Failed to generate preview URL for object '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -201,12 +201,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
+                _logger.LogWarning("Upload was cancelled by the client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "Error uploading food image.");
+                _logger.LogError(ex, "Error uploading food image.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An unexpected error occurred while uploading the food image."));
             }
         }
@@ -242,7 +242,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate URL for poster '{objectName}'.");
+                    _logger.LogError($"Failed to generate URL for poster '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -256,12 +256,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
+                _logger.LogWarning("Upload was cancelled by the client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "Error uploading movie poster.");
+                _logger.LogError(ex, "Error uploading movie poster.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An error occurred while uploading poster."));
             }
         }
@@ -297,7 +297,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"Failed to generate URL for background '{objectName}'.");
+                    _logger.LogError($"Failed to generate URL for background '{objectName}'.");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -311,12 +311,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("Upload was cancelled by the client.");
+                _logger.LogWarning("Upload was cancelled by the client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "Error uploading movie background.");
+                _logger.LogError(ex, "Error uploading movie background.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An error occurred while uploading background."));
             }
         }
@@ -367,7 +367,7 @@ namespace MovieTheater.API.Controllers
                 var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
                 if (previewUrl == null)
                 {
-                    _loggerService.LogError($"[UploadMovieCastImage] Failed to generate URL for: {objectName}");
+                    _logger.LogError($"[UploadMovieCastImage] Failed to generate URL for: {objectName}");
                     return StatusCode(500, ApiResult<string>.Failure("500", "Could not generate file URL."));
                 }
 
@@ -384,12 +384,12 @@ namespace MovieTheater.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                _loggerService.LogWarning("[UploadMovieCastImage] Upload cancelled by client.");
+                _logger.LogWarning("[UploadMovieCastImage] Upload cancelled by client.");
                 return BadRequest(ApiResult<string>.Failure("499", "Upload was cancelled."));
             }
             catch (Exception ex)
             {
-                _loggerService.LogError(ex, "[UploadMovieCastImage] Unexpected error.");
+                _logger.LogError(ex, "[UploadMovieCastImage] Unexpected error.");
                 return StatusCode(500, ApiResult<string>.Failure("500", "An unexpected error occurred."));
             }
         }

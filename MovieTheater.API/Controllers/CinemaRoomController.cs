@@ -109,7 +109,7 @@ namespace MovieTheater.API.Controllers
                 var success = await _service.SoftDeleteCinemaRoomAsync(id, adminId);
                 if (!success)
                     return NotFound(ApiResult<object>.Failure("404", "Cinema room not found"));
-                return Ok(ApiResult<object>.Success(null, "200", "Deleted cinema room successfully"));
+                return Ok(ApiResult<object>.Success(null!, "200", "Deleted cinema room successfully"));
             }
             catch (Exception ex)
             {
