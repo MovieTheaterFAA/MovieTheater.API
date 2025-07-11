@@ -41,20 +41,9 @@ public static class IocContainer
         // 3th party services
         services.SetupRedis();
         services.SetupReSendService();
-        services.SetupVnpay();
 
         return services;
     }
-
-    // public static IServiceCollection SetupGraphQl(this IServiceCollection services)
-    // {
-    //     services
-    //         .AddGraphQLServer()
-    //         .AddErrorFilter<GraphQLErrorFilter>()
-    //         .AddQueryType<Query>();
-    //
-    //     return services;
-    // }
 
     public static IServiceCollection SetupReSendService(this IServiceCollection services)
     {
@@ -80,18 +69,6 @@ public static class IocContainer
             ConnectionMultiplexer.Connect(redisConnectionString));
 
         services.AddScoped<IRedisService, RedisService>();
-
-        return services;
-    }
-
-    public static IServiceCollection SetupVnpay(this IServiceCollection services)
-    {
-        // Xây dựng IConfiguration từ các nguồn cấu hình
-        IConfiguration configuration = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory()) // Lấy thư mục hiện tại
-            .AddJsonFile("appsettings.json", true, true)  // Đọc appsettings.json
-            .AddEnvironmentVariables()                    // Đọc biến môi trường từ Docker
-            .Build();
 
         return services;
     }
