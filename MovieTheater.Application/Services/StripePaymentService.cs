@@ -263,6 +263,11 @@ namespace MovieTheater.Application.Services
 
                 if (invoice.Booking != null)
                 {
+                    _loggerService.Warn($"Booking {invoice.Booking.Id} not found for invoice {invoiceId}");
+                    throw new KeyNotFoundException($"Booking for invoice with ID {invoiceId} not found");
+                }
+                else
+                {
                     // Update booking status
                     invoice.Booking.Status = "Completed";
                     await _unitOfWork.Bookings.Update(invoice.Booking);
@@ -286,14 +291,16 @@ namespace MovieTheater.Application.Services
                             }
                         }
                     }
-
-                }
-
-                var tickets = await _ticketService.GenerateTicketFromBookingAsync(invoice.BookingId);
-                if (tickets == null)
-                {
-                    _loggerService.Warn($"No tickets generated for booking {invoice.BookingId}");
-                    throw new InvalidOperationException($"No tickets generated for booking {invoice.BookingId}");
+                    _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
+                    try
+                    {
+                        await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggerService.Error($"Error generating ticket for booking {invoice.BookingId}: {ex.Message}");
+                        throw;
+                    }
                 }
 
                 // Create payment record

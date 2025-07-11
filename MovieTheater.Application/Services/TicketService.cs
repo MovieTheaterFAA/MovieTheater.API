@@ -41,7 +41,9 @@ public class TicketService : ITicketService
                 b => b.BookingSeats,
                 b => b.BookingFoods,
                 b => b.Member,
-                b => b.Showtime);
+                b => b.Showtime.Id);
+
+            _loggerService.Info($"Booking retrieved: {booking?.Id}, Member: {booking?.Member?.PhoneNumber}, Showtime: {booking?.Showtime.Id}");
 
             if (booking == null || booking.IsDeleted)
             {
@@ -64,13 +66,19 @@ public class TicketService : ITicketService
                 IssuedAt = DateTime.UtcNow,
                 GuestPhoneNumber = booking.Member.PhoneNumber,
                 TotalPrice = booking.TotalAmount,
+                ShowTimeId = booking.Showtime.Id,
                 TicketType = TicketType.Online,
                 TicketSeats = new List<TicketSeat>(),
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink>()
             };
+            if (ticket == null)
+            {
+                _loggerService.Warn($"Failed to create ticket object for booking ID: {bookingId}");
+                throw new InvalidOperationException("Failed to create ticket object.");
+            }
 
             // Add seats to the ticket
-            if (booking.BookingSeats == null && !booking.BookingSeats.Any())
+            if (booking.BookingSeats == null)
             {
                 _loggerService.Warn($"No seats found for booking ID: {bookingId}");
                 throw new InvalidOperationException("No seats associated with this booking.");
@@ -141,6 +149,7 @@ public class TicketService : ITicketService
                 BookingId = null,
                 IssuedAt = DateTime.UtcNow,
                 GuestPhoneNumber = request.GuestPhoneNumber,
+                Showtime = showtime,
                 TicketType = TicketType.Offline,
                 TicketSeats = new List<TicketSeat>(),
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink>()
@@ -166,6 +175,19 @@ public class TicketService : ITicketService
                     });
                 }
             }
+            // Calculate total price
+            ticket.TotalPrice = CaculateTotalPrice(
+                ticket.TicketSeats.Select(ts => new TicketSeatDto
+                {
+                    SeatId = ts.SeatId,
+                    PricePerSeat = ts.PricePerSeat
+                }),
+                ticket.TicketFoodAndDrinks.Select(tf => new TicketFoodDto
+                {
+                    FoodId = tf.FoodAndDrinkId,
+                    Quantity = tf.Quantity,
+                    Price = _unitOfWork.FoodAndDrinks.GetByIdAsync(tf.FoodAndDrinkId).Result?.Price ?? 0
+                }));
 
             await _unitOfWork.Tickets.AddAsync(ticket);
             await _unitOfWork.SaveChangesAsync();
@@ -215,7 +237,7 @@ public class TicketService : ITicketService
 
                 query = query.Where(t =>
                     (!string.IsNullOrEmpty(t.GuestPhoneNumber) && t.GuestPhoneNumber.Contains(lowerSearch)) ||
-                    (t.Booking != null && showtimeIds.Contains(t.Booking.ShowtimeId))
+                    (t.Showtime != null && showtimeIds.Contains(t.Showtime.Id))
                 );
                 _loggerService.Info($"Filtered tickets by search term '{lowerSearch}', total count: {query.Count()}");
             }
@@ -286,20 +308,27 @@ public class TicketService : ITicketService
         {
             _loggerService.Info($"Fetching tickets for user ID: {userId}");
 
-            // Get all bookings for the user
-            var bookings = await _unitOfWork.Bookings.GetAllAsync(
-                b => b.MemberId == userId && !b.IsDeleted);
-
-            if (!bookings.Any())
+            var member = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (member == null || member.IsDeleted)
             {
-                _loggerService.Info($"No bookings found for user ID: {userId}");
-                return new List<TicketResponseDto>();
+                _loggerService.Warn($"No user found with ID: {userId}");
+                throw new KeyNotFoundException($"User with ID {userId} not found.");
             }
 
-            // Get all tickets for those bookings
-            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var phoneNumber = member.PhoneNumber;
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                _loggerService.Warn($"User with ID {userId} has no phone number associated.");
+                throw new InvalidOperationException("User phone number is required to fetch tickets.");
+            }
+
+            _loggerService.Info($"User phone number: {phoneNumber}");
+            // Get all tickets for the user
             var tickets = await _unitOfWork.Tickets.GetAllAsync(
-                t => bookingIds.Contains(t.BookingId.Value) && !t.IsDeleted);
+                t => (t.GuestPhoneNumber == phoneNumber) && !t.IsDeleted,
+                t => t.TicketSeats,
+                t => t.TicketFoodAndDrinks,
+                t => t.Showtime);
 
             if (!tickets.Any())
             {
@@ -444,7 +473,7 @@ public class TicketService : ITicketService
         try
         {
             // Include comprehensive ticket data
-            var dataToHash = $"{ticket.Id}|{ticket.IssuedAt:yyyy-MM-dd-HH-mm-ss}|{ticket.TotalPrice}|{ticket.BookingId}";
+            var dataToHash = $"{ticket.Id}|{ticket.IssuedAt:yyyy-MM-dd-HH-mm-ss}|{ticket.TotalPrice}";
 
             // Use the configured HMAC secret key from settings
             using var hmac = new System.Security.Cryptography.HMACSHA256(
@@ -474,7 +503,8 @@ public class TicketService : ITicketService
             ticketId,
             t => t.Booking,
             t => t.TicketSeats,
-            t => t.TicketFoodAndDrinks);
+            t => t.TicketFoodAndDrinks,
+            t => t.Showtime);
 
         if (ticket == null)
         {
@@ -523,7 +553,7 @@ public class TicketService : ITicketService
             }).ToList();
         }
 
-        var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(ticket.Booking.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
+        var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(ticket.Showtime.Id, s => s.Movie, s => s.CinemaRoom);
         if (showtime == null)
         {
             _loggerService.Warn($"No showtime found for ticket with ID: {ticketId}");
@@ -546,6 +576,19 @@ public class TicketService : ITicketService
         };
     }
 
+    private decimal CaculateTotalPrice(IEnumerable<TicketSeatDto> seats, IEnumerable<TicketFoodDto> foodItems)
+    {
+        decimal total = 0;
+        if (seats != null)
+        {
+            total += seats.Sum(s => s.PricePerSeat);
+        }
+        if (foodItems != null)
+        {
+            total += foodItems.Sum(f => f.Price * f.Quantity);
+        }
+        return total;
+    }
     private decimal GetSeatPrice(Seat seat)
     {
         // Logic to determine seat price based on seat type
