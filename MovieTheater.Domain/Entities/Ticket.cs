@@ -12,9 +12,14 @@ namespace MovieTheater.Domain.Entities
         public DateTime IssuedAt { get; set; }
         public string GuestPhoneNumber { get; set; } // Optional for offline tickets
         public decimal TotalPrice { get; set; }
-        public TicketType TicketType { get; set; } // Enum for Online or Offline ticket
+        public TicketType TicketType { get; set; }  // Enum for Online or Offline ticket
 
         // Navigation
+        public Guid? ShowTimeId { get; set; }       // Nullable if only for offline tickets
+
+        [ForeignKey(nameof(ShowTimeId))]
+        public ShowTime Showtime { get; set; }      // For offline tickets
+
         public ICollection<TicketSeat> TicketSeats { get; set; }
         public ICollection<TicketFoodAndDrink> TicketFoodAndDrinks { get; set; }
     }

@@ -7,5 +7,6 @@
         public decimal DiscountValue { get; set; }
         public string Detail { get; set; }
         public Guid EventId { get; set; }
+        public bool IsUsed { get; set; }
     }
 }

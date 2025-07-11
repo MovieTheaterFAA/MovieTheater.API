@@ -137,14 +137,13 @@ catch (Exception e)
     app.Logger.LogError(e, "An problem occurred during migration!");
 }
 
-// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseSession();
 
 // Map SignalR hubs
-app.MapHub<SeatHub>("/hubs/seat");
-app.MapHub<ChatbotHub>("/hubs/chatbot");
+app.MapHub<SeatHub>("/hubs/seat").RequireCors("AllowFrontend");
+app.MapHub<ChatbotHub>("/hubs/chatbot").RequireCors("AllowFrontend");
 
 await app.RunAsync();

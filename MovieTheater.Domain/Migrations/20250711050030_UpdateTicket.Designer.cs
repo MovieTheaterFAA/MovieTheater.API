@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieTheater.Domain;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    partial class MovieTheaterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250711050030_UpdateTicket")]
+    partial class UpdateTicket
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -907,8 +910,8 @@ namespace MovieTheater.Domain.Migrations
                     b.Property<DateTime>("IssuedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ShowTimeId")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("Showtime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("TicketType")
                         .HasColumnType("integer");
@@ -925,8 +928,6 @@ namespace MovieTheater.Domain.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId");
-
-                    b.HasIndex("ShowTimeId");
 
                     b.ToTable("Tickets");
                 });
@@ -1285,13 +1286,7 @@ namespace MovieTheater.Domain.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MovieTheater.Domain.Entities.ShowTime", "Showtime")
-                        .WithMany()
-                        .HasForeignKey("ShowTimeId");
-
                     b.Navigation("Booking");
-
-                    b.Navigation("Showtime");
                 });
 
             modelBuilder.Entity("MovieTheater.Domain.Entities.TicketFoodAndDrink", b =>
