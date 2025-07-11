@@ -147,6 +147,16 @@ public class TicketService : ITicketService
             if (seats.Count() != request.SeatIds.Count)
                 throw new InvalidOperationException("Some seats are invalid.");
 
+            var existSeat = await _unitOfWork.ShowTimeSeats.GetAllAsync(
+                sts => sts.ShowTimeId == request.ShowtimeId && request.SeatIds.Contains(sts.SeatId));
+
+            // Check if any selected seat is already booked
+            if (existSeat.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
+            {
+                _loggerService.Warn($"Attempted to book unavailable seats for showtime: {request.ShowtimeId}");
+                throw new InvalidOperationException("One or more selected seats are not available");
+            }
+
             var ticket = new Ticket
             {
                 BookingId = null,
@@ -192,6 +202,16 @@ public class TicketService : ITicketService
                     Price = _unitOfWork.FoodAndDrinks.GetByIdAsync(tf.FoodAndDrinkId).Result!.Price
                 }));
 
+            foreach (var seat in seats)
+            {
+                var ShowTimeSeat = new ShowTimeSeat
+                {
+                    ShowTimeId = request.ShowtimeId,
+                    SeatId = seat.Id,
+                    Status = SeatStatus.Sold
+                };
+                await _unitOfWork.ShowTimeSeats.AddAsync(ShowTimeSeat);
+            }
             await _unitOfWork.Tickets.AddAsync(ticket);
             await _unitOfWork.SaveChangesAsync();
 
