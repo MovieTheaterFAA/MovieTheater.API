@@ -372,17 +372,19 @@ public class PromotionService : IPromotionService
                 .GetQueryable()
                 .Include(cp => cp.Promotion)
                 .Where(cp => cp.UserId == userId && !cp.Promotion.IsDeleted)
-                .Select(cp => new PromotionResponseDto
-                {
-                    Id = cp.Promotion.Id,
-                    Title = cp.Promotion.Title,
-                    DiscountValue = cp.Promotion.DiscountValue,
-                    Detail = cp.Promotion.Detail,
-                    EventId = cp.Promotion.EventId
-                })
                 .ToListAsync();
 
-            return claimedPromotions;
+            var result = claimedPromotions.Select(cp => new PromotionResponseDto
+            {
+                Id = cp.Promotion.Id,
+                Title = cp.Promotion.Title,
+                DiscountValue = cp.Promotion.DiscountValue,
+                Detail = cp.Promotion.Detail,
+                EventId = cp.Promotion.EventId,
+                IsUsed = cp.IsUsed
+            });
+
+            return result;
         }
         catch (Exception ex)
         {
