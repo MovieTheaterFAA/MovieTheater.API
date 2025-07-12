@@ -124,7 +124,7 @@ namespace MovieTheater.API.Controllers
                 if (deletedCount == 0)
                     return NotFound(ApiResult<object>.Failure("404", $"No showtimes found for date {date:yyyy-MM-dd}."));
 
-                return Ok(ApiResult<object>.Success(null, "200", $"Deleted {deletedCount} showtimes for date {date:yyyy-MM-dd}."));
+                return Ok(ApiResult<object>.Success(null!, "200", $"Deleted {deletedCount} showtimes for date {date:yyyy-MM-dd}."));
             }
             catch (Exception ex)
             {

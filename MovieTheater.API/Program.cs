@@ -26,7 +26,6 @@ builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Str
 // Validate Stripe configuration
 var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
 var stripePublishableKey = builder.Configuration["Stripe:PublishableKey"];
-var stripeWebhookSecret = builder.Configuration["Stripe:WebhookSecret"];
 
 // Set Stripe API key
 StripeConfiguration.ApiKey = stripeSecretKey;
@@ -52,16 +51,11 @@ builder.Services.AddTransient<IStripeClient, StripeClient>(s =>
     return new StripeClient(stripeSecretKey, httpClient: sysHttpClient);
 });
 
-builder.Services.AddSingleton(serviceProvider => stripeWebhookSecret ?? string.Empty);
 if (string.IsNullOrEmpty(stripeSecretKey))
 {
     Console.WriteLine("CRITICAL: Stripe Secret Key is missing! Payment processing will fail.");
 }
 
-if (string.IsNullOrEmpty(stripeWebhookSecret))
-{
-    Console.WriteLine("WARNING: Stripe Webhook Secret is missing! Webhook validation will be disabled.");
-}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",

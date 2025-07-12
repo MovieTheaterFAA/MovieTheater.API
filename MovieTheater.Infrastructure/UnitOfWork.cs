@@ -25,8 +25,8 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<BookingSeat> bookingSeats,
         IGenericRepository<Invoice> invoices,
         IGenericRepository<Payment> payments,
-        IGenericRepository<ClaimedPromotion> claimedPromotions
-        )
+        IGenericRepository<ClaimedPromotion> claimedPromotions,
+        IGenericRepository<Ticket> tickets)
     {
         _dbContext = dbContext;
         Users = userRepository;
@@ -46,6 +46,7 @@ public class UnitOfWork : IUnitOfWork
         Invoices = invoices;
         Payments = payments;
         ClaimedPromotions = claimedPromotions;
+        Tickets = tickets;
     }
 
     public IGenericRepository<User> Users { get; }
@@ -65,7 +66,7 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Invoice> Invoices { get; }
     public IGenericRepository<Payment> Payments { get; }
     public IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
-
+    public IGenericRepository<Ticket> Tickets { get; }
     public void Dispose()
     {
         _dbContext.Dispose();

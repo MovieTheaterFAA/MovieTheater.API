@@ -26,7 +26,6 @@
       - MINIO_SECRET_KEY=minioadmin
       - Stripe__SecretKey=sk_test_51Rd5TmP6ozZhOjfIF7fFWGewQ2Rc3UgZJgEnNUiRMfr9IF8cismSxd1A9uch0uBZopM5p3w2I8IwonYkDORiFJGm00u5IMiygV
       - Stripe__PublishableKey=pk_test_51Rd5TmP6ozZhOjfIBgp2xrD3W1xdxvbpo9W7LgKRLKZOGmbMkXfmXL2996OzjELEgs0E3xOVsmeKNcPYzX47938k00DB2YGkSI
-      - Stripe__WebhookSecret=whsec_06scja3rKFsLXcdHjE4KNpwz8CwYrzi3
     ports:
       - "5000:5000"
 

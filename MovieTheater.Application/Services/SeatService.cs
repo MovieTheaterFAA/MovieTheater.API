@@ -297,104 +297,116 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Info($"User {userId} is attempting to hold seats for showtime {showTimeId}: {string.Join(", ", seatIds)}");
 
+                if (seatIds == null || !seatIds.Any())
+                {
+                    _loggerService.Warn($"User {userId} provided empty seat list for holding");
+                    return new List<SeatResponseDto>();
+                }
+
+                var uniqueSeatIds = seatIds.Distinct().ToList();
+                if (uniqueSeatIds.Count != seatIds.Count)
+                {
+                    _loggerService.Warn($"User {userId} provided duplicate seat IDs, using unique set instead");
+                    seatIds = uniqueSeatIds;
+                }
+
                 CleanupExpiredHolds();
 
                 var now = DateTime.UtcNow;
                 var expireAt = now.AddMinutes(5);
 
-                var seatOwnedCount = 0;
-
                 var requestedSeatIds = seatIds.ToHashSet();
 
-                var currentHeldCount = _holdingSeats
+                var currentHeldSeats = _holdingSeats
                     .Where(h => h.Key.showTimeId == showTimeId &&
-                          h.Value.userId == userId &&
-                          h.Value.expireAt > now)
-                    .Count(h => !requestedSeatIds.Contains(h.Key.seatId));
+                           h.Value.userId == userId &&
+                           h.Value.expireAt > now)
+                    .Select(h => h.Key.seatId)
+                    .Where(seatId => !requestedSeatIds.Contains(seatId))
+                    .ToList();
 
-                seatOwnedCount += currentHeldCount;
+                var totalSeatCount = currentHeldSeats.Count;
+                _loggerService.Info($"User {userId} currently holds {totalSeatCount} other seats for showtime {showTimeId}");
 
-                var bookings = await _unitOfWork.Bookings.GetQueryable()
-                    .Where(b => b.MemberId == userId && b.ShowtimeId == showTimeId && (b.Status == "Completed" || b.Status == "Created"))
+                var existingBookingSeats = await _unitOfWork.BookingSeats
+                    .GetQueryable()
+                    .Where(bs => bs.Booking.MemberId == userId &&
+                                 bs.Booking.ShowtimeId == showTimeId &&
+                                 (bs.Booking.Status == "Completed" || bs.Booking.Status == "Created"))
+                    .Select(bs => bs.SeatId)
                     .ToListAsync();
 
-                if (bookings.Any())
+                totalSeatCount += existingBookingSeats.Count;
+                _loggerService.Info($"User {userId} has {existingBookingSeats.Count} seats in existing bookings for showtime {showTimeId}");
+
+                var alreadyHeldByUserSeats = _holdingSeats
+                    .Where(h => h.Key.showTimeId == showTimeId &&
+                           h.Value.userId == userId &&
+                           h.Value.expireAt > now)
+                    .Select(h => h.Key.seatId)
+                    .Intersect(requestedSeatIds)
+                    .ToList();
+
+                var newSeatsToHold = requestedSeatIds.Except(alreadyHeldByUserSeats).ToList();
+                totalSeatCount += newSeatsToHold.Count;
+
+                if (totalSeatCount > 8)
                 {
-                    foreach (var booking in bookings)
-                    {
-                        var bookingSeats = await _unitOfWork.BookingSeats.GetQueryable()
-                            .Where(bs => bs.BookingId == booking.Id)
-                            .ToListAsync();
-                        seatOwnedCount += bookingSeats.Count;
-                    }
+                    _loggerService.Warn($"User {userId} attempted to exceed 8-seat limit (total: {totalSeatCount}) for showtime {showTimeId}");
+                    throw new InvalidOperationException($"You cannot hold more than 8 seats in total. You currently have {totalSeatCount - newSeatsToHold.Count} seats and are trying to hold {newSeatsToHold.Count} more.");
                 }
 
-                var newSeatCount = seatIds
-                .Where(seatId =>
-                    !_holdingSeats.TryGetValue((seatId, showTimeId), out var holdInfo) ||
-                    holdInfo.userId != userId ||
-                    holdInfo.expireAt <= now)
-                .Count();
-
-                seatOwnedCount += newSeatCount;
-
-                if (seatOwnedCount > 8)
+                var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+                if (showTime == null)
                 {
-                    _loggerService.Warn($"User {userId} is trying to hold more than 8 seats for showtime {showTimeId}.");
-                    return new List<SeatResponseDto>();
-                }
-
-                var showExist = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
-                if (showExist == null)
-                {
-                    _loggerService.Warn($"Showtime not found: {showTimeId}");
-                    throw new KeyNotFoundException("Showtime not found.");
+                    _loggerService.Warn($"Showtime {showTimeId} not found");
+                    throw new KeyNotFoundException($"Showtime with ID {showTimeId} not found");
                 }
 
                 var allSeatsInRoom = await _unitOfWork.Seats.GetQueryable()
-                    .Where(s => s.CinemaRoomId == showExist.CinemaRoomId)
-                    .ToListAsync();
+                    .Where(s => s.CinemaRoomId == showTime.CinemaRoomId && !s.IsDeleted)
+                    .ToDictionaryAsync(s => s.Id, s => s);
 
                 if (allSeatsInRoom.Count == 0)
                 {
-                    _loggerService.Warn($"No seats found for cinema room {showExist.CinemaRoomId}.");
-                    throw new KeyNotFoundException("No seats found for the specified cinema room.");
+                    _loggerService.Warn($"No seats found for cinema room {showTime.CinemaRoomId}");
+                    throw new KeyNotFoundException($"No seats found for cinema room {showTime.CinemaRoomId}");
                 }
 
-                var seatSet = allSeatsInRoom.Select(s => s.Id).ToHashSet();
-                var seatDict = allSeatsInRoom.ToDictionary(s => s.Id, s => s);
+                foreach (var seatId in seatIds)
+                {
+                    if (!allSeatsInRoom.ContainsKey(seatId))
+                    {
+                        _loggerService.Warn($"Seat {seatId} does not exist in cinema room {showTime.CinemaRoomId}");
+                        throw new ArgumentException($"Seat {seatId} does not exist in the specified cinema room");
+                    }
+                }
 
                 var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
-                    .Where(sts => sts.ShowTimeId == showTimeId)
+                    .Where(sts => sts.ShowTimeId == showTimeId && requestedSeatIds.Contains(sts.SeatId))
                     .ToDictionaryAsync(sts => sts.SeatId, sts => sts);
 
                 List<SeatResponseDto> heldSeats = new();
 
                 foreach (var seatId in seatIds)
                 {
-                    if (!seatSet.Contains(seatId))
+                    if (_holdingSeats.TryGetValue((seatId, showTimeId), out var holdInfo) &&
+                        holdInfo.userId != userId && holdInfo.expireAt > now)
                     {
-                        _loggerService.Warn($"Seat {seatId} is not in cinema room {showExist.CinemaRoomId}.");
-                        throw new ArgumentException($"Seat {seatId} does not exist in the specified cinema room.");
-                    }
-
-                    var key = (seatId, showTimeId);
-                    if (_holdingSeats.TryGetValue(key, out var holdInfo) &&
-                        holdInfo.expireAt > now && holdInfo.userId != userId)
-                    {
-                        _loggerService.Warn($"Seat {seatId} is already held by another user.");
-                        throw new InvalidOperationException($"Seat {seatId} is already held by another user.");
+                        _loggerService.Warn($"Seat {seatId} is already held by another user until {holdInfo.expireAt}");
+                        throw new InvalidOperationException($"Seat {seatId} is already held by another user");
                     }
 
                     if (showTimeSeats.TryGetValue(seatId, out var sts) &&
                         (sts.Status == SeatStatus.Booked || sts.Status == SeatStatus.Sold))
                     {
-                        _loggerService.Warn($"Seat {seatId} is already {sts.Status}.");
-                        throw new InvalidOperationException($"Seat {seatId} is already {sts.Status}.");
+                        _loggerService.Warn($"Seat {seatId} is already {sts.Status}");
+                        throw new InvalidOperationException($"Seat {seatId} is already {sts.Status}");
                     }
+
                     _holdingSeats[(seatId, showTimeId)] = (userId, expireAt);
 
-                    var seat = seatDict[seatId];
+                    var seat = allSeatsInRoom[seatId];
                     heldSeats.Add(new SeatResponseDto
                     {
                         Id = seat.Id,
@@ -404,12 +416,13 @@ namespace MovieTheater.Application.Services
                     });
                 }
 
-                _loggerService.Success($"User {userId} successfully held seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
+                _loggerService.Success($"User {userId} successfully held {heldSeats.Count} seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
 
-                // Broadcast seat status to other clients
                 if (heldSeats.Any())
                 {
                     await BroadcastSeatUpdateAsync(showTimeId, heldSeats);
+
+                    await _redisService.RemoveAsync($"seat:list:showtime:{showTimeId}");
                 }
 
                 return heldSeats;
@@ -417,7 +430,7 @@ namespace MovieTheater.Application.Services
             catch (Exception ex)
             {
                 _loggerService.Error($"Error holding seats for user {userId} for showtime {showTimeId}: {ex.Message}");
-                throw new InvalidOperationException("An error occurred while holding seats.", ex);
+                throw new InvalidOperationException("An error occurred while holding seats. Please try again later.", ex);
             }
         }
 
