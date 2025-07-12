@@ -131,12 +131,14 @@ public class TicketService : ITicketService
             _loggerService.Info($"Creating offline ticket for guest phone number: {request.GuestPhoneNumber}, Showtime ID: {request.ShowtimeId}");
             if (string.IsNullOrWhiteSpace(request.GuestPhoneNumber))
                 throw new ArgumentException("Guest phone number is required.");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.GuestPhoneNumber, @"^\+?\d{9,15}$"))
+                throw new ArgumentException("Guest phone number is not in a valid format.");
 
             // Optionally check if user exists by phone number
             User? user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.GuestPhoneNumber && !u.IsDeleted);
 
             // Validate showtime
-            var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
+            var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom, s => !s.IsDeleted);
             if (showtime == null)
                 throw new KeyNotFoundException("Showtime not found.");
 
