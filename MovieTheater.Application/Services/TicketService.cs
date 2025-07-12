@@ -596,6 +596,7 @@ public class TicketService : ITicketService
             MovieName = showtime.Movie.Name,
             ShowTime = showtime.ShowDate.ToString("yyyy-MM-dd HH:mm"),
             CinemaRoom = showtime.CinemaRoom.Name,
+            MoviePosterUrl = showtime.Movie.PosterImage,
             Seats = ticketSeats,
             FoodItems = ticketFoods
         };
