@@ -33,8 +33,8 @@ namespace MovieTheater.API.Controllers
                     return NotFound(ApiResult<object>.Failure("404", "Invoice not found"));
 
                 // Check if the user owns this invoice or is an admin
-                if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
-                    return Forbid();
+                //if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
+                //    return Forbid();
 
                 return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Fetched invoice successfully"));
             }
@@ -57,8 +57,8 @@ namespace MovieTheater.API.Controllers
                     return NotFound(ApiResult<object>.Failure("404", "Invoice not found"));
 
                 // Check if the user owns this invoice or is an admin
-                if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
-                    return Forbid();
+                //if (invoice.Booking.Id != _claimsService.GetCurrentUserId && !User.IsInRole("Admin"))
+                //    return Forbid();
 
                 return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Fetched invoice by booking successfully"));
             }
@@ -126,6 +126,30 @@ namespace MovieTheater.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(ApiResult<object>.Failure("404", ex.Message));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpGet("admin")]
+        [Authorize(Roles = "Admin")]
+        [SwaggerOperation(Summary = "Get all invoices with pagination (Admin only)")]
+        public async Task<IActionResult> GetAllInvoices(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] bool isDescending = false,
+        [FromQuery] string? search = null)
+        {
+            try
+            {
+                var result = await _invoiceService.GetAllInvoicesAsync(page, pageSize, status, sortBy, isDescending, search);
+                return Ok(ApiResult<Pagination<InvoiceDto>>.Success(result, "200", "Fetched all invoices successfully"));
             }
             catch (Exception ex)
             {
