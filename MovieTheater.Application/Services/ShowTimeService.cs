@@ -221,7 +221,7 @@ namespace MovieTheater.Application.Services
                 EntityType = "ShowTime",
                 EntityId = Guid.Empty,
                 OldValue = System.Text.Json.JsonSerializer.Serialize(showTimes),
-                NewValue = null,
+                NewValue = "",
                 ChangedFields = $"ShowDate: {date:yyyy-MM-dd}",
                 Timestamp = DateTime.UtcNow,
                 Reason = $"Deleted all showtimes for date {date:yyyy-MM-dd}"
