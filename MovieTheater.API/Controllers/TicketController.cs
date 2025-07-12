@@ -109,7 +109,7 @@ namespace MovieTheater.API.Controllers
         }
 
         [HttpPost("offline")]
-        [Authorize]
+        [Authorize(Roles = "Employee")]
         [SwaggerOperation(
             Summary = "Create offline ticket",
             Description = "Create a new offline ticket for a guest."
@@ -157,6 +157,7 @@ namespace MovieTheater.API.Controllers
         }
 
         [HttpPost("verify")]
+        [Authorize(Roles = "Employee")]
         [SwaggerOperation(
             Summary = "Verify ticket QR code",
             Description = "Verify a ticket using QR code data."
