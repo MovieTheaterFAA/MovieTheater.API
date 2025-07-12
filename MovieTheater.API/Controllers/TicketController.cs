@@ -108,39 +108,6 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        [HttpPost("generate/{bookingId}")]
-        [Authorize]
-        [SwaggerOperation(
-            Summary = "Generate ticket from booking",
-            Description = "Generate a ticket from an existing booking."
-        )]
-        [ProducesResponseType(typeof(ApiResult<TicketResponseDto>), 200)]
-        [ProducesResponseType(typeof(ApiResult<object>), 400)]
-        [ProducesResponseType(typeof(ApiResult<object>), 404)]
-        [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> GenerateTicket([FromRoute] Guid bookingId)
-        {
-            try
-            {
-                var ticket = await _ticketService.GenerateTicketFromBookingAsync(bookingId);
-                return Ok(ApiResult<TicketResponseDto>.Success(ticket, "200", "Ticket generated successfully."));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ApiResult<object>.Failure("404", ex.Message));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ApiResult<object>.Failure("400", ex.Message));
-            }
-            catch (Exception ex)
-            {
-                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
-                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
-                return StatusCode(statusCode, errorResponse);
-            }
-        }
-
         [HttpPost("offline")]
         [Authorize]
         [SwaggerOperation(
