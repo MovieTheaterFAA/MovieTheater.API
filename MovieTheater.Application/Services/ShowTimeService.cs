@@ -14,16 +14,14 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IClaimsService _claimsService;
-        private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
 
-        public ShowTimeService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IRedisService redisService, IAuditLogService auditLogService)
+        public ShowTimeService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _redisService = redisService;
-            _auditLogService = auditLogService;
         }
 
         //============================ Admin =============================
@@ -230,6 +228,75 @@ namespace MovieTheater.Application.Services
 
             _loggerService.Success($"[DeleteShowTimesByDateAsync] Deleted {deletedCount} showtimes for date: {date:yyyy-MM-dd}");
             return deletedCount;
+        }
+
+        public async Task<ShowtimeResponseDTO> UpdateShowTimeAsync(Guid showTimeId, UpdateShowtimeDto dto)
+        {
+            _loggerService.Info($"[UpdateShowTimeAsync] Updating showtime {showTimeId}");
+
+            var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+            if (showTime == null || showTime.IsDeleted)
+                throw new KeyNotFoundException("Showtime not found.");
+
+            // Get the movie to determine running time
+            var movie = await _unitOfWork.Movies.GetByIdAsync(dto.MovieId);
+            if (movie == null)
+                throw new KeyNotFoundException("Movie not found.");
+
+            var newStart = dto.ShowDate;
+            var newDuration = dto.Duration != default ? dto.Duration : TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15);
+            var newEnd = newStart.Add(newDuration);
+
+            // Overlap check: exclude this showtime itself
+            var overlapping = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.CinemaRoomId == dto.CinemaRoomId
+                    && st.Id != showTimeId
+                    && !st.IsDeleted
+                    && (
+                        (newStart < st.ShowDate.Add(st.Duration) && st.ShowDate < newEnd)
+                    )
+                )
+                .AnyAsync();
+
+            if (overlapping)
+                throw new InvalidOperationException("The new showtime overlaps with another showtime in this room.");
+
+            // Update fields
+            showTime.MovieId = dto.MovieId;
+            showTime.CinemaRoomId = dto.CinemaRoomId;
+            showTime.ShowDate = dto.ShowDate;
+            showTime.Duration = newDuration;
+            showTime.UpdatedAt = DateTime.UtcNow;
+            showTime.UpdatedBy = _claimsService.GetCurrentUserId;
+
+            await _unitOfWork.ShowTimes.Update(showTime);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[UpdateShowTimeAsync] Updated showtime {showTimeId}");
+
+            return new ShowtimeResponseDTO
+            {
+                Id = showTime.Id,
+                MovieId = showTime.MovieId,
+                CinemaRoomId = showTime.CinemaRoomId,
+                ShowDate = showTime.ShowDate,
+                Duration = showTime.Duration
+            };
+        }
+
+        public async Task<bool> SoftDeleteShowTimeAsync(Guid showTimeId)
+        {
+            _loggerService.Info($"[SoftDeleteShowTimeAsync] Soft deleting showtime {showTimeId}");
+
+            var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+            if (showTime == null || showTime.IsDeleted)
+                return false;
+
+            var result = await _unitOfWork.ShowTimes.SoftRemove(showTime);
+            await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[SoftDeleteShowTimeAsync] Soft deleted showtime {showTimeId}");
+            return result;
         }
 
         public async Task<List<ShowtimeResponseDTO>> GetShowTimesByDateAsync(DateTime? date, Guid? movieId, Guid? roomId)
