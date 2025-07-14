@@ -31,7 +31,7 @@ namespace MovieTheater.Application.Services
             _redisService = redisService;
             _stripeClient = stripeClient;
 
-            _baseUrl = configuration["PaymentSettings:FrontendBaseUrl"] ??
+            _baseUrl =
                 "https://movietheaterfe.ae-tao-fullstack-api.site";
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
@@ -286,7 +286,7 @@ namespace MovieTheater.Application.Services
                 invoice.Status = "Paid";
                 await _unitOfWork.Invoices.Update(invoice);
 
-                if (invoice.Booking != null)
+                if (invoice.Booking == null)
                 {
                     _loggerService.Warn($"Booking {invoice.Booking.Id} not found for invoice {invoiceId}");
                     throw new KeyNotFoundException($"Booking for invoice with ID {invoiceId} not found");

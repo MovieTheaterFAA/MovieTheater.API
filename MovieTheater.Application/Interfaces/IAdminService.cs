@@ -33,5 +33,6 @@ namespace MovieTheater.Application.Interfaces
         Task<bool> BanUserAsync(Guid userId, Guid adminId);
 
         Task<bool> UnbanUserAsync(Guid userId, Guid adminId);
+        Task<GetUserDto?> GetUserByPhoneNumberAsync(string phoneNumber);
     }
 }

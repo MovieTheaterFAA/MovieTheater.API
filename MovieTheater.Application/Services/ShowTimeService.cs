@@ -124,34 +124,21 @@ namespace MovieTheater.Application.Services
             var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
             var affectedMovieIds = dto.ShowTimes.Select(st => st.MovieId).Distinct().ToList();
 
-            // Remove cache for GetShowTimesByDateAsync
+            // Invalidate all GetShowTimesByDateAsync cache keys for affected dates, movies, and room
             foreach (var date in affectedDates)
             {
-                string cacheKey = $"showtime:date:{date:yyyyMMdd}:movie:all:room:{dto.CinemaRoomId}";
-                await _redisService.RemoveAsync(cacheKey);
-
-                foreach (var movieId in affectedMovieIds)
-                {
-                    string cacheKeyMovie = $"showtime:date:{date:yyyyMMdd}:movie:{movieId}:room:{dto.CinemaRoomId}";
-                    await _redisService.RemoveAsync(cacheKeyMovie);
-                }
+                await _redisService.RemoveByPatternAsync($"showtime:date:{date:yyyyMMdd}:*");
             }
 
-            // Remove cache for GetShowTimesByMovieAndDateAsync
+            // Invalidate all GetShowTimesByMovieAndDateAsync cache keys for affected movies
             foreach (var movieId in affectedMovieIds)
             {
-                foreach (var date in affectedDates)
-                {
-                    string cacheKey = $"showtime:movie:{movieId}:date:{date:yyyyMMdd}";
-                    await _redisService.RemoveAsync(cacheKey);
-                }
-                // Remove the "all" date cache for this movie
-                string cacheKeyAll = $"showtime:movie:{movieId}:all";
-                await _redisService.RemoveAsync(cacheKeyAll);
+                await _redisService.RemoveByPatternAsync($"showtime:movie:{movieId}:*");
             }
 
-            // Remove the original cache for AddBatchShowTimesAsync (if any)
-            await _redisService.RemoveAsync($"showtime:room:{dto.CinemaRoomId}:date:{dto.ShowTimes.First().StartTime:yyyyMMdd}");
+            // Clear all cache
+            await _redisService.RemoveByPatternAsync("showtime:date:all:*");
+            await _redisService.RemoveByPatternAsync("showtime:movie:*:all");
 
             // Audit log: log only primitive properties
             var newShowTimeData = showTimes.Select(st => new
@@ -271,6 +258,11 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.ShowTimes.Update(showTime);
             await _unitOfWork.SaveChangesAsync();
+
+            await _redisService.RemoveByPatternAsync($"showtime:date:{showTime.ShowDate:yyyyMMdd}:*");
+            await _redisService.RemoveByPatternAsync($"showtime:movie:{showTime.MovieId}:*");
+            await _redisService.RemoveByPatternAsync("showtime:date:all:*");
+            await _redisService.RemoveByPatternAsync("showtime:movie:*:all");
 
             _loggerService.Success($"[UpdateShowTimeAsync] Updated showtime {showTimeId}");
 

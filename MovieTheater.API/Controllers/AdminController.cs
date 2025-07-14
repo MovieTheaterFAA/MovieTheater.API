@@ -109,6 +109,38 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpGet("user/by-phone")]
+    [SwaggerOperation(Summary = "Get user by phone number", Description = "Get detailed information of a user by phone number.")]
+    [ProducesResponseType(typeof(ApiResult<GetUserDto>), 200)]
+    [ProducesResponseType(typeof(ApiResult<object>), 404)]
+    [ProducesResponseType(typeof(ApiResult<object>), 400)]
+    [ProducesResponseType(typeof(ApiResult<object>), 500)]
+    public async Task<IActionResult> GetUserByPhoneNumberAsync(
+    [FromQuery, SwaggerParameter("Phone number to search for.")] string phoneNumber)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return BadRequest(ApiResult<object>.Failure("400", "Phone number is required."));
+
+            var user = await _adminService.GetUserByPhoneNumberAsync(phoneNumber);
+            if (user == null)
+                return NotFound(ApiResult<object>.Failure("404", "User not found."));
+
+            return Ok(ApiResult<GetUserDto>.Success(user, "200", "Get user by phone number successfully."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResult<object>.Failure("400", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+            var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+            return StatusCode(statusCode, errorResponse);
+        }
+    }
+
     [HttpPost("employee")]
     [Authorize(Policy = "AdminPolicy")]
     [SwaggerOperation(
