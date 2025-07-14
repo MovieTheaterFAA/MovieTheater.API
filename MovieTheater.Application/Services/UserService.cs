@@ -1,6 +1,7 @@
 ﻿using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
+using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -124,11 +125,14 @@ namespace MovieTheater.Application.Services
 
                     user.PhoneNumber = userUpdateDto.PhoneNumber;
 
-                    var tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == userUpdateDto.PhoneNumber).ToList();
-                    foreach (var ticket in tickets)
+                    List<Ticket>? tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == userUpdateDto.PhoneNumber).ToList();
+                    if (tickets.Any())
                     {
-                        ticket.GuestPhoneNumber = userUpdateDto.PhoneNumber;
-                        await _unitOfWork.Tickets.Update(ticket);
+                        foreach (var ticket in tickets)
+                        {
+                            ticket.GuestPhoneNumber = userUpdateDto.PhoneNumber;
+                            await _unitOfWork.Tickets.Update(ticket);
+                        }
                     }
                     isUpdated = true;
                 }
