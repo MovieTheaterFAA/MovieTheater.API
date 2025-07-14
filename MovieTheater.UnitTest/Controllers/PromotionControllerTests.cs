@@ -16,7 +16,6 @@ namespace MovieTheater.UnitTest.Controllers
     {
         private readonly Mock<IPromotionService> _mockPromotionService;
         private readonly Mock<IClaimsService> _mockClaimsService;
-        private readonly Mock<ILoggerService> _mockLoggerService;
         private readonly PromotionController _controller;
 
         public PromotionControllerTests()
@@ -186,6 +185,206 @@ namespace MovieTheater.UnitTest.Controllers
 
             // Act
             var result = await _controller.DeletePromotion(promotionId);
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task ClaimPromotion_Success_ReturnsOkResult()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.ClaimPromotionAsync(promotionId, userId))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.ClaimPromotion(promotionId);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<bool>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            Assert.True((bool)apiResult.Value.Data);
+            Assert.Equal("Promotion claimed successfully.", apiResult.Value.Message);
+        }
+
+        [Fact]
+        public async Task ClaimPromotion_AlreadyClaimed_ReturnsBadRequest()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.ClaimPromotionAsync(promotionId, userId))
+                .ReturnsAsync(false);
+
+            // Act
+            var result = await _controller.ClaimPromotion(promotionId);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Promotion already claimed or not found.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task ClaimPromotion_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.ClaimPromotionAsync(promotionId, userId))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.ClaimPromotion(promotionId);
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task UseClaimedPromotion_Success_ReturnsOkResult()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.UseClaimedPromotionAsync(promotionId, userId))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.UseClaimedPromotion(promotionId);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<bool>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            Assert.True((bool)apiResult.Value.Data);
+            Assert.Equal("Promotion used successfully.", apiResult.Value.Message);
+        }
+
+        [Fact]
+        public async Task UseClaimedPromotion_NotClaimedOrAlreadyUsed_ReturnsBadRequest()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.UseClaimedPromotionAsync(promotionId, userId))
+                .ReturnsAsync(false);
+
+            // Act
+            var result = await _controller.UseClaimedPromotion(promotionId);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Promotion not claimed or already used.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task UseClaimedPromotion_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            var promotionId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.UseClaimedPromotionAsync(promotionId, userId))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.UseClaimedPromotion(promotionId);
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetClaimedPromotionsByUser_Success_ReturnsOkResult()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var promotions = new List<PromotionResponseDto>
+    {
+        new PromotionResponseDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promotion 1",
+            DiscountValue = 0.1m,
+            Detail = "Detail 1",
+            EventId = Guid.NewGuid(),
+            IsUsed = false
+        },
+        new PromotionResponseDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "Promotion 2",
+            DiscountValue = 0.2m,
+            Detail = "Detail 2",
+            EventId = Guid.NewGuid(),
+            IsUsed = true
+        }
+    };
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.GetClaimedPromotionsByUserAsync(userId))
+                .ReturnsAsync(promotions);
+
+            // Act
+            var result = await _controller.GetClaimedPromotionsByUser();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<IEnumerable<PromotionResponseDto>>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            var resultList = apiResult.Value.Data.ToList();
+            Assert.Equal(2, resultList.Count());
+            Assert.Equal("Promotion 1", resultList[0].Title);
+            Assert.Equal("Promotion 2", resultList[1].Title);
+            Assert.Equal("Claimed promotions retrieved successfully.", apiResult.Value.Message);
+        }
+
+        [Fact]
+        public async Task GetClaimedPromotionsByUser_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            _mockClaimsService.Setup(s => s.GetCurrentUserId)
+                .Returns(userId);
+
+            _mockPromotionService.Setup(s => s.GetClaimedPromotionsByUserAsync(userId))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.GetClaimedPromotionsByUser();
 
             // Assert
             Assert.IsType<ObjectResult>(result);

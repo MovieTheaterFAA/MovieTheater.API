@@ -144,7 +144,6 @@ namespace MovieTheater.UnitTest.Services
         #endregion
 
         #region UpdateUserInfo Tests
-
         [Fact]
         public async Task UpdateUserInfo_WithValidChanges_UpdatesAndReturnsDto()
         {
@@ -173,6 +172,13 @@ namespace MovieTheater.UnitTest.Services
 
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
                 .ReturnsAsync(user);
+
+            // Add mock for Tickets repository
+            var mockTicketsRepository = new Mock<IGenericRepository<Ticket>>();
+            mockTicketsRepository.Setup(repo => repo.GetQueryable())
+                .Returns(new List<Ticket>().AsQueryable());
+            _mockUnitOfWork.Setup(uow => uow.Tickets)
+                .Returns(mockTicketsRepository.Object);
 
             // Act
             var result = await _userService.UpdateUserInfo(userId, updateDto);

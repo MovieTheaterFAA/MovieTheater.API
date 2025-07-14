@@ -92,7 +92,7 @@ namespace MovieTheater.Application.Services
                 AuditActionType.Create,
                 "Event",
                 newEvent.Id,
-                null,
+                null!,
                 newData,
                 changgedFields,
                 "Admin created new event."
@@ -187,7 +187,7 @@ namespace MovieTheater.Application.Services
 
                 _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
-                var events = await _unitOfWork.Events.GetAllAsync(null, e => e.Promotions);
+                var events = await _unitOfWork.Events.GetAllAsync(null!, e => e.Promotions);
                 var query = events.AsQueryable().Where(e => !e.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(search))
@@ -218,7 +218,7 @@ namespace MovieTheater.Application.Services
                     StartTime = e.StartTime,
                     EndTime = e.EndTime,
                     Detail = e.Detail,
-                    Image = e.Image,
+                    Image = e.Image!,
                     Promotions = e.Promotions?
                         .Where(p => !p.IsDeleted)
                         .Select(p => new PromotionResponseDto
@@ -324,7 +324,7 @@ namespace MovieTheater.Application.Services
                         StartTime = eventEntity.StartTime,
                         EndTime = eventEntity.EndTime,
                         Detail = eventEntity.Detail,
-                        Image = eventEntity.Image
+                        Image = eventEntity.Image!
                     };
                 }
 
@@ -373,7 +373,7 @@ namespace MovieTheater.Application.Services
                     StartTime = eventEntity.StartTime,
                     EndTime = eventEntity.EndTime,
                     Detail = eventEntity.Detail,
-                    Image = eventEntity.Image
+                    Image = eventEntity.Image!
                 };
             }
             catch (Exception ex)
