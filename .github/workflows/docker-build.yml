@@ -55,5 +55,5 @@ jobs:
             docker image prune -f                                                   # Xóa những image không dùng tới để tiết kiệm dung lượng ổ đĩa
 
             echo "Checking health status..."
-            curl -f http://localhost:5000/health || echo "WARNING: Healthcheck failed"  
+            curl -f http://localhost:5001/health || echo "WARNING: Healthcheck failed"  
             # Gọi thử endpoint của API xem có chạy không, nếu lỗi thì cảnh báo nhưng không dừng workflow
