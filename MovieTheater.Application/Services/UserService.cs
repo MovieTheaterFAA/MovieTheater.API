@@ -125,7 +125,7 @@ namespace MovieTheater.Application.Services
 
                     user.PhoneNumber = userUpdateDto.PhoneNumber;
 
-                    List<Ticket>? tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == userUpdateDto.PhoneNumber).ToList();
+                    List<Ticket>? tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == user.PhoneNumber).ToList();
                     if (tickets.Any())
                     {
                         foreach (var ticket in tickets)
