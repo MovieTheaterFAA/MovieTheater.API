@@ -31,7 +31,7 @@ namespace MovieTheater.Application.Services
             _redisService = redisService;
             _stripeClient = stripeClient;
 
-            _baseUrl = configuration["PaymentSettings:FrontendBaseUrl"] ??
+            _baseUrl =
                 "https://movietheaterfe.ae-tao-fullstack-api.site";
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
