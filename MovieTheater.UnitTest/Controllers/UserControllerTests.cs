@@ -21,13 +21,9 @@ namespace MovieTheater.UnitTest.Controllers
         public UserControllerTests()
         {
             _mockUserService = new Mock<IUserService>();
-            _mockClaimsService = new Mock<IClaimsService>();
-            _mockLoggerService = new Mock<ILoggerService>();
             _mockImpersonationService = new Mock<IImpersonationService>();
             _controller = new UserController(
                 _mockUserService.Object,
-                _mockClaimsService.Object,
-                _mockLoggerService.Object,
                 _mockImpersonationService.Object
             );
         }

@@ -23,11 +23,9 @@ namespace MovieTheater.UnitTest.Controllers
         {
             _mockPromotionService = new Mock<IPromotionService>();
             _mockClaimsService = new Mock<IClaimsService>();
-            _mockLoggerService = new Mock<ILoggerService>();
             _controller = new PromotionController(
                 _mockPromotionService.Object,
-                _mockClaimsService.Object,
-                _mockLoggerService.Object
+                _mockClaimsService.Object
             );
         }
 

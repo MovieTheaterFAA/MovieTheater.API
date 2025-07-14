@@ -16,14 +16,10 @@ namespace MovieTheater.API.Controllers
     public class MovieController : ControllerBase
     {
         private readonly IMovieService _movieService;
-        private readonly IClaimsService _claimsService;
-        private readonly ILoggerService _loggerService;
 
-        public MovieController(IMovieService movieService, IClaimsService claimsService, ILoggerService loggerService)
+        public MovieController(IMovieService movieService)
         {
             _movieService = movieService;
-            _claimsService = claimsService;
-            _loggerService = loggerService;
         }
 
         [HttpGet]
