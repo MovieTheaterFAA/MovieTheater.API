@@ -1,6 +1,8 @@
-﻿using MovieTheater.Application.Interfaces;
+﻿using Microsoft.VisualBasic;
+using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
+using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -32,7 +34,7 @@ namespace MovieTheater.Application.Services
                 string cacheKey = $"user:detail:{userId}";
                 var cached = await _redisService.GetAsync<CurrentUserDto>(cacheKey);
                 if (cached != null) return cached;
-                
+
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
                 if (user == null)
                 {
@@ -121,6 +123,16 @@ namespace MovieTheater.Application.Services
                 {
                     if (!Regex.IsMatch(userUpdateDto.PhoneNumber, @"^\d{10,15}$"))
                         throw new ArgumentException("Invalid phone number format.");
+
+                    List<Ticket>? tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == user.PhoneNumber).ToList();
+                    if (tickets.Any())
+                    {
+                        foreach (var ticket in tickets)
+                        {
+                            ticket.GuestPhoneNumber = userUpdateDto.PhoneNumber;
+                            await _unitOfWork.Tickets.Update(ticket);
+                        }
+                    }
 
                     user.PhoneNumber = userUpdateDto.PhoneNumber;
                     isUpdated = true;

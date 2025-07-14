@@ -626,6 +626,37 @@ public class AdminService : IAdminService
         return dto;
     }
 
+    public async Task<GetUserDto?> GetUserByPhoneNumberAsync(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Phone number is required.", nameof(phoneNumber));
+
+        // Validate phone number format (10-15 digits, adjust regex as needed)
+        if (!Regex.IsMatch(phoneNumber, @"^\d{10,15}$"))
+            throw new ArgumentException("Invalid phone number format.", nameof(phoneNumber));
+
+        var user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber && !u.IsDeleted);
+        if (user == null)
+            return null;
+
+        return new GetUserDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Sex = user.Sex,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            CCCD = user.CCCD,
+            Address = user.Address,
+            Role = user.Role,
+            ScoreBalance = user.ScoreBalance,
+            CreatedAt = user.CreatedAt,
+            AvatarUrl = user.AvatarUrl ?? string.Empty,
+            IsDeleted = user.IsDeleted,
+            Status = user.UserStatus
+        };
+    }
+
 
     //========================= PRIVATE HELPER METHODS ============================
 

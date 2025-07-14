@@ -22,7 +22,7 @@ namespace MovieTheater.API.Controllers
         {
             _paymentService = paymentService;
             _loggerService = loggerService;
-            _frontendBaseUrl = configuration["PaymentSettings:FrontendBaseUrl"] ??
+            _frontendBaseUrl =
                 "https://movietheaterfe.ae-tao-fullstack-api.site";
         }
 
