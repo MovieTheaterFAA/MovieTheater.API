@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieTheater.Domain.Migrations
 {
     [DbContext(typeof(MovieTheaterDbContext))]
-    [Migration("20250712063821_UpdateTicketV3")]
-    partial class UpdateTicketV3
+    [Migration("20250714024117_InitDbV2")]
+    partial class InitDbV2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
