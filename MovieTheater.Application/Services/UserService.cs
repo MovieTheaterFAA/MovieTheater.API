@@ -32,7 +32,7 @@ namespace MovieTheater.Application.Services
                 string cacheKey = $"user:detail:{userId}";
                 var cached = await _redisService.GetAsync<CurrentUserDto>(cacheKey);
                 if (cached != null) return cached;
-                
+
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
                 if (user == null)
                 {
@@ -123,6 +123,13 @@ namespace MovieTheater.Application.Services
                         throw new ArgumentException("Invalid phone number format.");
 
                     user.PhoneNumber = userUpdateDto.PhoneNumber;
+
+                    var tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == userUpdateDto.PhoneNumber).ToList();
+                    foreach (var ticket in tickets)
+                    {
+                        ticket.GuestPhoneNumber = userUpdateDto.PhoneNumber;
+                        await _unitOfWork.Tickets.Update(ticket);
+                    }
                     isUpdated = true;
                 }
 
