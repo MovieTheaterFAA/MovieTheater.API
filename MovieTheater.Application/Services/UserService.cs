@@ -1,4 +1,5 @@
-﻿using MovieTheater.Application.Interfaces;
+﻿using Microsoft.VisualBasic;
+using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
@@ -123,8 +124,6 @@ namespace MovieTheater.Application.Services
                     if (!Regex.IsMatch(userUpdateDto.PhoneNumber, @"^\d{10,15}$"))
                         throw new ArgumentException("Invalid phone number format.");
 
-                    user.PhoneNumber = userUpdateDto.PhoneNumber;
-
                     List<Ticket>? tickets = _unitOfWork.Tickets.GetQueryable().Where(t => t.GuestPhoneNumber == user.PhoneNumber).ToList();
                     if (tickets.Any())
                     {
@@ -134,6 +133,8 @@ namespace MovieTheater.Application.Services
                             await _unitOfWork.Tickets.Update(ticket);
                         }
                     }
+
+                    user.PhoneNumber = userUpdateDto.PhoneNumber;
                     isUpdated = true;
                 }
 
