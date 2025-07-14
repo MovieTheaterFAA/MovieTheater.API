@@ -133,5 +133,58 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpPut("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(Summary = "Update a showtime", Description = "Update an existing showtime. Requires Admin privileges.")]
+        [ProducesResponseType(typeof(ApiResult<ShowtimeResponseDTO>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> UpdateShowTime([FromRoute] Guid id, [FromBody] UpdateShowtimeDto dto)
+        {
+            try
+            {
+                var result = await _showTimeService.UpdateShowTimeAsync(id, dto);
+                return Ok(ApiResult<ShowtimeResponseDTO>.Success(result, "200", "Showtime updated successfully."));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResult<object>.Failure("404", ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResult<object>.Failure("400", ex.Message));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(Summary = "Soft delete a showtime", Description = "Soft deletes a showtime by its ID. Requires Admin privileges.")]
+        [ProducesResponseType(typeof(ApiResult<object>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> SoftDeleteShowTime([FromRoute] Guid id)
+        {
+            try
+            {
+                var result = await _showTimeService.SoftDeleteShowTimeAsync(id);
+                if (!result)
+                    return NotFound(ApiResult<object>.Failure("404", "Showtime not found or already deleted."));
+                return Ok(ApiResult<object>.Success("200", "Showtime soft deleted successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }

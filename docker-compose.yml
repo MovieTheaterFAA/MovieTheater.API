@@ -9,10 +9,7 @@
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      # Xài cloud db trên vps
       - ConnectionStrings__DefaultConnection=Host=103.211.201.162;Port=5434;Database=movietheater_db;Username=postgres;Password=postgres
-      # Xài local
-      # - ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=movietheater_db;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=movietheater-redis:6379,abortConnect=false
       - GEMINI_API_KEY=AIzaSyD8YgqkR7d1gDYL_7cFXRDfYNhQl4glD4k
       - JWT__SecretKey=MovieTheater_SECRETKEY_SIEUCAPBAOMAT_VAYMACHUADU16KYTU

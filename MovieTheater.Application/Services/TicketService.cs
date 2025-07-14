@@ -138,8 +138,8 @@ public class TicketService : ITicketService
             User? user = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.GuestPhoneNumber && !u.IsDeleted);
 
             // Validate showtime
-            var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom, s => !s.IsDeleted);
-            if (showtime == null)
+            var showtime = await _unitOfWork.ShowTimes.GetByIdAsync(request.ShowtimeId, s => s.Movie, s => s.CinemaRoom);
+            if (showtime == null || showtime.IsDeleted)
                 throw new KeyNotFoundException("Showtime not found.");
 
             _loggerService.Info($"Showtime found: {showtime.Id}, Movie: {showtime.Movie?.Name}, Cinema Room: {showtime.CinemaRoom?.Name}");
@@ -596,6 +596,7 @@ public class TicketService : ITicketService
             MovieName = showtime.Movie.Name,
             ShowTime = showtime.ShowDate.ToString("yyyy-MM-dd HH:mm"),
             CinemaRoom = showtime.CinemaRoom.Name,
+            MoviePosterUrl = showtime.Movie.PosterImage,
             Seats = ticketSeats,
             FoodItems = ticketFoods
         };

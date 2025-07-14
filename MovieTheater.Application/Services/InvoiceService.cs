@@ -98,10 +98,6 @@ namespace MovieTheater.Application.Services
 
             try
             {
-                //string cacheKey = $"invoices:user:{userId}";
-                //var cached = await _redisService.GetAsync<IEnumerable<InvoiceDto>>(cacheKey);
-                //if (cached != null) return cached;
-
                 // Get all bookings for the user
                 var bookings = await _unitOfWork.Bookings.GetAllAsync(b => b.MemberId == userId);
                 if (bookings == null || !bookings.Any())
