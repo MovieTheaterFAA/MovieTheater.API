@@ -109,7 +109,7 @@ namespace MovieTheater.Application.Services
                     AuditActionType.Create,
                     "Seat",
                     cinemaRoomId,
-                    null,
+                    null!,
                     newSeatData,
                     JsonSerializer.Serialize(dto),
                     "Batch created seats"

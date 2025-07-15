@@ -3,6 +3,7 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.TicketDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using QRCoder;
 using System.Text.Json;
@@ -526,7 +527,7 @@ public class TicketService : ITicketService
     {
         var ticket = await _unitOfWork.Tickets.GetByIdAsync(
             ticketId,
-            t => t.Booking,
+            t => t.Booking!,
             t => t.TicketSeats,
             t => t.TicketFoodAndDrinks,
             t => t.Showtime);

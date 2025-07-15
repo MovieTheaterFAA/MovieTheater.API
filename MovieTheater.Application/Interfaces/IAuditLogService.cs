@@ -12,7 +12,7 @@ namespace MovieTheater.Application.Interfaces
     public interface IAuditLogService
     {
         Task LogAsync(Guid adminId, AuditActionType actionType, string entityType, Guid entityId,
-                  object oldValue, object newValue, string changedFields, string reason = null);
+                  object oldValue, object newValue, string changedFields, string reason = null!);
         Task<Pagination<AuditLogDto>> ViewLogAsync(string? search,AuditActionType? actionType, string? entityType,bool isDescending,int page,int pageSize);
     }
 }

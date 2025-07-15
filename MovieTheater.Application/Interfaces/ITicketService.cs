@@ -1,5 +1,6 @@
 ﻿using MovieTheater.Domain.DTOs.TicketDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {

@@ -88,7 +88,7 @@ public class PromotionService : IPromotionService
             AuditActionType.Create,
             "Promotion",
             promotion.Id,
-            null,
+            null!,
             newData,
             changedFields,
             "Admin created new promotion."

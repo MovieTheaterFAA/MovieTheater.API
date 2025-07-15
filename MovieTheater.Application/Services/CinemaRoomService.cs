@@ -102,7 +102,7 @@ namespace MovieTheater.Application.Services
                     AuditActionType.Create,
                     "CinemaRoom",
                     entity.Id,
-                    null,
+                    null!,
                     new { entity.Name, entity.Type },
                     JsonSerializer.Serialize(dto),
                     "Created new cinema room"

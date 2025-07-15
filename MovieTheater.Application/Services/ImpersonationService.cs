@@ -81,7 +81,7 @@ namespace MovieTheater.Application.Services
             session.SetString("AdminIdOriginal", admin.Id.ToString());
             session.SetString("Id", targetUser.Id.ToString());
 
-            await _auditLogService.LogAsync(admin.Id, AuditActionType.Impersonate, "User", targetUser.Id, null, null, "ImpersonationStarted", reason);
+            await _auditLogService.LogAsync(admin.Id, AuditActionType.Impersonate, "User", targetUser.Id, null!, null!, "ImpersonationStarted", reason);
             _logger.Info($"Admin {admin.Email} is impersonating user {targetUser.Email}");
 
             return true;
@@ -100,6 +100,8 @@ namespace MovieTheater.Application.Services
             session.Remove("AdminIdOriginal");
 
             _logger.Info($"Stopped impersonation. Back to admin: {originalAdminId}");
+
+            await Task.CompletedTask;
             return true;
         }
     }

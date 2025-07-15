@@ -653,45 +653,6 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
-
-    private async Task SeedShowTimeSeatsWithRandomStatusAsync()
-    {
-        var showtimes = await _context.Showtimes.ToListAsync();
-        var allSeats = await _context.Seats.ToListAsync();
-        var random = new Random();
-        var seatStatusValues = Enum.GetValues(typeof(SeatStatus)).Cast<SeatStatus>().ToArray();
-        var showTimeSeats = new List<ShowTimeSeat>();
-
-        foreach (var showtime in showtimes)
-        {
-            // Get seats for the cinema room of this showtime
-            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
-
-            foreach (var seat in seatsInRoom)
-            {
-                showTimeSeats.Add(new ShowTimeSeat
-                {
-                    Id = Guid.NewGuid(),
-                    ShowTimeId = showtime.Id,
-                    SeatId = seat.Id,
-                    Status = seatStatusValues[random.Next(seatStatusValues.Length)],
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = Guid.Empty // System seed
-                });
-            }
-        }
-
-        if (showTimeSeats.Count > 0)
-        {
-            await _context.ShowTimeSeats.AddRangeAsync(showTimeSeats);
-            await _context.SaveChangesAsync();
-            _logger.Success($"Seeded {showTimeSeats.Count} ShowTimeSeats with random status.");
-        }
-        else
-        {
-            _logger.Info("No ShowTimeSeats to seed.");
-        }
-    }
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
@@ -853,9 +814,7 @@ public class SystemController : ControllerBase
         await _context.FoodAndDrinks.AddRangeAsync(foodanddrinks);
         await _context.SaveChangesAsync();
         _logger.Success("Food and Drink seeded successfully.");
-    }
-
-
+    }   
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
         using var transaction = await context.Database.BeginTransactionAsync();

@@ -4,6 +4,7 @@ using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.BookingDTOs;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 

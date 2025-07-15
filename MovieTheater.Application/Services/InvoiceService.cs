@@ -3,6 +3,7 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.BookingDTOs;
 using MovieTheater.Domain.DTOs.InvoiceDTOs;
 using MovieTheater.Domain.Entities;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
@@ -74,7 +75,7 @@ namespace MovieTheater.Application.Services
                 if (invoice == null)
                 {
                     _loggerService.Warn($"No invoice found for booking ID: {bookingId}");
-                    return null;
+                    return null!;
                 }
 
                 var result = await MapToDto(invoice);
@@ -176,7 +177,7 @@ namespace MovieTheater.Application.Services
                 // Get the newly created invoice with all the relationships
                 invoice = await _unitOfWork.Invoices.GetByIdAsync(invoice.Id);
 
-                var result = await MapToDto(invoice);
+                var result = await MapToDto(invoice!);
                 return result;
             }
             catch (Exception ex)
@@ -220,7 +221,7 @@ namespace MovieTheater.Application.Services
                 // Get the updated invoice with all relationships
                 invoice = await _unitOfWork.Invoices.GetByIdAsync(id);
 
-                var result = await MapToDto(invoice);
+                var result = await MapToDto(invoice!);
                 return result;
             }
             catch (Exception ex)
@@ -323,7 +324,7 @@ namespace MovieTheater.Application.Services
                 booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId, b => b.Member, b => b.Showtime);
             }
             // Get member name
-            var member = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
+            var member = await _unitOfWork.Users.GetByIdAsync(booking!.MemberId);
             string memberName = member?.FullName ?? "Unknown";
 
             // Get movie title and show date

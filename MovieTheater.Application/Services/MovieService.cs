@@ -295,7 +295,7 @@ namespace MovieTheater.Application.Services
                     AuditActionType.Create,
                     "Movie",
                     movie.Id,
-                    null,
+                    null!,
                     newData,
                     changedFields,
                     "Admin created new movie."
@@ -428,9 +428,9 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (Enum.IsDefined(typeof(MovieStatus), movieUpdateDto.Status) && movie.Status != movieUpdateDto.Status)
+                if (Enum.IsDefined(typeof(MovieStatus), movieUpdateDto.Status!) && movie.Status != movieUpdateDto.Status)
                 {
-                    movie.Status = movieUpdateDto.Status.Value;
+                    movie.Status = movieUpdateDto.Status!.Value;
                     isUpdated = true;
                 }
 

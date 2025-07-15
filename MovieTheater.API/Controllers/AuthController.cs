@@ -245,7 +245,7 @@ namespace MovieTheater.API.Controllers
             {
                 var employeeId = _claimsService.GetCurrentUserId;
                 var result = await _authService.EmployeeCreateCustomerAsync(customer, employeeId);
-                return Ok(ApiResult<UserDto>.Success(result, "200", "Customer account created successfully."));
+                return Ok(ApiResult<UserDto>.Success(result!, "200", "Customer account created successfully."));
             }
             catch (Exception ex)
             {

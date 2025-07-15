@@ -3,8 +3,8 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.BookingDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
-
 namespace MovieTheater.Application.Services;
 
 public class BookingService : IBookingService
@@ -82,10 +82,10 @@ public class BookingService : IBookingService
 
             var Foods = new List<FoodAndDrink>();
             var bookingFoods = bookingWithDetails.BookingFoods;
-            if (bookingFoods != null || bookingFoods.Any())
+            if (bookingFoods != null || bookingFoods!.Any())
             {
                 Foods = await _unitOfWork.FoodAndDrinks.GetAllAsync(
-                    f => bookingFoods.Select(bf => bf.FoodAndDrinkId).Contains(f.Id) && !f.IsDeleted);
+                    f => bookingFoods!.Select(bf => bf.FoodAndDrinkId).Contains(f.Id) && !f.IsDeleted);
             }
 
             var result = new BookingResponseDto
@@ -106,7 +106,7 @@ public class BookingService : IBookingService
                 {
                     FoodId = food.Id,
                     Name = food.Name,
-                    Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                    Quantity = bookingFoods!.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
                     Price = food.Price
                 }).ToList()
             };
@@ -180,7 +180,7 @@ public class BookingService : IBookingService
                     _loggerService.Warn($"No seats found for booking ID: {booking.Id}");
                 }
 
-                var seatIds = bookingSeats.Select(bs => bs.SeatId).ToList();
+                var seatIds = bookingSeats!.Select(bs => bs.SeatId).ToList();
                 var seats = await _unitOfWork.Seats.GetAllAsync(s => seatIds.Contains(s.Id) && !s.IsDeleted);
 
                 var foods = new List<FoodAndDrink>();
@@ -209,7 +209,7 @@ public class BookingService : IBookingService
                     {
                         FoodId = food.Id,
                         Name = food.Name,
-                        Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                        Quantity = bookingFoods!.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
                         Price = food.Price
                     }).ToList()
                 };
@@ -245,7 +245,7 @@ public class BookingService : IBookingService
             // Apply status filter if provided
             if (status.HasValue)
             {
-                string statusString = status.ToString();
+                string statusString = status.ToString()!;
                 query = query.Where(b => b.Status.Equals(statusString, StringComparison.OrdinalIgnoreCase));
             }
 
@@ -297,7 +297,7 @@ public class BookingService : IBookingService
                     b => b.Member,
                     b => b.Showtime);
 
-                var member = completeBooking.Member;
+                var member = completeBooking!.Member;
                 if (member == null)
                 {
                     _loggerService.Warn($"No member found for booking ID: {completeBooking.Id}");
@@ -347,7 +347,7 @@ public class BookingService : IBookingService
                     {
                         FoodId = food.Id,
                         Name = food.Name,
-                        Quantity = bookingFoods.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
+                        Quantity = bookingFoods!.FirstOrDefault(bf => bf.FoodAndDrinkId == food.Id)?.Quantity ?? 0,
                         Price = food.Price
                     }).ToList()
                 };
@@ -463,7 +463,7 @@ public class BookingService : IBookingService
                 b => b.BookingSeats,
                 b => b.BookingFoods);
 
-            var result = MapToDto(booking);
+            var result = MapToDto(booking!);
             return result;
         }
         catch (Exception ex)
@@ -535,7 +535,7 @@ public class BookingService : IBookingService
             BookingSeats = booking.BookingSeats?.Select(bs => new BookingSeatDto
             {
                 SeatId = bs.SeatId,
-                Row = bs.Seat?.Row,
+                Row = bs.Seat?.Row!,
                 Number = bs.Seat?.Number ?? 0,
             }).ToList() ?? new List<BookingSeatDto>(),
             BookingFoods = booking.BookingFoods?.Select(bf => new BookingFoodDto

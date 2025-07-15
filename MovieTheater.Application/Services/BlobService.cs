@@ -91,7 +91,7 @@ namespace MovieTheater.Application.Services
         /// <param name="fileStream"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task UploadFileAsync(string fileName, Stream fileStream, string? folder = null, CancellationToken cancellationToken = default)
+        public async Task UploadFileAsync(string fileName, Stream fileStream, string? folder, CancellationToken cancellationToken = default)
         {
             await EnsureBucketExistsAsync(cancellationToken);
 
@@ -170,7 +170,7 @@ namespace MovieTheater.Application.Services
             catch (Exception ex)
             {
                 _loggerService.Error($"Error generating presigned URL: {ex.Message}");
-                return null;
+                return null!;
             }
         }
 

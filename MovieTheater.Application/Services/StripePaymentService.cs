@@ -165,7 +165,7 @@ namespace MovieTheater.Application.Services
                         await ProcessSuccessfulPaymentAsync(invoiceId, session);
 
                         var invoice = await _unitOfWork.Invoices.GetByIdAsync(invoiceId, i => i.Booking);
-                        _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
+                        _loggerService.Info($"Booking {invoice!.Booking.Id} status updated to Completed");
                         try
                         {
                             await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
@@ -185,7 +185,7 @@ namespace MovieTheater.Application.Services
                         {
                             await ProcessSuccessfulPaymentAsync(invoiceId, session);
                             var invoice = await _unitOfWork.Invoices.GetByIdAsync(invoiceId, i => i.Booking);
-                            _loggerService.Info($"Booking {invoice.Booking.Id} status updated to Completed");
+                            _loggerService.Info($"Booking {invoice!.Booking.Id} status updated to Completed");
                             try
                             {
                                 await _ticketService.GenerateTicketFromBookingAsync(invoice.Booking.Id);
@@ -288,7 +288,7 @@ namespace MovieTheater.Application.Services
 
                 if (invoice.Booking == null)
                 {
-                    _loggerService.Warn($"Booking {invoice.Booking.Id} not found for invoice {invoiceId}");
+                    _loggerService.Warn($"Booking {invoice.Booking!.Id} not found for invoice {invoiceId}");
                     throw new KeyNotFoundException($"Booking for invoice with ID {invoiceId} not found");
                 }
                 else

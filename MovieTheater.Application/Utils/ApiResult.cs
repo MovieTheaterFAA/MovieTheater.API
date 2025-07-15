@@ -3,8 +3,8 @@
 public class ApiResult
 {
     public bool IsSuccess { get; set; }
-    public ResponseContent Value { get; set; }
-    public ErrorContent Error { get; set; }
+    public ResponseContent? Value { get; set; }
+    public ErrorContent? Error { get; set; }
 
     public static ApiResult Success(string code = "200", string message = "Operation successful.")
     {
@@ -38,8 +38,8 @@ public class ApiResult
 public class ApiResult<T>
 {
     public bool IsSuccess { get; set; }
-    public ResponseDataContent<T> Value { get; set; }
-    public ErrorContent Error { get; set; }
+    public ResponseDataContent<T>? Value { get; set; }
+    public ErrorContent? Error { get; set; }
 
     public static ApiResult<T> Success(T data, string code = "200", string message = "Operation successful.")
     {
@@ -73,19 +73,19 @@ public class ApiResult<T>
 
 public class ResponseContent
 {
-    public string Code { get; set; }
-    public string Message { get; set; }
+    public string? Code { get; set; }
+    public string? Message { get; set; }
 }
 
 public class ResponseDataContent<T>
 {
-    public string Code { get; set; }
-    public string Message { get; set; }
-    public T Data { get; set; }
+    public string? Code { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
 }
 
 public class ErrorContent
 {
-    public string Code { get; set; }
-    public string Message { get; set; }
+    public string? Code { get; set; }
+    public string? Message { get; set; }
 }
