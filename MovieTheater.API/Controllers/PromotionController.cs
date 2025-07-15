@@ -21,6 +21,55 @@ namespace MovieTheater.API.Controllers
             _claimsService = claimsService;
         }
 
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        [SwaggerOperation(
+        Summary = "Get promotion by ID",
+        Description = "Returns a promotion by its ID."
+        )]
+        [ProducesResponseType(typeof(ApiResult<PromotionResponseDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 404)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetPromotionAsync([FromRoute] Guid id)
+        {
+            try
+            {
+                var result = await _promotionService.GetPromotionAsync(id);
+                if (result == null)
+                    return NotFound(ApiResult<object>.Failure("404", "Promotion not found."));
+                return Ok(ApiResult<PromotionResponseDto>.Success(result, "200", "Promotion retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [SwaggerOperation(
+            Summary = "Get all promotions",
+            Description = "Returns all available promotions."
+        )]
+        [ProducesResponseType(typeof(ApiResult<IEnumerable<PromotionResponseDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetAllPromotionsAsync()
+        {
+            try
+            {
+                var result = await _promotionService.GetAllPromotionsAsync();
+                return Ok(ApiResult<IEnumerable<PromotionResponseDto>>.Success(result, "200", "Promotions retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
         [HttpPost]
         [Authorize(Policy = "AdminPolicy")]
         [SwaggerOperation(
@@ -114,6 +163,32 @@ namespace MovieTheater.API.Controllers
                 if (!result)
                     return BadRequest(ApiResult<object>.Failure("400", "Promotion already claimed or not found."));
                 return Ok(ApiResult<bool>.Success(true, "200", "Promotion claimed successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPost("{promotionId}/claim-for/{userId}")]
+        [Authorize(Policy = "AdminPolicy")]
+        [SwaggerOperation(
+        Summary = "Admin claims a promotion for a member",
+        Description = "Admin claims a promotion for a specific user (member)."
+        )]
+        [ProducesResponseType(typeof(ApiResult<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AdminClaimPromotionForMember([FromRoute] Guid promotionId, [FromRoute] Guid userId)
+        {
+            try
+            {
+                var result = await _promotionService.ClaimPromotionAsync(promotionId, userId);
+                if (!result)
+                    return BadRequest(ApiResult<object>.Failure("400", "Promotion already claimed or not found for this user."));
+                return Ok(ApiResult<bool>.Success(true, "200", "Promotion claimed for member successfully."));
             }
             catch (Exception ex)
             {
