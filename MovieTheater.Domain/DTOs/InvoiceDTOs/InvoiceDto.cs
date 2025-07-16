@@ -9,6 +9,7 @@ namespace MovieTheater.Domain.DTOs.InvoiceDTOs
         public DateTime InvoiceDate { get; set; }
         public decimal Amount { get; set; }
         public string Status { get; set; }
+        public string? promotion { get; set; }
         public BookingSummaryDto Booking { get; set; }
     }
 }

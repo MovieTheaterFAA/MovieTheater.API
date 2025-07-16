@@ -291,6 +291,58 @@ public class PromotionService : IPromotionService
         }
     }
 
+    public async Task<PromotionResponseDto?> GetPromotionAsync(Guid promotionId)
+    {
+        try
+        {
+            _loggerService.Info($"[GetPromotionAsync] Getting promotion with ID: {promotionId}");
+            var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId);
+            if (promotion == null || promotion.IsDeleted)
+            {
+                _loggerService.Warn($"[GetPromotionAsync] Promotion with ID {promotionId} not found or deleted.");
+                return null;
+            }
+            return new PromotionResponseDto
+            {
+                Id = promotion.Id,
+                Title = promotion.Title,
+                DiscountValue = promotion.DiscountValue,
+                Detail = promotion.Detail,
+                EventId = promotion.EventId
+            };
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetPromotionAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<PromotionResponseDto>> GetAllPromotionsAsync()
+    {
+        try
+        {
+            _loggerService.Info("[GetAllPromotionsAsync] Getting all promotions");
+            var promotions = await _unitOfWork.Promotions
+                .GetQueryable()
+                .Where(p => !p.IsDeleted)
+                .ToListAsync();
+
+            return promotions.Select(p => new PromotionResponseDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                DiscountValue = p.DiscountValue,
+                Detail = p.Detail,
+                EventId = p.EventId
+            });
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetAllPromotionsAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
 
     public async Task<bool> ClaimPromotionAsync(Guid promotionId, Guid userId)
     {

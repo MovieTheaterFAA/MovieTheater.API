@@ -12,12 +12,14 @@ namespace MovieTheater.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILoggerService _loggerService;
         private readonly IRedisService _redisService;
+        private readonly IPromotionService _promotionService;
 
-        public InvoiceService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService)
+        public InvoiceService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService, IPromotionService promotionService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _redisService = redisService;
+            _promotionService = promotionService;
         }
 
         public async Task<InvoiceDto> GetInvoiceByIdAsync(Guid id)
@@ -130,7 +132,7 @@ namespace MovieTheater.Application.Services
             }
         }
 
-        public async Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId)
+        public async Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId, Guid? promotionId)
         {
             if (bookingId == Guid.Empty)
             {
@@ -167,6 +169,28 @@ namespace MovieTheater.Application.Services
                     Amount = booking.TotalAmount,
                     Status = "Pending" // Initial status
                 };
+
+                if (promotionId.HasValue)
+                {
+                    var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId.Value, p => p.ClaimedPromotions);
+                    _loggerService.Info($"Applying promotion with ID: {promotionId}");
+                    if (promotion == null)
+                    {
+                        _loggerService.Warn($"No promotion found with ID: {promotionId}");
+                        throw new KeyNotFoundException($"Promotion with ID {promotionId} not found");
+                    }
+
+                    var use = await _promotionService.UseClaimedPromotionAsync(promotionId.Value, booking.MemberId);
+
+                    if (!use)
+                    {
+                        _loggerService.Warn($"Promotion with ID {promotionId} could not be used for booking {bookingId}");
+                        throw new InvalidOperationException("Promotion could not be used");
+                    }
+
+                    invoice.PromotionId = promotionId.Value;
+                    invoice.Amount -= promotion.DiscountValue * invoice.Amount;
+                }
 
                 await _unitOfWork.Invoices.AddAsync(invoice);
                 await _unitOfWork.SaveChangesAsync();
@@ -351,6 +375,7 @@ namespace MovieTheater.Application.Services
                 InvoiceDate = invoice.InvoiceDate,
                 Amount = invoice.Amount,
                 Status = invoice.Status,
+                promotion = invoice.Promotion?.Title,
                 Booking = new BookingSummaryDto
                 {
                     Id = booking.Id,
