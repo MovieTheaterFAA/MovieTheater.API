@@ -12,6 +12,7 @@ namespace MovieTheater.Application.Interfaces
         Task AddScoreForBookingAsync(User user, Booking booking);
         (decimal discountPercent, int usedPoints) CalculateDiscount(int availablePoints, int requestedPoints);
         Task UseScoreForBookingAsync(User user, Booking booking, int usedPoints);
+        Task RefundScoreForBookingAsync(Booking booking);
         Task<int> GetCurrentScoreAsync();
         Task<List<ScoreHistory>> GetScoreHistoryAsync();
     }

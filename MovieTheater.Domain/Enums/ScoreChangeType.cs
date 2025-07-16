@@ -3,6 +3,7 @@
     public enum ScoreChangeType
     {
         Add = 0,
-        Use = 1
+        Use = 1,
+        Refund = 2,
     }
 }

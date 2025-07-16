@@ -90,11 +90,11 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("booking/{id}")]
         [SwaggerOperation(Summary = "Create an invoice for a booking")]
-        public async Task<IActionResult> CreateInvoice(Guid id, [FromBody] Guid? promotionId = null, [FromBody] int? requestedPoints = null)
+        public async Task<IActionResult> CreateInvoice(Guid id, [FromBody] CreateInvoiceRequest request)
         {
             try
             {
-                var invoice = await _invoiceService.CreateInvoiceAsync(id, promotionId, requestedPoints);
+                var invoice = await _invoiceService.CreateInvoiceAsync(id, request.PromotionId, request.RequestedPoints);
                 return Ok(ApiResult<InvoiceDto>.Success(invoice, "200", "Created invoice successfully"));
             }
             catch (KeyNotFoundException ex)
