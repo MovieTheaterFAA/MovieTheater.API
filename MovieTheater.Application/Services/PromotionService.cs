@@ -302,13 +302,16 @@ public class PromotionService : IPromotionService
                 _loggerService.Warn($"[GetPromotionAsync] Promotion with ID {promotionId} not found or deleted.");
                 return null;
             }
+            ClaimedPromotion? claimedPromotions = await _unitOfWork.ClaimedPromotions.GetQueryable()
+                                                 .FirstOrDefaultAsync(cp => cp.PromotionId == promotionId);
             return new PromotionResponseDto
             {
                 Id = promotion.Id,
                 Title = promotion.Title,
                 DiscountValue = promotion.DiscountValue,
                 Detail = promotion.Detail,
-                EventId = promotion.EventId
+                EventId = promotion.EventId,
+                IsUsed = claimedPromotions?.IsUsed ?? false // Default to false if no claimed promotion found
             };
         }
         catch (Exception ex)
@@ -328,14 +331,32 @@ public class PromotionService : IPromotionService
                 .Where(p => !p.IsDeleted)
                 .ToListAsync();
 
-            return promotions.Select(p => new PromotionResponseDto
+            if (promotions == null || !promotions.Any())
             {
-                Id = p.Id,
-                Title = p.Title,
-                DiscountValue = p.DiscountValue,
-                Detail = p.Detail,
-                EventId = p.EventId
-            });
+                _loggerService.Warn("[GetAllPromotionsAsync] No promotions found.");
+                return Enumerable.Empty<PromotionResponseDto>();
+            }
+            _loggerService.Info($"[GetAllPromotionsAsync] Found {promotions.Count} promotions.");
+
+            var promotionDtos = new List<PromotionResponseDto>();
+            foreach (var promotion in promotions)
+            {
+                _loggerService.Info($"Promotion ID: {promotion.Id}, Title: {promotion.Title}, Discount: {promotion.DiscountValue}");
+                ClaimedPromotion? claimedPromotion = await _unitOfWork.ClaimedPromotions.GetQueryable()
+                    .FirstOrDefaultAsync(cp => cp.PromotionId == promotion.Id);
+                promotionDtos.Add(new PromotionResponseDto
+                {
+                    Id = promotion.Id,
+                    Title = promotion.Title,
+                    DiscountValue = promotion.DiscountValue,
+                    Detail = promotion.Detail,
+                    EventId = promotion.EventId,
+                    IsUsed = claimedPromotion?.IsUsed ?? false // Default to false if no claimed promotion found
+                });
+            }
+
+            _loggerService.Info($"[GetAllPromotionsAsync] Successfully retrieved {promotionDtos.Count} promotions.");
+            return promotionDtos;
         }
         catch (Exception ex)
         {
