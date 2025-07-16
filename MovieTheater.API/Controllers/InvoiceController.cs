@@ -90,7 +90,7 @@ namespace MovieTheater.API.Controllers
 
         [HttpPost("booking/{id}")]
         [SwaggerOperation(Summary = "Create an invoice for a booking")]
-        public async Task<IActionResult> CreateInvoice(Guid id, [FromQuery] Guid? promotionId = null, [FromQuery] int? requestedPoints = null)
+        public async Task<IActionResult> CreateInvoice(Guid id, [FromBody] Guid? promotionId = null, [FromBody] int? requestedPoints = null)
         {
             try
             {
