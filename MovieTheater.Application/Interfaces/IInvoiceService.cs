@@ -7,7 +7,7 @@ namespace MovieTheater.Application.Interfaces
         Task<InvoiceDto> GetInvoiceByIdAsync(Guid id);
         Task<InvoiceDto> GetInvoiceByBookingIdAsync(Guid bookingId);
         Task<IEnumerable<InvoiceDto>> GetUserInvoicesAsync(Guid userId);
-        Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId);
+        Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId, Guid? promotionId, int? requestedPoints = null);
         Task<InvoiceDto> UpdateInvoiceStatusAsync(Guid id, string status);
         Task<Pagination<InvoiceDto>> GetAllInvoicesAsync(int page = 1,
                                                          int pageSize = 10,

@@ -5,6 +5,7 @@ using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 using QRCoder;
+using Stripe.V2;
 using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
@@ -13,14 +14,17 @@ public class TicketService : ITicketService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILoggerService _loggerService;
+    private readonly IScoreService _scoreService;
 
     public TicketService(
         IUnitOfWork unitOfWork,
-        ILoggerService loggerService
+        ILoggerService loggerService,
+        IScoreService scoreService
         )
     {
         _unitOfWork = unitOfWork;
         _loggerService = loggerService;
+        _scoreService = scoreService;
     }
 
     public async Task<TicketResponseDto> GenerateTicketFromBookingAsync(Guid bookingId)
@@ -41,7 +45,8 @@ public class TicketService : ITicketService
                 b => b.BookingSeats,
                 b => b.BookingFoods,
                 b => b.Member,
-                b => b.Showtime);
+                b => b.Showtime,
+                b => b.Invoice);
 
             _loggerService.Info($"Booking retrieved: {booking?.Id}, Member: {booking?.Member?.PhoneNumber}, Showtime: {booking?.Showtime?.Id}");
 
@@ -65,7 +70,7 @@ public class TicketService : ITicketService
                 BookingId = bookingId,
                 IssuedAt = DateTime.UtcNow,
                 GuestPhoneNumber = booking.Member.PhoneNumber,
-                TotalPrice = booking.TotalAmount,
+                TotalPrice = booking.Invoice.Amount,
                 ShowTimeId = booking.ShowtimeId,
                 TicketType = TicketType.Online,
                 TicketSeats = new List<TicketSeat>(),
@@ -114,6 +119,11 @@ public class TicketService : ITicketService
 
             _loggerService.Success($"Ticket generated successfully for booking ID: {bookingId}");
 
+            if (booking.Member != null)
+            {
+                // Giả sử bạn đã inject IScoreService vào TicketService
+                await _scoreService.AddScoreForBookingAsync(booking.Member, booking);
+            }
             // Return ticket details
             return await GetTicketDetailsAsync(ticket.Id);
         }

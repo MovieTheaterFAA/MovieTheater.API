@@ -287,6 +287,10 @@ namespace MovieTheater.Application.Services
             var result = await _unitOfWork.ShowTimes.SoftRemove(showTime);
             await _unitOfWork.SaveChangesAsync();
 
+            // Invalidate related cache
+            await _redisService.RemoveByPatternAsync("showtime:date:*");
+            await _redisService.RemoveByPatternAsync("showtime:movie:*");
+
             _loggerService.Success($"[SoftDeleteShowTimeAsync] Soft deleted showtime {showTimeId}");
             return result;
         }

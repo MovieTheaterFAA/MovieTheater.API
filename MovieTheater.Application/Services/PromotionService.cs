@@ -291,6 +291,79 @@ public class PromotionService : IPromotionService
         }
     }
 
+    public async Task<PromotionResponseDto?> GetPromotionAsync(Guid promotionId)
+    {
+        try
+        {
+            _loggerService.Info($"[GetPromotionAsync] Getting promotion with ID: {promotionId}");
+            var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId);
+            if (promotion == null || promotion.IsDeleted)
+            {
+                _loggerService.Warn($"[GetPromotionAsync] Promotion with ID {promotionId} not found or deleted.");
+                return null;
+            }
+            ClaimedPromotion? claimedPromotions = await _unitOfWork.ClaimedPromotions.GetQueryable()
+                                                 .FirstOrDefaultAsync(cp => cp.PromotionId == promotionId);
+            return new PromotionResponseDto
+            {
+                Id = promotion.Id,
+                Title = promotion.Title,
+                DiscountValue = promotion.DiscountValue,
+                Detail = promotion.Detail,
+                EventId = promotion.EventId,
+                IsUsed = claimedPromotions?.IsUsed ?? false // Default to false if no claimed promotion found
+            };
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetPromotionAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<PromotionResponseDto>> GetAllPromotionsAsync()
+    {
+        try
+        {
+            _loggerService.Info("[GetAllPromotionsAsync] Getting all promotions");
+            var promotions = await _unitOfWork.Promotions
+                .GetQueryable()
+                .Where(p => !p.IsDeleted)
+                .ToListAsync();
+
+            if (promotions == null || !promotions.Any())
+            {
+                _loggerService.Warn("[GetAllPromotionsAsync] No promotions found.");
+                return Enumerable.Empty<PromotionResponseDto>();
+            }
+            _loggerService.Info($"[GetAllPromotionsAsync] Found {promotions.Count} promotions.");
+
+            var promotionDtos = new List<PromotionResponseDto>();
+            foreach (var promotion in promotions)
+            {
+                _loggerService.Info($"Promotion ID: {promotion.Id}, Title: {promotion.Title}, Discount: {promotion.DiscountValue}");
+                ClaimedPromotion? claimedPromotion = await _unitOfWork.ClaimedPromotions.GetQueryable()
+                    .FirstOrDefaultAsync(cp => cp.PromotionId == promotion.Id);
+                promotionDtos.Add(new PromotionResponseDto
+                {
+                    Id = promotion.Id,
+                    Title = promotion.Title,
+                    DiscountValue = promotion.DiscountValue,
+                    Detail = promotion.Detail,
+                    EventId = promotion.EventId,
+                    IsUsed = claimedPromotion?.IsUsed ?? false // Default to false if no claimed promotion found
+                });
+            }
+
+            _loggerService.Info($"[GetAllPromotionsAsync] Successfully retrieved {promotionDtos.Count} promotions.");
+            return promotionDtos;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetAllPromotionsAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
 
     public async Task<bool> ClaimPromotionAsync(Guid promotionId, Guid userId)
     {
