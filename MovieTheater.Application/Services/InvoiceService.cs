@@ -4,6 +4,7 @@ using MovieTheater.Domain.DTOs.BookingDTOs;
 using MovieTheater.Domain.DTOs.InvoiceDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
+using Stripe.V2;
 
 namespace MovieTheater.Application.Services
 {
@@ -13,13 +14,15 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IRedisService _redisService;
         private readonly IPromotionService _promotionService;
+        private readonly IScoreService _scoreService;
 
-        public InvoiceService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService, IPromotionService promotionService)
+        public InvoiceService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService, IPromotionService promotionService, IScoreService scoreService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _redisService = redisService;
             _promotionService = promotionService;
+            _scoreService = scoreService;
         }
 
         public async Task<InvoiceDto> GetInvoiceByIdAsync(Guid id)
@@ -132,7 +135,7 @@ namespace MovieTheater.Application.Services
             }
         }
 
-        public async Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId, Guid? promotionId)
+        public async Task<InvoiceDto> CreateInvoiceAsync(Guid bookingId, Guid? promotionId, int? requestedPoints = null)
         {
             if (bookingId == Guid.Empty)
             {
@@ -152,6 +155,8 @@ namespace MovieTheater.Application.Services
                     throw new InvalidOperationException("Invoice already exists for this booking");
                 }
 
+
+
                 // Get the booking
                 var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
 
@@ -160,6 +165,8 @@ namespace MovieTheater.Application.Services
                     _loggerService.Warn($"No booking found with ID: {bookingId}");
                     throw new KeyNotFoundException($"Booking with ID {bookingId} not found");
                 }
+
+                var user = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
 
                 // Create invoice
                 var invoice = new Invoice
@@ -190,6 +197,16 @@ namespace MovieTheater.Application.Services
 
                     invoice.PromotionId = promotionId.Value;
                     invoice.Amount -= promotion.DiscountValue * invoice.Amount;
+                }
+
+                if (requestedPoints.HasValue && requestedPoints.Value > 0)
+                {
+                    var (discountPercent, usedPoints) = _scoreService.CalculateDiscount(user.ScoreBalance, requestedPoints.Value);
+                    if (usedPoints > 0 && discountPercent > 0)
+                    {
+                        invoice.Amount -= invoice.Amount * (discountPercent / 100m);
+                        await _scoreService.UseScoreForBookingAsync(user, booking, usedPoints);
+                    }
                 }
 
                 await _unitOfWork.Invoices.AddAsync(invoice);
