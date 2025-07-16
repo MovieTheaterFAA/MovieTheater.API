@@ -20,6 +20,12 @@ namespace MovieTheater.Domain.Entities
         [ForeignKey(nameof(ShowTimeId))]
         public ShowTime Showtime { get; set; }      // For offline tickets
 
+        // Promotion relation
+        public Guid? PromotionId { get; set; }
+
+        [ForeignKey(nameof(PromotionId))]
+        public Promotion? Promotion { get; set; }
+
         public ICollection<TicketSeat> TicketSeats { get; set; }
         public ICollection<TicketFoodAndDrink> TicketFoodAndDrinks { get; set; }
     }

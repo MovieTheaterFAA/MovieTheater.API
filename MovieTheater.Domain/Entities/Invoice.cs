@@ -16,6 +16,10 @@ namespace MovieTheater.Domain.Entities
         public string Status { get; set; }
 
         // Navigation
+        public Guid? PromotionId { get; set; }
+
+        [ForeignKey(nameof(PromotionId))]
+        public Promotion? Promotion { get; set; }
         public ICollection<Payment> Payments { get; set; }
     }
 }
