@@ -189,7 +189,7 @@ namespace MovieTheater.Application.Services
                     }
 
                     invoice.PromotionId = promotionId.Value;
-                    invoice.Amount -= promotion.DiscountValue;
+                    invoice.Amount -= promotion.DiscountValue * invoice.Amount;
                 }
 
                 await _unitOfWork.Invoices.AddAsync(invoice);
