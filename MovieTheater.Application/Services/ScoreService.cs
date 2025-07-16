@@ -172,5 +172,38 @@ namespace MovieTheater.Application.Services
             _loggerService.Info($"[GetScoreHistoryAsync] Found {histories.Count} score history records for user {userId}.");
             return histories.OrderByDescending(h => h.ChangeDate).ToList();
         }
+
+        public async Task RefundScoreForBookingAsync(Booking booking)
+        {
+            if (booking == null)
+            {
+                _loggerService.Error("[RefundScoreForBookingAsync] Booking is null.");
+                throw new ArgumentNullException("Booking is invalid.");
+            }
+
+            var usedScoreHistory = await _unitOfWork.ScoreHistories.FirstOrDefaultAsync(
+                h => h.RelatedBookingId == booking.Id && h.ChangeType == ScoreChangeType.Use);
+
+            if (usedScoreHistory != null && usedScoreHistory.ScoreValue > 0)
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
+                if (user != null)
+                {
+                    user.ScoreBalance += usedScoreHistory.ScoreValue;
+                    await _unitOfWork.Users.Update(user);
+
+                    var refundHistory = new ScoreHistory
+                    {
+                        MemberId = user.Id,
+                        ChangeDate = DateTime.UtcNow,
+                        ChangeType = ScoreChangeType.Refund,
+                        ScoreValue = usedScoreHistory.ScoreValue,
+                        RelatedBookingId = booking.Id
+                    };
+                    await _unitOfWork.ScoreHistories.AddAsync(refundHistory);
+                    await _unitOfWork.SaveChangesAsync();
+                }   
+            }
+        }
     }
 }
