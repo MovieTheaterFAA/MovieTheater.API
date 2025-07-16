@@ -26,7 +26,8 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<Invoice> invoices,
         IGenericRepository<Payment> payments,
         IGenericRepository<ClaimedPromotion> claimedPromotions,
-        IGenericRepository<Ticket> tickets)
+        IGenericRepository<Ticket> tickets,
+        IGenericRepository<ScoreHistory> scoreHistories)
     {
         _dbContext = dbContext;
         Users = userRepository;
@@ -47,6 +48,7 @@ public class UnitOfWork : IUnitOfWork
         Payments = payments;
         ClaimedPromotions = claimedPromotions;
         Tickets = tickets;
+        ScoreHistories = scoreHistories;
     }
 
     public IGenericRepository<User> Users { get; }
@@ -67,6 +69,7 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Payment> Payments { get; }
     public IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
     public IGenericRepository<Ticket> Tickets { get; }
+    public IGenericRepository<ScoreHistory> ScoreHistories { get; }
     public void Dispose()
     {
         _dbContext.Dispose();
