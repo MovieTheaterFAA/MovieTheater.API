@@ -13,8 +13,6 @@ namespace MovieTheater.UnitTest.Controllers
     public class UserControllerTests
     {
         private readonly Mock<IUserService> _mockUserService;
-        private readonly Mock<IClaimsService> _mockClaimsService;
-        private readonly Mock<ILoggerService> _mockLoggerService;
         private readonly Mock<IImpersonationService> _mockImpersonationService;
         private readonly UserController _controller;
 

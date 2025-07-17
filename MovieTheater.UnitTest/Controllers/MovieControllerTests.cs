@@ -15,8 +15,6 @@ namespace MovieTheater.UnitTest.Controllers
     public class MovieControllerTests
     {
         private readonly Mock<IMovieService> _mockMovieService;
-        private readonly Mock<IClaimsService> _mockClaimsService;
-        private readonly Mock<ILoggerService> _mockLoggerService;
         private readonly MovieController _controller;
 
         public MovieControllerTests()
@@ -46,34 +44,6 @@ namespace MovieTheater.UnitTest.Controllers
             Assert.Equal(movieList, apiResult.Value.Data);
         }
 
-        [Fact]
-        public async Task GetAllMoviesAsync_InvalidPagination_ReturnsBadRequest()
-        {
-            // Act
-            var result = await _controller.GetAllMoviesAsync(null, null, false, 0, 0, null, null);
-
-            // Assert
-            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
-            Assert.False(apiResult.IsSuccess);
-        }
-
-        [Fact]
-        public async Task GetAllMoviesAsync_ServiceThrowsException_ReturnsErrorResponse()
-        {
-            // Arrange
-            _mockMovieService.Setup(s => s.GetAllMoviesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<List<string>>(), It.IsAny<MovieStatus>()))
-                .ThrowsAsync(new Exception("Test exception"));
-
-            // Act
-            var result = await _controller.GetAllMoviesAsync("title", null, false, 1, 10, null, null);
-
-            // Assert
-            var objectResult = Assert.IsType<OkObjectResult>(result);
-            var apiResult = Assert.IsType<ApiResult<Pagination<MovieResponseDto>>>(objectResult.Value);
-            Assert.True(apiResult.IsSuccess);
-        }
 
         [Theory]
         [InlineData("name", false)]
@@ -275,7 +245,7 @@ namespace MovieTheater.UnitTest.Controllers
         public async Task UpdateMovieAsync_NullDto_ReturnsBadRequest()
         {
             // Act
-            var result = await _controller.UpdateMovieAsync(Guid.NewGuid(), null);
+            var result = await _controller.UpdateMovieAsync(Guid.NewGuid(), null!);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -351,6 +321,51 @@ namespace MovieTheater.UnitTest.Controllers
             var objectResult = Assert.IsType<ObjectResult>(result);
             var apiResult = Assert.IsType<ApiResult<object>>(objectResult.Value);
             Assert.False(apiResult.IsSuccess);
+        }
+
+        [Fact]
+        public async Task GetAllMoviesAsync_InvalidPagination_ReturnsBadRequest()
+        {
+            // Act
+            var result = await _controller.GetAllMoviesAsync(null, null, false, 0, 0, null, null);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Invalid pagination parameters.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task GetAllMoviesAsync_ValidRequest_ReturnsOkResult()
+        {
+            // Arrange
+            var movies = new Pagination<MovieResponseDto> { Items = new List<MovieResponseDto>() };
+            _mockMovieService.Setup(s => s.GetAllMoviesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<List<string>>(), It.IsAny<MovieStatus?>()))
+                .ReturnsAsync(movies);
+
+            // Act
+            var result = await _controller.GetAllMoviesAsync(null, null, false, 1, 10, null, null);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<Pagination<MovieResponseDto>>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            Assert.Equal(movies, apiResult.Value.Data);
+        }
+
+        [Fact]
+        public async Task GetAllMoviesAsync_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            _mockMovieService.Setup(s => s.GetAllMoviesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<List<string>>(), It.IsAny<MovieStatus?>()))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.GetAllMoviesAsync(null, null, false, 1, 10, null, null);
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
         }
     }
 }

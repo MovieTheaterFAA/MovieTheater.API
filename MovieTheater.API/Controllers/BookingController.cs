@@ -103,7 +103,7 @@ namespace MovieTheater.API.Controllers
                 var result = await _bookingService.CancelBookingAsync(id);
 
                 if (result)
-                    return Ok(ApiResult<object>.Success(null, "200", "Cancelled booking successfully"));
+                    return Ok(ApiResult<object>.Success(null!, "200", "Cancelled booking successfully"));
 
                 return BadRequest(ApiResult<object>.Failure("400", "Failed to cancel booking"));
             }

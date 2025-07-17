@@ -563,5 +563,85 @@ namespace MovieTheater.UnitTest.Controllers
             var apiResult = Assert.IsType<ApiResult<object>>(objectResult.Value);
             Assert.False(apiResult.IsSuccess);
         }
+        [Fact]
+        public async Task GetUserByPhoneNumberAsync_PhoneNumberIsNullOrWhiteSpace_ReturnsBadRequest()
+        {
+            // Act
+            var result = await _controller.GetUserByPhoneNumberAsync(null!);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Phone number is required.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task GetUserByPhoneNumberAsync_UserNotFound_ReturnsNotFound()
+        {
+            // Arrange
+            _mockAdminService.Setup(s => s.GetUserByPhoneNumberAsync(It.IsAny<string>()))
+                .ReturnsAsync((GetUserDto)null!);
+
+            // Act
+            var result = await _controller.GetUserByPhoneNumberAsync("0123456789");
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(notFoundResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("User not found.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task GetUserByPhoneNumberAsync_UserFound_ReturnsOk()
+        {
+            // Arrange
+            var userDto = new GetUserDto { Id = Guid.NewGuid(), PhoneNumber = "0123456789" };
+            _mockAdminService.Setup(s => s.GetUserByPhoneNumberAsync("0123456789"))
+                .ReturnsAsync(userDto);
+
+            // Act
+            var result = await _controller.GetUserByPhoneNumberAsync("0123456789");
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<GetUserDto>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            Assert.Equal(userDto, apiResult.Value.Data);
+            Assert.Equal("Get user by phone number successfully.", apiResult.Value.Message);
+        }
+
+        [Fact]
+        public async Task GetUserByPhoneNumberAsync_ArgumentException_ReturnsBadRequest()
+        {
+            // Arrange
+            _mockAdminService.Setup(s => s.GetUserByPhoneNumberAsync(It.IsAny<string>()))
+                .ThrowsAsync(new ArgumentException("Invalid phone number format."));
+
+            // Act
+            var result = await _controller.GetUserByPhoneNumberAsync("invalid");
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Invalid phone number format.", apiResult.Error.Message);
+        }
+
+        [Fact]
+        public async Task GetUserByPhoneNumberAsync_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            _mockAdminService.Setup(s => s.GetUserByPhoneNumberAsync(It.IsAny<string>()))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.GetUserByPhoneNumberAsync("0123456789");
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
+        }
+
     }
 }
