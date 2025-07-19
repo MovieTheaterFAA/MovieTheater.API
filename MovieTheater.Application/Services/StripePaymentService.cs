@@ -17,7 +17,6 @@ namespace MovieTheater.Application.Services
         private readonly IStripeClient _stripeClient;
         private readonly string _baseUrl;
         private readonly ITicketService _ticketService;
-        private readonly IScoreService _scoreService;
 
         public StripePaymentService(
             ILoggerService loggerService,
@@ -25,8 +24,8 @@ namespace MovieTheater.Application.Services
             IRedisService redisService,
             IStripeClient stripeClient,
             IConfiguration configuration,
-            ITicketService ticketService,
-            IScoreService scoreService)
+            ITicketService ticketService
+            )
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
@@ -38,7 +37,6 @@ namespace MovieTheater.Application.Services
 
             _loggerService.Info($"Stripe payment service initialized with base URL: {_baseUrl}");
             _ticketService = ticketService;
-            _scoreService = scoreService;
         }
 
         public async Task<string> CreateCheckoutSessionAsync(Guid invoiceId)
@@ -123,7 +121,7 @@ namespace MovieTheater.Application.Services
                 await _redisService.SetAsync(
                     $"stripe:session:{session.Id}",
                     invoiceId.ToString(),
-                    TimeSpan.FromHours(24));
+                    TimeSpan.FromHours(1));
 
                 _loggerService.Success($"Stripe checkout session created successfully: {session.Id}");
                 return session.Url;
@@ -245,11 +243,6 @@ namespace MovieTheater.Application.Services
                 await _unitOfWork.Invoices.Update(invoice);
                 await _unitOfWork.SaveChangesAsync();
 
-                await _redisService.SetAsync(
-                    $"payment:expiry:{invoiceId}",
-                    DateTime.UtcNow.AddMinutes(30),
-                    TimeSpan.FromMinutes(35));
-
                 // Create Stripe checkout session
                 var checkoutUrl = await CreateCheckoutSessionAsync(invoiceId);
 
@@ -369,8 +362,6 @@ namespace MovieTheater.Application.Services
                     // Update booking status
                     invoice.Booking.Status = "PaymentFailed";
                     await _unitOfWork.Bookings.Update(invoice.Booking);
-
-                    await _scoreService.RefundScoreForBookingAsync(invoice.Booking);
 
                     var bookingSeats = await _unitOfWork.BookingSeats.GetAllAsync(bs => bs.BookingId == invoice.BookingId);
 

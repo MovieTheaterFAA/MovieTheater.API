@@ -388,13 +388,13 @@ public class BookingService : IBookingService
                 throw new ArgumentException("Invalid showtime");
             }
 
-            var existSeat = await _unitOfWork.ShowTimeSeats.GetAllAsync(
+            var existSeats = await _unitOfWork.ShowTimeSeats.GetAllAsync(
                 sts => sts.ShowTimeId == request.ShowTimeId && request.SeatIds.Contains(sts.SeatId));
 
             decimal totalAmount = 0;
 
             // Check if any selected seat is already booked
-            if (existSeat.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
+            if (existSeats.Any(s => s.Status == SeatStatus.Booked || s.Status == SeatStatus.Sold))
             {
                 _loggerService.Warn($"Attempted to book unavailable seats for showtime: {request.ShowTimeId}");
                 throw new InvalidOperationException("One or more selected seats are not available");
@@ -440,16 +440,24 @@ public class BookingService : IBookingService
 
             await _unitOfWork.Bookings.AddAsync(booking);
 
-            // Update seat status to booked
             foreach (var seat in selectedSeats)
             {
-                var ShowTimeSeat = new ShowTimeSeat
+                if (existSeats.Any(e => e.ShowTimeId == showTime.Id && e.Seat.Id == seat.Id))
                 {
-                    ShowTimeId = request.ShowTimeId,
-                    SeatId = seat.Id,
-                    Status = SeatStatus.Booked
-                };
-                await _unitOfWork.ShowTimeSeats.AddAsync(ShowTimeSeat);
+                    var existingSeat = existSeats.First(e => e.ShowTimeId == showTime.Id && e.Seat.Id == seat.Id);
+                    existingSeat.Status = SeatStatus.Booked;
+                    await _unitOfWork.ShowTimeSeats.Update(existingSeat);
+                }
+                else
+                {
+                    var ShowTimeSeat = new ShowTimeSeat
+                    {
+                        ShowTimeId = request.ShowTimeId,
+                        SeatId = seat.Id,
+                        Status = SeatStatus.Booked
+                    };
+                    await _unitOfWork.ShowTimeSeats.AddAsync(ShowTimeSeat);
+                }
             }
 
             await _unitOfWork.SaveChangesAsync();
