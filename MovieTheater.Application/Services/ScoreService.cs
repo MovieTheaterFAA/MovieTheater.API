@@ -52,9 +52,9 @@ namespace MovieTheater.Application.Services
                             }
                             totalPoints += seat.Type switch
                             {
-                                SeatType.Normal => 50,
-                                SeatType.VIP => 100,
-                                SeatType.Couple => 200,
+                                SeatType.Normal => 20,
+                                SeatType.VIP => 50,
+                                SeatType.Couple => 100,
                                 _ => 0
                             };
                         }
@@ -137,7 +137,7 @@ namespace MovieTheater.Application.Services
                     MemberId = user.Id,
                     ChangeDate = DateTime.UtcNow,
                     ChangeType = ScoreChangeType.Use,
-                    ScoreValue = -usedPoints,
+                    ScoreValue = usedPoints,
                     RelatedBookingId = booking.Id
                 };
                 await _unitOfWork.ScoreHistories.AddAsync(history);
@@ -189,7 +189,7 @@ namespace MovieTheater.Application.Services
                     h => h.RelatedBookingId == booking.Id && h.ChangeType == ScoreChangeType.Use);
                 _loggerService.Info($"[RefundScoreForBookingAsync] Used score history for bookingId {bookingId}: {usedScoreHistory?.ScoreValue ?? 0}");
 
-                if (usedScoreHistory != null && usedScoreHistory.ScoreValue < 0)
+                if (usedScoreHistory != null && usedScoreHistory.ScoreValue > 0)
                 {
                     _loggerService.Info($"[RefundScoreForBookingAsync] Found used score history for bookingId: {bookingId}, ScoreValue: {usedScoreHistory.ScoreValue}");
                     var user = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);

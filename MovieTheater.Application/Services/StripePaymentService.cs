@@ -75,7 +75,7 @@ namespace MovieTheater.Application.Services
                     throw new KeyNotFoundException($"Movie for showtime {booking.ShowtimeId} not found");
                 }
 
-                if (amount <= 0)
+                if (amount < 0)
                 {
                     throw new ArgumentException("Payment amount must be greater than zero");
                 }
