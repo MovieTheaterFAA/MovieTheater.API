@@ -178,7 +178,7 @@ namespace MovieTheater.Application.Services
                 };
 
                 var preAmount = invoice.Amount;
-
+                var promotionPercent = 0m;
                 if (promotionId.HasValue)
                 {
                     var promotion = await _unitOfWork.Promotions.GetByIdAsync(promotionId.Value, p => p.ClaimedPromotions);
@@ -198,15 +198,19 @@ namespace MovieTheater.Application.Services
                     }
 
                     invoice.PromotionId = promotionId.Value;
+                    promotionPercent = promotion.DiscountValue * 100m;
                     invoice.Amount -= promotion.DiscountValue * preAmount;
                 }
 
                 if (requestedPoints.HasValue && requestedPoints.Value > 0)
                 {
                     var (discountPercent, usedPoints) = _scoreService.CalculateDiscount(user.ScoreBalance, requestedPoints.Value);
-                    if (usedPoints > 0 && discountPercent > 0)
+                    var maxPointPercent = Math.Max(0, 100m - promotionPercent);
+                    var appliedPointPercent = Math.Min(discountPercent, maxPointPercent);
+
+                    if (usedPoints > 0 && appliedPointPercent > 0)
                     {
-                        invoice.Amount -= preAmount * (discountPercent / 100m);
+                        invoice.Amount -= preAmount * (appliedPointPercent / 100m);
                         await _scoreService.UseScoreForBookingAsync(user, booking, usedPoints);
                     }
                 }

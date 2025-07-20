@@ -46,50 +46,42 @@ namespace MovieTheater.Application.Services
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var loggerService = scope.ServiceProvider.GetRequiredService<ILoggerService>();
-            var redisService = scope.ServiceProvider.GetRequiredService<IRedisService>();
+            var scoreService = scope.ServiceProvider.GetRequiredService<IScoreService>();
 
-            // Get all keys that match the payment expiry pattern
-            var keys = await redisService.GetKeysByPatternAsync("payment:expiry:*");
+            // Use the same cutoff logic as BookingCleanupService
+            var cutoffTime = DateTime.UtcNow.AddMinutes(-5);
 
-            if (keys == null || !keys.Any())
-            {
+            // Find invoices in "Processing" status that are older than cutoff
+            var expiredInvoices = await unitOfWork.Invoices.GetAllAsync(
+                i => (i.Status == "Processing" || i.Status == "Pending") && i.InvoiceDate < cutoffTime);
+
+            if (expiredInvoices == null || !expiredInvoices.Any())
                 return;
-            }
 
-            foreach (var key in keys)
+            loggerService.Info($"Processing {expiredInvoices.Count} expired payments");
+
+            foreach (var invoice in expiredInvoices)
             {
                 try
                 {
-                    // Get the expiry time
-                    var expiryTime = await redisService.GetAsync<DateTime>(key);
-                    if (expiryTime <= DateTime.UtcNow)
-                    {
-                        // Extract invoice ID from key - Fixed S6608 warning
-                        var parts = key.Split(':');
-                        var invoiceIdStr = parts[parts.Length - 1];
+                    loggerService.Warn($"Found expired payment for invoice {invoice.Id}");
 
-                        if (Guid.TryParse(invoiceIdStr, out Guid invoiceId))
-                        {
-                            // Check if invoice is still in "Processing" status
-                            var invoice = await unitOfWork.Invoices.GetByIdAsync(invoiceId);
-                            if (invoice != null && invoice.Status == "Processing")
-                            {
-                                loggerService.Warn($"Found expired payment for invoice {invoiceId}");
-                                await paymentService.ProcessFailPaymentAsync(invoiceId);
-                                _logger.LogInformation("Successfully processed expired payment for invoice {InvoiceId}", invoiceId);
-                            }
+                    await paymentService.ProcessFailPaymentAsync(invoice.Id);
+                    loggerService.Info($"Processed failed payment for invoice {invoice.Id}");
 
-                            // Remove the expiry key
-                            await redisService.RemoveAsync(key);
-                        }
-                    }
+                    await scoreService.RefundScoreForBookingAsync(invoice.BookingId);
+                    loggerService.Info($"Refunded score for booking {invoice.BookingId} related to invoice {invoice.Id}");
+
+                    _logger.LogInformation("Successfully processed expired payment for invoice {InvoiceId}", invoice.Id);
                 }
                 catch (Exception ex)
                 {
-                    loggerService.Error($"Error processing expired payment key {key}: {ex.Message}");
-                    _logger.LogError(ex, "Error processing payment key {Key}", key);
+                    loggerService.Error($"Error processing expired payment for invoice {invoice.Id}: {ex.Message}");
+                    _logger.LogError(ex, "Error processing expired payment for invoice {InvoiceId}", invoice.Id);
                 }
             }
+
+            await unitOfWork.SaveChangesAsync();
         }
     }
 }

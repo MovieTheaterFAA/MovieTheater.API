@@ -6,7 +6,7 @@ using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.Application.Services
 {
-    public class ScoreService  : IScoreService
+    public class ScoreService : IScoreService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILoggerService _loggerService;
@@ -52,9 +52,9 @@ namespace MovieTheater.Application.Services
                             }
                             totalPoints += seat.Type switch
                             {
-                                SeatType.Normal => 50,
-                                SeatType.VIP => 100,
-                                SeatType.Couple => 200,
+                                SeatType.Normal => 20,
+                                SeatType.VIP => 50,
+                                SeatType.Couple => 100,
                                 _ => 0
                             };
                         }
@@ -81,7 +81,7 @@ namespace MovieTheater.Application.Services
                 }
                 else
                 {
-                    _loggerService.Info($"[AddScoreForBookingAsync] No points added for booking {booking.Id}.");
+                    _loggerService.Info($"[AddScoreForBookingAsync] No points added for bookingId {booking.Id}.");
                 }
             }
             catch (Exception ex)
@@ -137,7 +137,7 @@ namespace MovieTheater.Application.Services
                     MemberId = user.Id,
                     ChangeDate = DateTime.UtcNow,
                     ChangeType = ScoreChangeType.Use,
-                    ScoreValue = -usedPoints,
+                    ScoreValue = usedPoints,
                     RelatedBookingId = booking.Id
                 };
                 await _unitOfWork.ScoreHistories.AddAsync(history);
@@ -173,23 +173,33 @@ namespace MovieTheater.Application.Services
             return histories.OrderByDescending(h => h.ChangeDate).ToList();
         }
 
-        public async Task RefundScoreForBookingAsync(Booking booking)
+        public async Task RefundScoreForBookingAsync(Guid bookingId)
         {
-            if (booking == null)
+            try
             {
-                _loggerService.Error("[RefundScoreForBookingAsync] Booking is null.");
-                throw new ArgumentNullException("Booking is invalid.");
-            }
-
-            var usedScoreHistory = await _unitOfWork.ScoreHistories.FirstOrDefaultAsync(
-                h => h.RelatedBookingId == booking.Id && h.ChangeType == ScoreChangeType.Use);
-
-            if (usedScoreHistory != null && usedScoreHistory.ScoreValue > 0)
-            {
-                var user = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
-                if (user != null)
+                _loggerService.Info($"[RefundScoreForBookingAsync] Attempting to refund score for bookingId: {bookingId}");
+                var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
+                if (booking == null)
                 {
-                    user.ScoreBalance += usedScoreHistory.ScoreValue;
+                    _loggerService.Error("[RefundScoreForBookingAsync] Booking is null.");
+                    throw new ArgumentNullException("Booking is invalid.");
+                }
+
+                var usedScoreHistory = await _unitOfWork.ScoreHistories.FirstOrDefaultAsync(
+                    h => h.RelatedBookingId == booking.Id && h.ChangeType == ScoreChangeType.Use);
+                _loggerService.Info($"[RefundScoreForBookingAsync] Used score history for bookingId {bookingId}: {usedScoreHistory?.ScoreValue ?? 0}");
+
+                if (usedScoreHistory != null && usedScoreHistory.ScoreValue > 0)
+                {
+                    _loggerService.Info($"[RefundScoreForBookingAsync] Found used score history for bookingId: {bookingId}, ScoreValue: {usedScoreHistory.ScoreValue}");
+                    var user = await _unitOfWork.Users.GetByIdAsync(booking.MemberId);
+                    if (user == null)
+                    {
+                        _loggerService.Error("[RefundScoreForBookingAsync] User not found for booking.");
+                        throw new KeyNotFoundException("User not found.");
+                    }
+
+                    user.ScoreBalance += Math.Abs(usedScoreHistory.ScoreValue);
                     await _unitOfWork.Users.Update(user);
 
                     var refundHistory = new ScoreHistory
@@ -202,7 +212,13 @@ namespace MovieTheater.Application.Services
                     };
                     await _unitOfWork.ScoreHistories.AddAsync(refundHistory);
                     await _unitOfWork.SaveChangesAsync();
-                }   
+
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[RefundScoreForBookingAsync] Exception: {ex.Message}");
+                throw;
             }
         }
     }

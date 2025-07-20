@@ -40,7 +40,7 @@ namespace MovieTheater.Application.Services
                     _logger.LogError(ex, "Error in booking cleanup service");
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
 
@@ -48,32 +48,27 @@ namespace MovieTheater.Application.Services
         {
             var cutoffTime = DateTime.UtcNow.AddMinutes(-5);
 
-            var abandonedInvoices = await unitOfWork.Invoices.GetAllAsync(
-                i => i.Status == "Pending" && i.InvoiceDate < cutoffTime,
-                i => i.Booking);
+            // Find bookings that are pending and older than cutoff
+            var abandonedBookings = await unitOfWork.Bookings.GetAllAsync(
+                b => b.Status == "Created" && b.BookingDate < cutoffTime,
+                b => b.Invoice, b => b.Showtime);
 
-            if (abandonedInvoices == null || !abandonedInvoices.Any())
+            if (abandonedBookings == null || !abandonedBookings.Any())
                 return;
 
-            loggerService.Info($"Processing {abandonedInvoices.Count} abandoned bookings");
+            loggerService.Info($"Processing {abandonedBookings.Count} abandoned bookings");
 
-            foreach (var invoice in abandonedInvoices)
+            foreach (var booking in abandonedBookings)
             {
-                if (invoice.Booking == null)
-                {
-                    loggerService.Warn($"Invoice {invoice.Id} has no associated booking, skipping");
-                    continue;
-                }
-
                 try
                 {
                     // Get seats to release
                     var bookingSeats = await unitOfWork.BookingSeats.GetAllAsync(
-                        bs => bs.BookingId == invoice.BookingId);
+                        bs => bs.BookingId == booking.Id);
 
                     if (bookingSeats == null || !bookingSeats.Any())
                     {
-                        loggerService.Warn($"No seats found for booking {invoice.BookingId}, skipping seat cleanup");
+                        loggerService.Warn($"No seats found for booking {booking.Id}, skipping seat cleanup");
                     }
                     else
                     {
@@ -81,7 +76,7 @@ namespace MovieTheater.Application.Services
 
                         // Release the seats
                         var showTimeSeats = await unitOfWork.ShowTimeSeats.GetAllAsync(
-                            sts => sts.ShowTimeId == invoice.Booking.ShowtimeId &&
+                            sts => sts.ShowTimeId == booking.ShowtimeId &&
                                   seatIds.Contains(sts.SeatId));
 
                         if (showTimeSeats != null && showTimeSeats.Any())
@@ -95,21 +90,25 @@ namespace MovieTheater.Application.Services
                         }
                     }
 
-                    // Mark booking and invoice as cancelled
-                    invoice.Status = "Cancelled";
-                    invoice.Booking.Status = "Cancelled";
+                    // Mark booking as cancelled
+                    booking.Status = "Cancelled";
+                    await unitOfWork.Bookings.Update(booking);
 
-                    await unitOfWork.Invoices.Update(invoice);
-                    await unitOfWork.Bookings.Update(invoice.Booking);
+                    // If booking has an invoice, cancel it too
+                    if (booking.Invoice != null)
+                    {
+                        booking.Invoice.Status = "Cancelled";
+                        await unitOfWork.Invoices.Update(booking.Invoice);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    loggerService.Error($"Error processing abandoned booking {invoice.BookingId}: {ex.Message}");
+                    loggerService.Error($"Error processing abandoned booking {booking.Id}: {ex.Message}");
                 }
             }
 
             await unitOfWork.SaveChangesAsync();
-            loggerService.Success($"Processed {abandonedInvoices.Count} abandoned bookings");
+            loggerService.Success($"Processed {abandonedBookings.Count} abandoned bookings");
         }
     }
 }
