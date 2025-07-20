@@ -643,5 +643,25 @@ namespace MovieTheater.UnitTest.Controllers
             Assert.IsType<ObjectResult>(result);
         }
 
+        [Fact]
+        public async Task EditEmployeeAsync_ArgumentException_ReturnsBadRequest()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var editEmployeeDto = new EditEmployeeDto { FullName = "Test Name" };
+            _mockAdminService
+                .Setup(s => s.EditEmployeeAsync(userId, editEmployeeDto))
+                .ThrowsAsync(new ArgumentException("Invalid employee data"));
+
+            // Act
+            var result = await _controller.EditEmployeeAsync(userId, editEmployeeDto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<object>>(badRequestResult.Value);
+            Assert.False(apiResult.IsSuccess);
+            Assert.Equal("Invalid employee data", apiResult.Error.Message);
+        }
+
     }
 }

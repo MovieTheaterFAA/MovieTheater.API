@@ -179,5 +179,20 @@ namespace MovieTheater.UnitTest.Controllers
             var objectResult = Assert.IsType<ObjectResult>(result);
             Assert.Equal(500, objectResult.StatusCode);
         }
+
+        [Fact]
+        public async Task Start_ImpersonationServiceThrowsException_ReturnsErrorResponse()
+        {
+            var user = new User { Id = _currentUserId };
+            _mockUnitOfWork.Setup(u => u.Users.GetByIdAsync(_currentUserId, It.IsAny<System.Linq.Expressions.Expression<Func<User, object>>>()))
+                .ReturnsAsync(user);
+            _mockImpersonationService.Setup(s => s.StartImpersonationAsync(_targetUserId, "Testing"))
+                .ThrowsAsync(new Exception("Service exception"));
+
+            var result = await _controller.Start(_targetUserId, "Testing");
+
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(500, objectResult.StatusCode);
+        }
     }
 }
