@@ -219,59 +219,85 @@ namespace MovieTheater.Application.Services
 
         public async Task<ShowtimeResponseDTO> UpdateShowTimeAsync(Guid showTimeId, UpdateShowtimeDto dto)
         {
-            _loggerService.Info($"[UpdateShowTimeAsync] Updating showtime {showTimeId}");
-
-            var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
-            if (showTime == null || showTime.IsDeleted)
-                throw new KeyNotFoundException("Showtime not found.");
-
-            // Get the movie to determine running time
-            var movie = await _unitOfWork.Movies.GetByIdAsync(dto.MovieId);
-            if (movie == null)
-                throw new KeyNotFoundException("Movie not found.");
-
-            var newStart = dto.ShowDate;
-            var newDuration = TimeSpan.FromMinutes((double)movie.RunningTime!) + TimeSpan.FromMinutes(15); // Add 15 minutes for rest
-            var newEnd = newStart.Add(newDuration);
-
-            // Overlap check: exclude this showtime itself
-            var overlapping = await _unitOfWork.ShowTimes.GetQueryable()
-                .Where(st => st.CinemaRoomId == dto.CinemaRoomId
-                    && st.Id != showTimeId
-                    && !st.IsDeleted
-                    && newStart < st.ShowDate.Add(st.Duration) && st.ShowDate < newEnd
-                )
-                .AnyAsync();
-
-            if (overlapping)
-                throw new InvalidOperationException("The new showtime overlaps with another showtime in this room.");
-
-            // Update fields
-            showTime.MovieId = dto.MovieId;
-            showTime.CinemaRoomId = dto.CinemaRoomId;
-            showTime.ShowDate = dto.ShowDate;
-            showTime.Duration = newDuration;
-            showTime.UpdatedAt = DateTime.UtcNow;
-            showTime.UpdatedBy = _claimsService.GetCurrentUserId;
-
-            await _unitOfWork.ShowTimes.Update(showTime);
-            await _unitOfWork.SaveChangesAsync();
-
-            await _redisService.RemoveByPatternAsync($"showtime:date:{showTime.ShowDate:yyyyMMdd}:*");
-            await _redisService.RemoveByPatternAsync($"showtime:movie:{showTime.MovieId}:*");
-            await _redisService.RemoveByPatternAsync("showtime:date:all:*");
-            await _redisService.RemoveByPatternAsync("showtime:movie:*:all");
-
-            _loggerService.Success($"[UpdateShowTimeAsync] Updated showtime {showTimeId}");
-
-            return new ShowtimeResponseDTO
+            try
             {
-                Id = showTime.Id,
-                MovieId = showTime.MovieId,
-                CinemaRoomId = showTime.CinemaRoomId,
-                ShowDate = showTime.ShowDate,
-                Duration = showTime.Duration
-            };
+                _loggerService.Info($"[UpdateShowTimeAsync] Updating showtime {showTimeId}");
+
+                var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+                if (showTime == null || showTime.IsDeleted)
+                {
+                    _loggerService.Warn($"[UpdateShowTimeAsync] Showtime {showTimeId} not found or already deleted.");
+                    throw new KeyNotFoundException("Showtime not found.");
+                }
+
+                // Get the movie to determine running time
+                var movie = await _unitOfWork.Movies.GetByIdAsync(dto.MovieId);
+                if (movie == null)
+                {
+                    _loggerService.Warn($"[UpdateShowTimeAsync] Movie {dto.MovieId} not found.");
+                    throw new KeyNotFoundException("Movie not found.");
+                }
+
+                var cinemaRoom = await _unitOfWork.CinemaRooms.GetByIdAsync(dto.CinemaRoomId);
+                if (cinemaRoom == null)
+                {
+                    _loggerService.Warn($"[UpdateShowTimeAsync] Cinema room {dto.CinemaRoomId} not found.");
+                    throw new KeyNotFoundException("Cinema room not found.");
+                }
+
+                var newStart = dto.ShowDate;
+                var newDuration = TimeSpan.FromMinutes((double)movie.RunningTime!) + TimeSpan.FromMinutes(15); // Add 15 minutes for rest
+                var newEnd = newStart.Add(newDuration);
+
+                var candidates = await _unitOfWork.ShowTimes.GetQueryable()
+                .Where(st => st.CinemaRoomId == dto.CinemaRoomId
+                && st.Id != showTimeId
+                && !st.IsDeleted)
+                .ToListAsync();
+
+                var overlapping = candidates.Any(st =>
+                    newStart < st.ShowDate + st.Duration &&
+                    st.ShowDate < newEnd
+                );
+
+                if (overlapping)
+                {
+                    _loggerService.Error($"[UpdateShowTimeAsync] Overlap detected for showtime {showTimeId} in room {dto.CinemaRoomId}.");
+                    throw new InvalidOperationException("The new showtime overlaps with another showtime in this room.");
+                }
+
+                // Update fields
+                showTime.MovieId = dto.MovieId;
+                showTime.CinemaRoomId = dto.CinemaRoomId;
+                showTime.ShowDate = dto.ShowDate;
+                showTime.Duration = newDuration;
+                showTime.UpdatedAt = DateTime.UtcNow;
+                showTime.UpdatedBy = _claimsService.GetCurrentUserId;
+
+                await _unitOfWork.ShowTimes.Update(showTime);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _redisService.RemoveByPatternAsync($"showtime:date:{showTime.ShowDate:yyyyMMdd}:*");
+                await _redisService.RemoveByPatternAsync($"showtime:movie:{showTime.MovieId}:*");
+                await _redisService.RemoveByPatternAsync("showtime:date:all:*");
+                await _redisService.RemoveByPatternAsync("showtime:movie:*:all");
+
+                _loggerService.Success($"[UpdateShowTimeAsync] Updated showtime {showTimeId}");
+
+                return new ShowtimeResponseDTO
+                {
+                    Id = showTime.Id,
+                    MovieId = showTime.MovieId,
+                    CinemaRoomId = showTime.CinemaRoomId,
+                    ShowDate = showTime.ShowDate,
+                    Duration = showTime.Duration
+                };
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"[UpdateShowTimeAsync] Error updating showtime {showTimeId}: {ex.Message}");
+                throw new InvalidOperationException("An error occurred while updating the showtime.", ex);
+            }
         }
 
         public async Task<bool> SoftDeleteShowTimeAsync(Guid showTimeId)
