@@ -94,79 +94,89 @@ namespace MovieTheater.Application.Services
 
                 var tickets = await _unitOfWork.Tickets.GetQueryable()
                     .Where(t => !t.IsDeleted
-                        && t.CreatedAt != DateTime.MinValue
-                        && t.CreatedAt.Year == monthYear.Year
-                        && t.CreatedAt.Month == monthYear.Month)
-                    .Include(t => t.Showtime)
-                    .ThenInclude(st => st.Movie)
+                                && t.CreatedAt.Year == monthYear.Year
+                                && t.CreatedAt.Month == monthYear.Month)
+                    .Include(t => t.Showtime).ThenInclude(st => st.Movie)
                     .Include(t => t.TicketSeats)
                     .ToListAsync();
 
-                var movieGroups = tickets
-                    .Where(t => t.Showtime != null && t.Showtime.Movie != null)
-                    .GroupBy(t => new
-                    {
-                        t.Showtime.MovieId,
-                        t.Showtime.Movie.Name
-                    });
+                var groupedByMovie = tickets
+                    .GroupBy(t => new { t.Showtime.MovieId, MovieName = t.Showtime.Movie.Name });
 
                 var monthlyData = new List<MonthlyMovieRevenueDto>();
 
-                foreach (var g in movieGroups)
+                foreach (var group in groupedByMovie)
                 {
-                    decimal totalSeatRevenue = 0;
+                    decimal totalRevenue = 0;
 
-                    // Offline tickets: sum seat prices directly
-                    var offlineTickets = g.Where(t => t.TicketType == TicketType.Offline);
-                    totalSeatRevenue += offlineTickets
-                        .SelectMany(t => t.TicketSeats)
-                        .Sum(ts => ts.PricePerSeat);
+                    // Offline tickets revenue
+                    var offlineTickets = group.Where(t => t.TicketType == TicketType.Offline).ToList();
 
-                    // Online tickets: apply promotion and score discounts
-                    var onlineTickets = g.Where(t => t.TicketType == TicketType.Online);
+                    if (offlineTickets.Any())
+                    {
+                        var offlineTicketSeats = await _unitOfWork.TicketSeats.GetQueryable()
+                        .Where(ts => offlineTickets.Select(t => t.Id).Contains(ts.TicketId))
+                        .ToListAsync();
+                        totalRevenue = offlineTicketSeats.Sum(ts => ts.PricePerSeat);
+                        _loggerService.Info($"Offline tickets revenue for movie {group.Key.MovieName} (ID: {group.Key.MovieId}) in month {monthYear.Month}/{monthYear.Year}: {totalRevenue}");
+                    }
+
+
+                    // Online tickets revenue
+                    var onlineTickets = group.Where(t => t.TicketType == TicketType.Online).ToList();
+
                     foreach (var ticket in onlineTickets)
                     {
-                        var seatRevenue = ticket.TicketSeats.Sum(ts => ts.PricePerSeat);
+
+                        var onlineTicketSeats = await _unitOfWork.TicketSeats.GetQueryable()
+                            .Where(onts => onts.TicketId == ticket.Id).ToListAsync();
+
+                        var seatRevenue = onlineTicketSeats.Sum(ts => ts.PricePerSeat);
                         var originalRevenue = seatRevenue;
 
                         if (!ticket.BookingId.HasValue)
                         {
-                            _loggerService.Warn($"Ticket with ID {ticket.Id} has no BookingId, skipping online seat revenue calculation.");
-                            continue;
+                            _loggerService.Warn($"[RevenueCalc] Missing BookingId on Ticket {ticket.Id}");
+                            throw new InvalidOperationException($"Ticket {ticket.Id} missing BookingId.");
                         }
 
-                        // Get invoice and apply promotion discount
                         var invoice = await _unitOfWork.Invoices.GetQueryable()
                             .FirstOrDefaultAsync(i => i.BookingId == ticket.BookingId);
+                        if (invoice == null)
+                        {
+                            _loggerService.Warn($"[RevenueCalc] Invoice not found for Ticket {ticket.Id} with BookingId {ticket.BookingId}");
+                            throw new InvalidOperationException($"Invoice not found for Ticket {ticket.Id} with BookingId {ticket.BookingId}.");
+                        }
 
-                        if (invoice != null && invoice.PromotionId.HasValue)
+                        if (invoice.PromotionId.HasValue)
                         {
                             var promotion = await _unitOfWork.Promotions.GetByIdAsync(invoice.PromotionId.Value);
-                            if (promotion != null)
-                            {
-                                seatRevenue -= originalRevenue * promotion.DiscountValue;
-                            }
+                            if (promotion == null)
+                                throw new InvalidOperationException($"Promotion {invoice.PromotionId} not found for Invoice {invoice.Id}.");
+                            seatRevenue -= originalRevenue * promotion.DiscountValue;
+                            _loggerService.Info($"Applied promotion with discount {promotion.DiscountValue} to ticket {ticket.Id}. New seat revenue: {seatRevenue}");
                         }
 
-                        // Apply score history discount
                         var scoreHistory = await _unitOfWork.ScoreHistories.GetQueryable()
-                            .FirstOrDefaultAsync(sh => sh.RelatedBookingId == ticket.BookingId);
+                            .FirstOrDefaultAsync(sh => sh.RelatedBookingId == ticket.BookingId && sh.ChangeType == ScoreChangeType.Use);
+
                         if (scoreHistory != null)
                         {
-                            seatRevenue -= originalRevenue * (scoreHistory.ScoreValue / 100m);
+                            seatRevenue -= originalRevenue * (Math.Abs(scoreHistory.ScoreValue) / 100m);
+                            _loggerService.Info($"Applied score deduction of {Math.Abs(scoreHistory.ScoreValue)} to ticket {ticket.Id}. New seat revenue: {seatRevenue}");
                         }
 
-                        totalSeatRevenue += seatRevenue;
+                        totalRevenue += seatRevenue;
+                        _loggerService.Info($"Ticket {ticket.Id} revenue calculated: {seatRevenue}, Total Revenue: {totalRevenue}");
                     }
-
-                    var totalTickets = g.Count();
+                    _loggerService.Info($"Total revenue for movie {group.Key.MovieName} (ID: {group.Key.MovieId}) in month {monthYear.Month}/{monthYear.Year}: {totalRevenue}");
 
                     monthlyData.Add(new MonthlyMovieRevenueDto
                     {
-                        MovieId = g.Key.MovieId,
-                        MovieName = g.Key.Name,
-                        TotalRevenue = totalSeatRevenue,
-                        TotalTickets = totalTickets
+                        MovieId = group.Key.MovieId,
+                        MovieName = group.Key.MovieName,
+                        TotalRevenue = totalRevenue,
+                        TotalTickets = group.Count()
                     });
                 }
 
@@ -174,9 +184,10 @@ namespace MovieTheater.Application.Services
             }
             catch (Exception ex)
             {
-                _loggerService.Error($"Error in GetMonthlyRevenueMovieAsync: {ex.Message}");
+                _loggerService.Error($"[RevenueCalc] Exception: {ex.Message}");
                 throw;
             }
         }
+
     }
 }

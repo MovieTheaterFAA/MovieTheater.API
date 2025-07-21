@@ -27,6 +27,8 @@ public class UnitOfWork : IUnitOfWork
         IGenericRepository<Payment> payments,
         IGenericRepository<ClaimedPromotion> claimedPromotions,
         IGenericRepository<Ticket> tickets,
+        IGenericRepository<TicketSeat> ticketSeats,
+        IGenericRepository<TicketFoodAndDrink> ticketFoodAndDrinks,
         IGenericRepository<ScoreHistory> scoreHistories)
     {
         _dbContext = dbContext;
@@ -48,6 +50,8 @@ public class UnitOfWork : IUnitOfWork
         Payments = payments;
         ClaimedPromotions = claimedPromotions;
         Tickets = tickets;
+        TicketSeats = ticketSeats;
+        TicketFoodAndDrinks = ticketFoodAndDrinks;
         ScoreHistories = scoreHistories;
     }
 
@@ -69,6 +73,8 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Payment> Payments { get; }
     public IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
     public IGenericRepository<Ticket> Tickets { get; }
+    public IGenericRepository<TicketSeat> TicketSeats { get; }
+    public IGenericRepository<TicketFoodAndDrink> TicketFoodAndDrinks { get; }
     public IGenericRepository<ScoreHistory> ScoreHistories { get; }
     public void Dispose()
     {
