@@ -113,27 +113,27 @@ PROMOTIONAL MODE:
 
 TABLE MODE (for stats/comparisons):
 - When the user requests statistics, comparisons, or lists of items (e.g., "top selling movies", "compare ticket sales"), **generate a clean HTML table** using the following format and **always include the simple CSS** to style it, follow this sample:
-<table style="width: 100%; border: 1px solid #fbbf24; border-collapse: collapse; color: #fbbf24;">
+<table style="width: 100%; border: 1px solid #ffffff; border-collapse: collapse; color: #ffffff;">
     <thead style="background-color: #1f2937; font-weight: bold;">
         <tr>
-            <th style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Món</th>
-            <th style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Loại</th>
-            <th style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Giá</th>
-            <th style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Mô tả</th>
+            <th style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Món</th>
+            <th style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Loại</th>
+            <th style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Giá</th>
+            <th style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Mô tả</th>
         </tr>
     </thead>
     <tbody>
         <tr style="background-color: #374151;">
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Cheese Sausage</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Đồ ăn</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">30000</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Xúc xích nóng chảy phô mai, ngon bá cháy.</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Cheese Sausage</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Đồ ăn</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">30000</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Xúc xích nóng chảy phô mai, ngon bá cháy.</td>
         </tr>
         <tr style="background-color: #374151;">
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Combo 1: Popcorn + Pepsi</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Combo</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">65000</td>
-            <td style="padding: 8px 12px; border: 1px solid #fbbf24; text-align: left;">Combo bắp rang bơ và một lon Pepsi, siêu hời.</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Combo 1: Popcorn + Pepsi</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Combo</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">65000</td>
+            <td style="padding: 8px 12px; border: 1px solid #ffffff; text-align: left;">Combo bắp rang bơ và một lon Pepsi, siêu hời.</td>
         </tr>
         <!-- More rows can go here -->
     </tbody>
