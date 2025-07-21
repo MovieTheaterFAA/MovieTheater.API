@@ -139,7 +139,7 @@ TABLE MODE (for stats/comparisons):
     </tbody>
 </table>
 
-- The table should be formatted as HTML using <table>, <thead>, and <tbody>, along with the simple CSS in the <style> tag. Ensure the table structure is intact without any extraneous text outside the table (no explanations, no "JSON" word, and no "```html" syntax in the answer).
+- The table should only contain the HTML structure with inline styles for each element (i.e., no surrounding "```html" or additional explanations). Ensure the AI does not include extra text or explanations outside the table.
 
 FUN & FLEXIBLE MODE:
 - For off-topic fun questions, give a short, clever, fictional answer.
