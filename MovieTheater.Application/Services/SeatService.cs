@@ -1,14 +1,12 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using MovieTheater.Application.Hubs;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -17,33 +15,20 @@ namespace MovieTheater.Application.Services
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditLogService _auditLogService;
-        private readonly IRedisService _redisService;
-        private readonly IHubContext<SeatHub> _seatHub;
         private static readonly ConcurrentDictionary<(Guid seatId, Guid showTimeId), (Guid userId, DateTime expireAt)> _holdingSeats = new();
 
-        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, IHubContext<SeatHub> seatHub, IAuditLogService auditLogService, IRedisService redisService)
+        public SeatService(ILoggerService loggerService, IUnitOfWork unitOfWork, IAuditLogService auditLogService)
         {
             _loggerService = loggerService;
             _unitOfWork = unitOfWork;
-            _seatHub = seatHub;
             _auditLogService = auditLogService;
-            _redisService = redisService;
         }
 
         ///================== Admin Methods ===================///
         public async Task<List<SeatDto>> GetSeatsByCinemaRoomAsync(Guid cinemaRoomId)
         {
-            string cacheKey = $"seat:list:cinemaroom:{cinemaRoomId}";
             try
             {
-                var cached = await _redisService.GetAsync<List<SeatDto>>(cacheKey);
-                if (cached != null)
-                {
-                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
-                    return cached;
-                }
-
-                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
                 var seats = await _unitOfWork.Seats.GetQueryable()
                     .Where(s => s.CinemaRoomId == cinemaRoomId && !s.IsDeleted)
                     .Select(s => new SeatDto
@@ -56,7 +41,6 @@ namespace MovieTheater.Application.Services
                     })
                     .ToListAsync();
 
-                await _redisService.SetAsync(cacheKey, seats, TimeSpan.FromMinutes(5));
                 _loggerService.Success($"[SeatManagementService] Retrieved {seats.Count} seats for cinema room {cinemaRoomId}");
                 return seats;
             }
@@ -93,7 +77,6 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Seats.AddRangeAsync(newSeats);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveAsync($"seat:list:cinemaroom:{cinemaRoomId}");
 
                 var newSeatData = newSeats.Select(s => new
                 {
@@ -156,7 +139,6 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Seats.Update(seat);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveAsync($"seat:list:cinemaroom:{seat.CinemaRoomId}");
 
                 await _auditLogService.LogAsync(
                     adminId,
@@ -208,7 +190,6 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Seats.Update(seat);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveAsync($"seat:list:cinemaroom:{seat.CinemaRoomId}");
 
                 await _auditLogService.LogAsync(
                     adminId,
@@ -235,18 +216,8 @@ namespace MovieTheater.Application.Services
         //================== User & Admin Methods ===================///
         public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
         {
-            string cacheKey = $"seat:list:showtime:{showTimeId}";
             try
             {
-                var cached = await _redisService.GetAsync<List<ShowTimeSeatDto>>(cacheKey);
-                if (cached != null)
-                {
-                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
-                    return cached;
-                }
-
-                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
-
                 CleanupExpiredHolds();
                 var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
                 if (showTime == null)
@@ -280,7 +251,6 @@ namespace MovieTheater.Application.Services
                     };
                 }).ToList();
 
-                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
                 _loggerService.Success($"Successfully retrieved seats for showtime {showTimeId} with {result.Count} seats.");
                 return result;
             }
@@ -418,13 +388,6 @@ namespace MovieTheater.Application.Services
 
                 _loggerService.Success($"User {userId} successfully held {heldSeats.Count} seats for showtime {showTimeId}: {string.Join(", ", heldSeats.Select(s => $"{s.Row}{s.Number}"))}");
 
-                if (heldSeats.Any())
-                {
-                    await BroadcastSeatUpdateAsync(showTimeId, heldSeats);
-
-                    await _redisService.RemoveAsync($"seat:list:showtime:{showTimeId}");
-                }
-
                 return heldSeats;
             }
             catch (Exception ex)
@@ -481,21 +444,6 @@ namespace MovieTheater.Application.Services
                     _holdingSeats.TryRemove(entry.Key, out _);
                 }
             }
-        }
-
-        private async Task BroadcastSeatUpdateAsync(Guid showTimeId, List<SeatResponseDto> heldSeats)
-        {
-            await _seatHub.Clients
-                .Group($"ShowTime_{showTimeId}")
-                .SendAsync("ReceiveSeatUpdate", new
-                {
-                    ShowTimeId = showTimeId,
-                    Seats = heldSeats.Select(s => new
-                    {
-                        SeatId = s.Id,
-                        Status = SeatStatus.Holding
-                    })
-                });
         }
     }
 }
