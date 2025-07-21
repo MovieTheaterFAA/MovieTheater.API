@@ -1,24 +1,21 @@
-﻿using Microsoft.VisualBasic;
+﻿using System.Text.RegularExpressions;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.UserDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Text.RegularExpressions;
 
 namespace MovieTheater.Application.Services
 {
     public class UserService : IUserService
     {
-
         private readonly ILoggerService _loggerService;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IRedisService _redisService;
-        public UserService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService)
+
+        public UserService(IUnitOfWork unitOfWork, ILoggerService loggerService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
-            _redisService = redisService;
         }
 
         public async Task<CurrentUserDto> GetUserDetails(Guid userId)
@@ -31,10 +28,6 @@ namespace MovieTheater.Application.Services
 
             try
             {
-                string cacheKey = $"user:detail:{userId}";
-                var cached = await _redisService.GetAsync<CurrentUserDto>(cacheKey);
-                if (cached != null) return cached;
-
                 var user = await _unitOfWork.Users.GetByIdAsync(userId);
                 if (user == null)
                 {
@@ -56,7 +49,6 @@ namespace MovieTheater.Application.Services
                     AvatarUrl = user.AvatarUrl,
                 };
 
-                await _redisService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10));
                 return result;
             }
             catch (Exception ex)
@@ -65,7 +57,6 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-
 
         public async Task<UserUpdateDto> UpdateUserInfo(Guid userId, UserUpdateDto userUpdateDto)
         {
@@ -102,7 +93,6 @@ namespace MovieTheater.Application.Services
                     user.CCCD = userUpdateDto.CCCD;
                     isUpdated = true;
                 }
-
 
                 if (userUpdateDto.DateOfBirth.HasValue && user.DateOfBirth != userUpdateDto.DateOfBirth)
                 {
@@ -154,8 +144,6 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveAsync($"user:detail:{userId}");
-                await _redisService.RemoveByPatternAsync("admin:user:list:"); // xóa cache cho cả list admin
 
                 _loggerService.Success($"User info updated successfully for UserId: {userId}");
 
@@ -175,6 +163,5 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-
     }
 }
