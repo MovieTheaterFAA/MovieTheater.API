@@ -126,6 +126,7 @@ public static class IocContainer
         services.AddHostedService<PaymentExpiryService>();
         services.AddHostedService<BookingCleanupService>();
         services.AddScoped<IScoreService, ScoreService>();
+        services.AddScoped<IStatisticService, StatisticService>();
 
         services.AddHttpContextAccessor();
 
