@@ -231,7 +231,7 @@ namespace MovieTheater.Application.Services
                 throw new KeyNotFoundException("Movie not found.");
 
             var newStart = dto.ShowDate;
-            var newDuration = dto.Duration != default ? dto.Duration : TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15);
+            var newDuration = TimeSpan.FromMinutes((double)movie.RunningTime!) + TimeSpan.FromMinutes(15); // Add 15 minutes for rest
             var newEnd = newStart.Add(newDuration);
 
             // Overlap check: exclude this showtime itself
@@ -239,9 +239,7 @@ namespace MovieTheater.Application.Services
                 .Where(st => st.CinemaRoomId == dto.CinemaRoomId
                     && st.Id != showTimeId
                     && !st.IsDeleted
-                    && (
-                        (newStart < st.ShowDate.Add(st.Duration) && st.ShowDate < newEnd)
-                    )
+                    && newStart < st.ShowDate.Add(st.Duration) && st.ShowDate < newEnd
                 )
                 .AnyAsync();
 
