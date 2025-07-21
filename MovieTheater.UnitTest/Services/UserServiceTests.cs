@@ -6,14 +6,12 @@ using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 
-
 namespace MovieTheater.UnitTest.Services
 {
     public class UserServiceTests
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ILoggerService> _mockLoggerService;
-        private readonly Mock<IRedisService> _mockRedisService;
         private readonly Mock<IGenericRepository<User>> _mockUserRepository;
         private readonly UserService _userService;
 
@@ -21,7 +19,6 @@ namespace MovieTheater.UnitTest.Services
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLoggerService = new Mock<ILoggerService>();
-            _mockRedisService = new Mock<IRedisService>();
             _mockUserRepository = new Mock<IGenericRepository<User>>();
 
             // Setup UnitOfWork to return user repository
@@ -29,43 +26,14 @@ namespace MovieTheater.UnitTest.Services
 
             _userService = new UserService(
                 _mockUnitOfWork.Object,
-                _mockLoggerService.Object,
-                _mockRedisService.Object
+                _mockLoggerService.Object
             );
         }
 
         #region GetUserDetails Tests
 
         [Fact]
-        public async Task GetUserDetails_WithCachedData_ReturnsCachedUser()
-        {
-            // Arrange
-            var userId = Guid.NewGuid();
-            var cachedUser = new CurrentUserDto
-            {
-                FullName = "Cached User",
-                Email = "cached@example.com",
-                Role = RoleType.Member
-            };
-
-            _mockRedisService.Setup(redis => redis.GetAsync<CurrentUserDto>($"user:detail:{userId}"))
-                .ReturnsAsync(cachedUser);
-
-            // Act
-            var result = await _userService.GetUserDetails(userId);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(cachedUser.FullName, result.FullName);
-            Assert.Equal(cachedUser.Email, result.Email);
-
-            // Verify Redis was called but database was not
-            _mockRedisService.Verify(redis => redis.GetAsync<CurrentUserDto>($"user:detail:{userId}"), Times.Once);
-            _mockUserRepository.Verify(repo => repo.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task GetUserDetails_WithoutCache_ReturnsFromDatabase()
+        public async Task GetUserDetails_WithValidUser_ReturnsUserDto()
         {
             // Arrange
             var userId = Guid.NewGuid();
@@ -84,9 +52,6 @@ namespace MovieTheater.UnitTest.Services
                 AvatarUrl = "avatar.jpg"
             };
 
-            _mockRedisService.Setup(redis => redis.GetAsync<CurrentUserDto>($"user:detail:{userId}"))
-                .ReturnsAsync((CurrentUserDto)null!);
-
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
                 .ReturnsAsync(user);
 
@@ -99,11 +64,6 @@ namespace MovieTheater.UnitTest.Services
             Assert.Equal(user.Email, result.Email);
             Assert.Equal(user.ScoreBalance, result.ScoreBalance);
 
-            _mockRedisService.Verify(redis => redis.GetAsync<CurrentUserDto>($"user:detail:{userId}"), Times.Once);
-            _mockRedisService.Verify(redis => redis.SetAsync(
-                $"user:detail:{userId}",
-                It.IsAny<CurrentUserDto>(),
-                TimeSpan.FromMinutes(10)), Times.Once);
             _mockUserRepository.Verify(repo => repo.GetByIdAsync(userId), Times.Once);
         }
 
@@ -126,9 +86,6 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var userId = Guid.NewGuid();
-
-            _mockRedisService.Setup(redis => redis.GetAsync<CurrentUserDto>(It.IsAny<string>()))
-                .ReturnsAsync((CurrentUserDto)null!);
 
             _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
                 .ReturnsAsync((User)null!);
@@ -201,8 +158,6 @@ namespace MovieTheater.UnitTest.Services
                 u.Address == updateDto.Address)), Times.Once);
 
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveAsync($"user:detail:{userId}"), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("admin:user:list:"), Times.Once);
             _mockLoggerService.Verify(logger => logger.Success(It.IsAny<string>()), Times.Once);
         }
 

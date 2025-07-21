@@ -175,7 +175,9 @@ namespace MovieTheater.UnitTest.Services
             var showTimeId = Guid.NewGuid();
             _mockShowTimeRepo.Setup(r => r.GetByIdAsync(showTimeId, null!)).ReturnsAsync((ShowTime)null!);
 
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateShowTimeAsync(showTimeId, new UpdateShowtimeDto()));
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateShowTimeAsync(showTimeId, new UpdateShowtimeDto()));
+            Assert.Contains("An error occurred while updating the showtime", ex.Message);
+            Assert.IsType<KeyNotFoundException>(ex.InnerException);
         }
 
         [Fact]
@@ -186,7 +188,9 @@ namespace MovieTheater.UnitTest.Services
             _mockShowTimeRepo.Setup(r => r.GetByIdAsync(showTimeId, null!)).ReturnsAsync(new ShowTime());
             _mockMovieRepo.Setup(m => m.GetByIdAsync(dto.MovieId, null!)).ReturnsAsync((Movie)null!);
 
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateShowTimeAsync(showTimeId, dto));
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateShowTimeAsync(showTimeId, dto));
+            Assert.Contains("An error occurred while updating the showtime", ex.Message);
+            Assert.IsType<KeyNotFoundException>(ex.InnerException);
         }
 
         [Fact]
@@ -203,7 +207,6 @@ namespace MovieTheater.UnitTest.Services
                 MovieId = movieId,
                 CinemaRoomId = roomId,
                 ShowDate = now,
-                Duration = TimeSpan.FromMinutes(120)
             };
 
             var existingShowTime = new ShowTime
