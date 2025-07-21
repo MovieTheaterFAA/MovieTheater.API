@@ -5,6 +5,5 @@
         public Guid MovieId { get; set; }
         public Guid CinemaRoomId { get; set; }
         public DateTime ShowDate { get; set; }
-        public TimeSpan Duration { get; set; }
     }
 }
