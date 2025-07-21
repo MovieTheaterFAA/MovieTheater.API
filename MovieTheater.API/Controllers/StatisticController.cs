@@ -39,6 +39,54 @@ namespace MovieTheater.API.Controllers
             }
         }
 
-        // Add more endpoints here following the MovieController pattern as needed.
+        [HttpGet("monthly-revenue")]
+        [SwaggerOperation(
+        Summary = "Get monthly ticket revenue statistics",
+        Description = "Retrieves the total ticket revenue per month."
+        )]
+        [ProducesResponseType(typeof(ApiResult<List<MonthlyRevenueDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetMonthlyRevenueAsync()
+        {
+            try
+            {
+                var result = await _statisticService.GetMonthlyRevenueAsync();
+                return Ok(ApiResult<List<MonthlyRevenueDto>>.Success(result, "200", "Monthly revenue statistics retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpGet("monthly-movie-revenue")]
+        [SwaggerOperation(
+            Summary = "Get monthly revenue for each movie",
+            Description = "Retrieves the total ticket revenue per movie for a specified month and year."
+        )]
+        [ProducesResponseType(typeof(ApiResult<List<MonthlyMovieRevenueDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetMonthlyRevenueMovieAsync([FromQuery] MonthYearDto monthYear)
+        {
+            try
+            {
+                if (monthYear.Month < 1 || monthYear.Month > 12)
+                    return BadRequest(ApiResult<object>.Failure("400", "Month must be between 1 and 12."));
+                if (monthYear.Year < 2000 || monthYear.Year > DateTime.UtcNow.Year)
+                    return BadRequest(ApiResult<object>.Failure("400", "Year is out of valid range."));
+
+                var result = await _statisticService.GetMonthlyRevenueMovieAsync(monthYear);
+                return Ok(ApiResult<List<MonthlyMovieRevenueDto>>.Success(result, "200", "Monthly movie revenue statistics retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }
