@@ -239,8 +239,6 @@ namespace MovieTheater.Application.Services
                     TrailerUrl = movieRequestDto.TrailerUrl,
                     Genres = movieRequestDto.Genres,
                     Description = movieRequestDto.Description,
-                    PosterImage = movieRequestDto.PosterImage,
-                    BackgroundImage = movieRequestDto.BackgroundImage,
                     Rating = movieRequestDto.Rating,
                     Status = Domain.Enums.MovieStatus.ComingSoon,
                 };
