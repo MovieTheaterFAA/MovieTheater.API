@@ -1,6 +1,5 @@
 ﻿using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 
 namespace MovieTheater.Application.Interfaces
 {
@@ -9,7 +8,7 @@ namespace MovieTheater.Application.Interfaces
         Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto);
 
         Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto);
-
+        Task<MovieResponseDto> AddMovieWithFilesAsync(MovieCreateWithFilesDto dto);
         Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
             string? search,
             string? sortBy,

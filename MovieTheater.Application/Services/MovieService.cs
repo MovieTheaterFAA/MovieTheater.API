@@ -1,5 +1,7 @@
-﻿using MovieTheater.Application.Interfaces;
+﻿using Microsoft.AspNetCore.Http;
+using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Domain.DTOs.BlobDTOs;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
@@ -15,14 +17,16 @@ namespace MovieTheater.Application.Services
         private readonly IClaimsService _claimsService;
         private readonly IAuditLogService _auditLogService;
         private readonly IRedisService _redisService;
+        private readonly IBlobService _blobService;
 
-        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService)
+        public MovieService(IUnitOfWork unitOfWork, ILoggerService loggerService, IClaimsService claimsService, IAuditLogService auditLogService, IRedisService redisService, IBlobService blobService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
             _claimsService = claimsService;
             _auditLogService = auditLogService;
             _redisService = redisService;
+            _blobService = blobService;
         }
 
         public async Task<Pagination<MovieResponseDto>> GetAllMoviesAsync(
@@ -210,7 +214,6 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-
         public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
         {
             _loggerService.Info($"[AddMovieAsync] Start adding movie {movieRequestDto.Name}");
@@ -328,7 +331,6 @@ namespace MovieTheater.Application.Services
                 throw;
             }
         }
-
         public async Task<MovieUpdateDto> UpdateMovieInfoAsync(Guid movieId, MovieUpdateDto movieUpdateDto)
         {
             try
@@ -573,6 +575,102 @@ namespace MovieTheater.Application.Services
             {
                 _loggerService.Error($"An error occurred while deleting movie : {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<MovieResponseDto> AddMovieWithFilesAsync(MovieCreateWithFilesDto dto)
+        {
+            // 1. Add the movie (without images first)
+            var movieResponse = await AddMovieAsync(dto.Movie);
+
+            // 2. Upload poster
+            if (dto.Poster != null)
+            {
+                var posterUrl = await UploadMoviePosterInternal(movieResponse.Id, dto.Poster);
+                movieResponse.PosterImage = posterUrl;
+            }
+
+            // 3. Upload background
+            if (dto.Background != null)
+            {
+                var backgroundUrl = await UploadMovieBackgroundInternal(movieResponse.Id, dto.Background);
+                movieResponse.BackgroundImage = backgroundUrl;
+            }
+
+            // 4. Upload cast images
+            if (dto.CastImages != null)
+            {
+                foreach (var cast in dto.CastImages)
+                {
+                    if (cast.File != null && !string.IsNullOrWhiteSpace(cast.ActorName))
+                    {
+                        await UploadCastImageInternal(movieResponse.Id, cast);
+                    }
+                }
+            }
+
+            // Optionally, reload the movie to get updated URLs
+            return await GetMovieDetailAsync(movieResponse.Id);
+        }
+
+        //===================== File Upload Methods =====================
+        private async Task<string> UploadMoviePosterInternal(Guid movieId, IFormFile file)
+        {
+            var folder = $"movies/{movieId}/poster";
+            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var objectName = $"{folder}/{uniqueFileName}";
+            using var stream = file.OpenReadStream();
+            await _blobService.UploadFileAsync(uniqueFileName, stream, folder);
+            var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+
+            // Update DB
+            var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+            movie.PosterImage = previewUrl;
+            await _unitOfWork.Movies.Update(movie);
+            await _unitOfWork.SaveChangesAsync();
+
+            return previewUrl;
+        }
+
+        private async Task<string> UploadMovieBackgroundInternal(Guid movieId, IFormFile file)
+        {
+            var folder = $"movies/{movieId}/background";
+            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var objectName = $"{folder}/{uniqueFileName}";
+            using var stream = file.OpenReadStream();
+            await _blobService.UploadFileAsync(uniqueFileName, stream, folder);
+            var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+
+            // Update DB
+            var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+            movie.BackgroundImage = previewUrl;
+            await _unitOfWork.Movies.Update(movie);
+            await _unitOfWork.SaveChangesAsync();
+
+            return previewUrl;
+        }
+
+        private async Task UploadCastImageInternal(Guid movieId, MovieCastUploadDto cast)
+        {
+            var actorName = cast.ActorName?.Trim();
+            var safeActor = actorName.Replace(" ", "_").ToLowerInvariant();
+            var folder = $"movies/{movieId}/cast/{safeActor}";
+            var uniqueFileName = $"{Guid.NewGuid()}_{cast.File.FileName}";
+            var objectName = $"{folder}/{uniqueFileName}";
+            using var stream = cast.File.OpenReadStream();
+            await _blobService.UploadFileAsync(uniqueFileName, stream, folder);
+            var previewUrl = await _blobService.GetPreviewUrlAsync(objectName);
+
+            // Update DB
+            var movie = await _unitOfWork.Movies.GetByIdAsync(movieId);
+            movie.Actors ??= new List<string>();
+            movie.ActorsUrl ??= new List<string>();
+            if (!movie.Actors.Contains(actorName, StringComparer.OrdinalIgnoreCase))
+            {
+                movie.Actors.Add(actorName);
+                movie.ActorsUrl.Add(previewUrl);
+                await _unitOfWork.Movies.Update(movie);
+                await _unitOfWork.SaveChangesAsync();
             }
         }
     }
