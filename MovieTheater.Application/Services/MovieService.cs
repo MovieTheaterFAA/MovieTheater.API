@@ -448,8 +448,9 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Movies.Update(movie);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveByPatternAsync("movies:list:");
-                await _redisService.RemoveAsync($"movie:detail:{movieId}");
+
+                await _redisService.RemoveByPatternAsync("movie:list:*");
+                await _redisService.RemoveByPatternAsync("movie:detail:*");
 
                 var newData = new
                 {
@@ -538,8 +539,9 @@ namespace MovieTheater.Application.Services
 
                 await _unitOfWork.Movies.SoftRemove(movie);
                 await _unitOfWork.SaveChangesAsync();
-                await _redisService.RemoveByPatternAsync("movies:list:");
-                await _redisService.RemoveAsync($"movie:detail:{movieId}");
+
+                await _redisService.RemoveByPatternAsync("movie:list:*");
+                await _redisService.RemoveByPatternAsync("movie:detail:*");
 
                 var newValue = new
                 {
@@ -576,6 +578,9 @@ namespace MovieTheater.Application.Services
             }
         }
 
+
+
+        //===================== Add Movie with Files =====================
         public async Task<MovieResponseDto> AddMovieWithFilesAsync(MovieCreateWithFilesDto dto)
         {
             // 1. Add the movie (without images first)
