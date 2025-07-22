@@ -5,7 +5,7 @@ namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
     public class MovieCreateWithFilesDto
     {
-        public MovieRequestDTO Movie { get; set; }
+        public MovieRequestDto Movie { get; set; }
         public IFormFile Poster { get; set; }
         public IFormFile Background { get; set; }
         public List<MovieCastUploadDto> CastImages { get; set; } = new();

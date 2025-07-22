@@ -121,7 +121,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDTO movieRequestDto)
+        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDto movieRequestDto)
         {
             try
             {

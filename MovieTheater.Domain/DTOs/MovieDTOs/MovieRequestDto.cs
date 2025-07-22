@@ -1,6 +1,6 @@
 ﻿namespace MovieTheater.Domain.DTOs.MovieDTOs
 {
-    public class MovieRequestDTO
+    public class MovieRequestDto
     {
         public string Name { get; set; }
         public DateTime FromDate { get; set; }
@@ -10,8 +10,6 @@
         public string TrailerUrl { get; set; }
         public List<string> Genres { get; set; }
         public string Description { get; set; }
-        public string PosterImage { get; set; }
-        public string BackgroundImage { get; set; }
         public float Rating { get; set; }
     }
 }

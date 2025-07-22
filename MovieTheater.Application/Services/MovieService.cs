@@ -214,7 +214,7 @@ namespace MovieTheater.Application.Services
                 throw new Exception("An error occurred while searching for movies. Please try again later.");
             }
         }
-        public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDTO movieRequestDto)
+        public async Task<MovieResponseDto> AddMovieAsync(MovieRequestDto movieRequestDto)
         {
             _loggerService.Info($"[AddMovieAsync] Start adding movie {movieRequestDto.Name}");
             try
