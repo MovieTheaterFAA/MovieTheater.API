@@ -828,26 +828,31 @@ public class SystemController : ControllerBase
         {
             _logger.Info("Start deleting data in database...");
 
-            var tablesToDelete = new List<Func<Task>>
-            {
-                () => context.Users.ExecuteDeleteAsync(),
-                () => context.Movies.ExecuteDeleteAsync(),
-                () => context.Seats.ExecuteDeleteAsync(),
-                () => context.CinemaRooms.ExecuteDeleteAsync(),
-                () => context.FoodAndDrinks.ExecuteDeleteAsync(),
-                () => context.Events.ExecuteDeleteAsync(),
-                () => context.Promotions.ExecuteDeleteAsync(),
-                () => context.ShowTimeSeats.ExecuteDeleteAsync(),
-                () => context.Showtimes.ExecuteDeleteAsync(),
-                () => context.AuditLogs.ExecuteDeleteAsync(),
-                () => context.Tickets.ExecuteDeleteAsync(),
-                () => context.Bookings.ExecuteDeleteAsync(),
-                () => context.TicketFoodAndDrinks.ExecuteDeleteAsync(),
-                () => context.TicketSeats.ExecuteDeleteAsync(),
-                () => context.ScoreHistory.ExecuteDeleteAsync(),
-            };
+            // Wipe all tables that reference Ticket and Booking first (child tables)
+            await context.TicketFoodAndDrinks.ExecuteDeleteAsync();
+            await context.TicketSeats.ExecuteDeleteAsync();
+            await context.BookingSeats.ExecuteDeleteAsync();
+            await context.BookingFoods.ExecuteDeleteAsync();
+            await context.ScoreHistory.ExecuteDeleteAsync();
+            await context.Invoices.ExecuteDeleteAsync();
+            await context.Payments.ExecuteDeleteAsync();
 
-            foreach (var deleteFunc in tablesToDelete) await deleteFunc();
+            // Now delete Tickets and Bookings themselves
+            await context.Tickets.ExecuteDeleteAsync();
+            await context.Bookings.ExecuteDeleteAsync();
+
+            // Wipe other tables as needed (not related to Ticket/Booking)
+            await context.Users.ExecuteDeleteAsync();
+            await context.Movies.ExecuteDeleteAsync();
+            await context.Seats.ExecuteDeleteAsync();
+            await context.CinemaRooms.ExecuteDeleteAsync();
+            await context.FoodAndDrinks.ExecuteDeleteAsync();
+            await context.Events.ExecuteDeleteAsync();
+            await context.Promotions.ExecuteDeleteAsync();
+            await context.ShowTimeSeats.ExecuteDeleteAsync();
+            await context.Showtimes.ExecuteDeleteAsync();
+            await context.AuditLogs.ExecuteDeleteAsync();
+            await context.OtpStorages.ExecuteDeleteAsync();
 
             await transaction.CommitAsync();
             _logger.Success("Deleted data in database successfully.");
