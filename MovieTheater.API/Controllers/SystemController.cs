@@ -36,7 +36,6 @@ public class SystemController : ControllerBase
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
-            //await SeedShowTimeSeatsWithRandomStatusAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -69,7 +68,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Female,
             DateOfBirth = DateTime.UtcNow.AddYears(-30),
             PhoneNumber = "0944000000",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.Admin,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -84,7 +83,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Female,
             DateOfBirth = DateTime.UtcNow.AddYears(-30),
             PhoneNumber = "0944000000",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.SystemOwner,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -100,7 +99,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Male,
             DateOfBirth = DateTime.UtcNow.AddYears(-28),
             PhoneNumber = "0944000001",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@") !,
             Role = RoleType.Employee,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -115,7 +114,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Female,
             DateOfBirth = DateTime.UtcNow.AddYears(-27),
             PhoneNumber = "0944000002",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@") !,
             Role = RoleType.Employee,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -130,7 +129,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Male,
             DateOfBirth = DateTime.UtcNow.AddYears(-26),
             PhoneNumber = "0944000003",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.Employee,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -146,7 +145,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Female,
             DateOfBirth = DateTime.UtcNow.AddYears(-25),
             PhoneNumber = "0944000004",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.Member,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -161,7 +160,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Male,
             DateOfBirth = DateTime.UtcNow.AddYears(-24),
             PhoneNumber = "0944000005",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.Member,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -176,7 +175,7 @@ public class SystemController : ControllerBase
             Sex = Gender.Female,
             DateOfBirth = DateTime.UtcNow.AddYears(-23),
             PhoneNumber = "0944000006",
-            Password = passwordHasher.HashPassword("1@"),
+            Password = passwordHasher.HashPassword("1@")!,
             Role = RoleType.Member,
             ScoreBalance = 0,
             IsEmailVerified = true,
@@ -654,45 +653,6 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
-
-    private async Task SeedShowTimeSeatsWithRandomStatusAsync()
-    {
-        var showtimes = await _context.Showtimes.ToListAsync();
-        var allSeats = await _context.Seats.ToListAsync();
-        var random = new Random();
-        var seatStatusValues = Enum.GetValues(typeof(SeatStatus)).Cast<SeatStatus>().ToArray();
-        var showTimeSeats = new List<ShowTimeSeat>();
-
-        foreach (var showtime in showtimes)
-        {
-            // Get seats for the cinema room of this showtime
-            var seatsInRoom = allSeats.Where(s => s.CinemaRoomId == showtime.CinemaRoomId).ToList();
-
-            foreach (var seat in seatsInRoom)
-            {
-                showTimeSeats.Add(new ShowTimeSeat
-                {
-                    Id = Guid.NewGuid(),
-                    ShowTimeId = showtime.Id,
-                    SeatId = seat.Id,
-                    Status = seatStatusValues[random.Next(seatStatusValues.Length)],
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = Guid.Empty // System seed
-                });
-            }
-        }
-
-        if (showTimeSeats.Count > 0)
-        {
-            await _context.ShowTimeSeats.AddRangeAsync(showTimeSeats);
-            await _context.SaveChangesAsync();
-            _logger.Success($"Seeded {showTimeSeats.Count} ShowTimeSeats with random status.");
-        }
-        else
-        {
-            _logger.Info("No ShowTimeSeats to seed.");
-        }
-    }
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
@@ -876,6 +836,10 @@ public class SystemController : ControllerBase
                 () => context.ShowTimeSeats.ExecuteDeleteAsync(),
                 () => context.Showtimes.ExecuteDeleteAsync(),
                 () => context.AuditLogs.ExecuteDeleteAsync(),
+                () => context.Tickets.ExecuteDeleteAsync(),
+                () => context.TicketFoodAndDrinks.ExecuteDeleteAsync(),
+                () => context.TicketSeats.ExecuteDeleteAsync(),
+                () => context.ScoreHistory.ExecuteDeleteAsync(),
             };
 
             foreach (var deleteFunc in tablesToDelete) await deleteFunc();
