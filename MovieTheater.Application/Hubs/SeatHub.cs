@@ -22,34 +22,34 @@ namespace MovieTheater.Application.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"ShowTime_{showTimeId}");
         }
 
-        public async Task HoldSeats(string showTimeId, string userId, List<Guid> seatIds)
+        public async Task BroadcastSeatStatus(string showTimeId)
         {
-            if (!Guid.TryParse(userId, out var userGuid) || !Guid.TryParse(showTimeId, out var showTimeGuid))
+            if (!Guid.TryParse(showTimeId, out var showTimeGuid))
             {
-                await Clients.Caller.SendAsync("ReceiveSeatHoldError", "Invalid user or showtime ID.");
+                await Clients.Caller.SendAsync("ReceiveSeatStatusError", "Invalid showtime ID.");
                 return;
             }
 
             try
             {
-                var heldSeats = await _seatService.HoldSeatsAsync(userGuid, showTimeGuid, seatIds);
+                var seatStatusList = await _seatService.GetShowTimeSeatStatusAsync(showTimeGuid);
 
-                await Clients.Group($"ShowTime_{showTimeId}").SendAsync("ReceiveSeatUpdate", new
+                await Clients.Group($"ShowTime_{showTimeId}").SendAsync("ReceiveSeatStatus", new
                 {
                     ShowTimeId = showTimeId,
-                    Seats = heldSeats.Select(s => new
+                    Seats = seatStatusList.Select(s => new
                     {
-                        SeatId = s.Id,
+                        SeatId = s.SeatId,
                         Row = s.Row,
                         Number = s.Number,
                         Type = s.Type,
-                        Status = "Holding"
+                        Status = s.Status.ToString()
                     })
                 });
             }
             catch (Exception ex)
             {
-                await Clients.Caller.SendAsync("ReceiveSeatHoldError", ex.Message);
+                await Clients.Caller.SendAsync("ReceiveSeatStatusError", ex.Message);
             }
         }
     }
