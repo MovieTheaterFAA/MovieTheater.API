@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Moq;
 using MovieTheater.API.Controllers;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
+using MovieTheater.Domain.DTOs.BlobDTOs;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Commons;
@@ -180,7 +182,7 @@ namespace MovieTheater.UnitTest.Controllers
         public async Task AddMovieAsync_ValidData_ReturnsOkResult()
         {
             // Arrange
-            var movieRequest = new MovieRequestDTO
+            var movieRequest = new MovieRequestDto
             {
                 Name = "Test Movie",
                 FromDate = DateTime.Now,
@@ -188,8 +190,6 @@ namespace MovieTheater.UnitTest.Controllers
                 Director = "Test Director",
                 Genres = new List<string> { "Action", "Drama" },
                 Description = "Test description",
-                PosterImage = "https://example.com/poster.jpg",
-                BackgroundImage = "https://example.com/bg.jpg",
                 TrailerUrl = "https://example.com/trailer.mp4"
             };
             var movieResponse = new MovieResponseDto { Id = Guid.NewGuid(), Name = "Test Movie" };
@@ -209,7 +209,7 @@ namespace MovieTheater.UnitTest.Controllers
         public async Task AddMovieAsync_ServiceThrowsException_ReturnsErrorResponse()
         {
             // Arrange
-            var movieRequest = new MovieRequestDTO { Name = "Test Movie" };
+            var movieRequest = new MovieRequestDto { Name = "Test Movie" };
             _mockMovieService.Setup(s => s.AddMovieAsync(movieRequest))
                 .ThrowsAsync(new Exception("Test exception"));
 
@@ -366,6 +366,73 @@ namespace MovieTheater.UnitTest.Controllers
 
             // Assert
             Assert.IsType<ObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task AddMovieWithFilesAsync_ValidData_ReturnsOkResult()
+        {
+            // Arrange
+            var dto = new MovieCreateWithFilesDto
+            {
+                Movie = new MovieRequestDto
+                {
+                    Name = "Test Movie",
+                    FromDate = DateTime.Now,
+                    ToDate = DateTime.Now.AddDays(10),
+                    Director = "Director",
+                    Genres = new List<string> { "Action" },
+                    Description = "Description",
+                    TrailerUrl = "https://example.com/trailer.mp4",
+                    Rating = 5.0f
+                },
+                Poster = Mock.Of<IFormFile>(),
+                Background = Mock.Of<IFormFile>(),
+                CastImages = new List<MovieCastUploadDto>()
+            };
+            var movieResponse = new MovieResponseDto { Id = Guid.NewGuid(), Name = "Test Movie" };
+            _mockMovieService.Setup(s => s.AddMovieWithFilesAsync(dto)).ReturnsAsync(movieResponse);
+
+            // Act
+            var result = await _controller.AddMovieWithFilesAsync(dto);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<MovieResponseDto>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            Assert.Equal(movieResponse, apiResult.Value.Data);
+        }
+
+        [Fact]
+        public async Task AddMovieWithFilesAsync_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            var dto = new MovieCreateWithFilesDto
+            {
+                Movie = new MovieRequestDto
+                {
+                    Name = "Test Movie",
+                    FromDate = DateTime.Now,
+                    ToDate = DateTime.Now.AddDays(10),
+                    Director = "Director",
+                    Genres = new List<string> { "Action" },
+                    Description = "Description",
+                    TrailerUrl = "https://example.com/trailer.mp4",
+                    Rating = 5.0f
+                },
+                Poster = Mock.Of<IFormFile>(),
+                Background = Mock.Of<IFormFile>(),
+                CastImages = new List<MovieCastUploadDto>()
+            };
+            _mockMovieService.Setup(s => s.AddMovieWithFilesAsync(dto))
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.AddMovieWithFilesAsync(dto);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<MovieResponseDto>>(objectResult.Value);
+            Assert.False(apiResult.IsSuccess);
         }
     }
 }

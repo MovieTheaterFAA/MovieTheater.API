@@ -18,6 +18,7 @@ namespace MovieTheater.UnitTest.Services
         private readonly Mock<IClaimsService> _mockClaimsService;
         private readonly Mock<IAuditLogService> _mockAuditLogService;
         private readonly Mock<IRedisService> _mockRedisService;
+        private readonly Mock<IBlobService> _mockBlobService;
         private readonly Mock<IGenericRepository<Movie>> _mockMovieRepository;
         private readonly MovieService _movieService;
         private readonly Guid _currentUserId = Guid.NewGuid();
@@ -29,6 +30,7 @@ namespace MovieTheater.UnitTest.Services
             _mockClaimsService = new Mock<IClaimsService>();
             _mockAuditLogService = new Mock<IAuditLogService>();
             _mockRedisService = new Mock<IRedisService>();
+            _mockBlobService = new Mock<IBlobService>();
             _mockMovieRepository = new Mock<IGenericRepository<Movie>>();
 
             // Setup UnitOfWork to return movie repository
@@ -42,7 +44,8 @@ namespace MovieTheater.UnitTest.Services
                 _mockLoggerService.Object,
                 _mockClaimsService.Object,
                 _mockAuditLogService.Object,
-                _mockRedisService.Object
+                _mockRedisService.Object,
+                _mockBlobService.Object
             );
         }
 
@@ -556,7 +559,7 @@ namespace MovieTheater.UnitTest.Services
         public async Task AddMovieAsync_WithValidData_ReturnsMovieResponseDto()
         {
             // Arrange
-            var movieRequestDto = new MovieRequestDTO
+            var movieRequestDto = new MovieRequestDto
             {
                 Name = "Test Movie",
                 Director = "Test Director",
@@ -565,8 +568,6 @@ namespace MovieTheater.UnitTest.Services
                 FromDate = DateTime.Now.AddDays(10),
                 ToDate = DateTime.Now.AddDays(40),
                 Genres = new List<string> { "Action", "Adventure" },
-                PosterImage = "https://example.com/poster.jpg",
-                BackgroundImage = "https://example.com/background.jpg",
                 TrailerUrl = "https://example.com/trailer",
                 Rating = 8.5f
             };
@@ -581,8 +582,6 @@ namespace MovieTheater.UnitTest.Services
                 FromDate = movieRequestDto.FromDate,
                 ToDate = movieRequestDto.ToDate,
                 Genres = movieRequestDto.Genres,
-                PosterImage = movieRequestDto.PosterImage,
-                BackgroundImage = movieRequestDto.BackgroundImage,
                 TrailerUrl = movieRequestDto.TrailerUrl,
                 Rating = movieRequestDto.Rating,
                 Status = MovieStatus.ComingSoon
@@ -623,7 +622,7 @@ namespace MovieTheater.UnitTest.Services
         public async Task AddMovieAsync_WithInvalidDateRange_ThrowsInvalidOperationException()
         {
             // Arrange
-            var movieRequestDto = new MovieRequestDTO
+            var movieRequestDto = new MovieRequestDto
             {
                 Name = "Invalid Movie",
                 Director = "Test Director",
@@ -643,7 +642,7 @@ namespace MovieTheater.UnitTest.Services
         public async Task AddMovieAsync_WhenExceptionOccurs_ThrowsException()
         {
             // Arrange
-            var movieRequestDto = new MovieRequestDTO
+            var movieRequestDto = new MovieRequestDto
             {
                 Name = "Test Movie",
                 FromDate = DateTime.Now.AddDays(10),
@@ -723,8 +722,8 @@ namespace MovieTheater.UnitTest.Services
             Assert.Equal(updateMovieDto.Status, result.Status);
 
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("movies:list:"), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveAsync($"movie:detail:{movieId}"), Times.Once);
+            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("movie:list:*"), Times.Once);
+            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync($"movie:detail:*"), Times.Once);
 
             _mockAuditLogService.Verify(log => log.LogAsync(
                 It.IsAny<Guid>(), AuditActionType.Update, "Movie", movieId,
@@ -888,8 +887,8 @@ namespace MovieTheater.UnitTest.Services
                 m.Id == movieId)), Times.Once);
 
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("movies:list:"), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveAsync($"movie:detail:{movieId}"), Times.Once);
+            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("movie:list:*"), Times.Once);
+            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync($"movie:detail:*"), Times.Once);
 
             _mockAuditLogService.Verify(log => log.LogAsync(
                 It.IsAny<Guid>(), AuditActionType.Delete, "Movie", movieId,
