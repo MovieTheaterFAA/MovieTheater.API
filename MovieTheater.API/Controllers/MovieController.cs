@@ -5,7 +5,6 @@ using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
 using MovieTheater.Domain.DTOs.MovieDTOs;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -118,7 +117,7 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<MovieResponseDto>), 200)]
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
-        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDTO movieRequestDto)
+        public async Task<IActionResult> AddMovieAsync([FromBody, SwaggerParameter("New movie data to be added")] MovieRequestDto movieRequestDto)
         {
             try
             {
@@ -178,17 +177,38 @@ namespace MovieTheater.API.Controllers
             {
                 var result = await _movieService.DeleteMovieAsync(id);
 
-                if(!result)
+                if (!result)
                 {
                     return NotFound(ApiResult<object>.Failure("404", $"Movie with ID {id} not found."));
                 }
 
-                return Ok(ApiResult<bool>.Success(result, "200", "Movie updated successfully."));
+                return Ok(ApiResult<bool>.Success(result, "200", "Movie delete successfully."));
             }
             catch (Exception ex)
             {
                 var statusCode = ExceptionUtils.ExtractStatusCode(ex);
                 var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpPost("add-with-files")]
+        [Authorize(Policy = "AdminPolicy")]
+        [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResult<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> AddMovieWithFilesAsync([FromForm] MovieCreateWithFilesDto dto)
+        {
+            try
+            {
+                var result = await _movieService.AddMovieWithFilesAsync(dto);
+                return Ok(ApiResult<MovieResponseDto>.Success(result, "200", "Movie and files added successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<MovieResponseDto>(ex);
                 return StatusCode(statusCode, errorResponse);
             }
         }
