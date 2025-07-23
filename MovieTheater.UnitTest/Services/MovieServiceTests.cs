@@ -18,7 +18,6 @@ namespace MovieTheater.UnitTest.Services
         private readonly Mock<IClaimsService> _mockClaimsService;
         private readonly Mock<IAuditLogService> _mockAuditLogService;
         private readonly Mock<IRedisService> _mockRedisService;
-        private readonly Mock<IBlobService> _mockBlobService;
         private readonly Mock<IGenericRepository<Movie>> _mockMovieRepository;
         private readonly MovieService _movieService;
         private readonly Guid _currentUserId = Guid.NewGuid();
@@ -30,7 +29,6 @@ namespace MovieTheater.UnitTest.Services
             _mockClaimsService = new Mock<IClaimsService>();
             _mockAuditLogService = new Mock<IAuditLogService>();
             _mockRedisService = new Mock<IRedisService>();
-            _mockBlobService = new Mock<IBlobService>();
             _mockMovieRepository = new Mock<IGenericRepository<Movie>>();
 
             // Setup UnitOfWork to return movie repository
@@ -44,8 +42,7 @@ namespace MovieTheater.UnitTest.Services
                 _mockLoggerService.Object,
                 _mockClaimsService.Object,
                 _mockAuditLogService.Object,
-                _mockRedisService.Object,
-                _mockBlobService.Object
+                _mockRedisService.Object
             );
         }
 
