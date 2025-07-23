@@ -469,11 +469,11 @@ public class PromotionService : IPromotionService
         }
     }
 
-    public async Task<IEnumerable<PromotionResponseDto>> GetUnclaimedPromotionsByUserAsync(Guid? userId = null)
+    public async Task<IEnumerable<PromotionResponseDto>> GetUnclaimedPromotionsByUserAsync()
     {
         try
         {
-            var actualUserId = userId ?? _claimsService.GetCurrentUserId;
+            var actualUserId = _claimsService.GetCurrentUserId;
 
             _loggerService.Info($"[GetUnclaimedPromotionsByUserAsync] Getting unclaimed promotions for user {actualUserId}");
 
