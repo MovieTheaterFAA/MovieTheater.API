@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Utils;
@@ -6,7 +7,6 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
 
@@ -112,6 +112,7 @@ public class PromotionService : IPromotionService
             throw;
         }
     }
+
     public async Task<bool> DeletePromotionAsync(Guid promotionId)
     {
         try
@@ -165,6 +166,7 @@ public class PromotionService : IPromotionService
             return false;
         }
     }
+
     public async Task<PromotionResponseDto?> UpdatePromotionAsync(Guid promotionId, PromotionUpdateDto dto)
     {
         try
@@ -404,6 +406,7 @@ public class PromotionService : IPromotionService
             throw;
         }
     }
+
     public async Task<bool> UseClaimedPromotionAsync(Guid promotionId, Guid userId)
     {
         try
@@ -462,6 +465,51 @@ public class PromotionService : IPromotionService
         catch (Exception ex)
         {
             _loggerService.Error($"[GetClaimedPromotionsByUserAsync] Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<PromotionResponseDto>> GetUnclaimedPromotionsByUserAsync(Guid? userId = null)
+    {
+        try
+        {
+            var actualUserId = userId ?? _claimsService.GetCurrentUserId;
+
+            _loggerService.Info($"[GetUnclaimedPromotionsByUserAsync] Getting unclaimed promotions for user {actualUserId}");
+
+            // Get all non-deleted promotions
+            var allPromotions = await _unitOfWork.Promotions
+                .GetQueryable()
+                .Where(p => !p.IsDeleted)
+                .ToListAsync();
+
+            // Get all claimed promotion IDs for this user
+            var claimedPromotionIds = await _unitOfWork.ClaimedPromotions
+                .GetQueryable()
+                .Where(cp => cp.UserId == actualUserId)
+                .Select(cp => cp.PromotionId)
+                .ToListAsync();
+
+            // Filter out claimed promotions
+            var unclaimedPromotions = allPromotions
+                .Where(p => !claimedPromotionIds.Contains(p.Id))
+                .Select(p => new PromotionResponseDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    DiscountValue = p.DiscountValue,
+                    Detail = p.Detail,
+                    EventId = p.EventId
+                })
+                .ToList();
+
+            _loggerService.Info($"[GetUnclaimedPromotionsByUserAsync] Found {unclaimedPromotions.Count} unclaimed promotions for user {actualUserId}");
+
+            return unclaimedPromotions;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"[GetUnclaimedPromotionsByUserAsync] Error: {ex.Message}");
             throw;
         }
     }
