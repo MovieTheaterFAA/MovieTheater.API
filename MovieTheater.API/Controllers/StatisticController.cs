@@ -88,5 +88,61 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
+
+        [HttpGet("monthly-ticket-type-statistics")]
+        [SwaggerOperation(
+            Summary = "Get monthly ticket type statistics",
+            Description = "Retrieves the number of online, offline, and guest (non-member) tickets for a specified month and year."
+        )]
+        [ProducesResponseType(typeof(ApiResult<MonthlyTicketTypeStatisticDto>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetMonthlyTicketTypeStatisticsAsync([FromQuery] MonthYearDto monthYear)
+        {
+            try
+            {
+                if (monthYear.Month < 1 || monthYear.Month > 12)
+                    return BadRequest(ApiResult<object>.Failure("400", "Month must be between 1 and 12."));
+                if (monthYear.Year < 2000 || monthYear.Year > DateTime.UtcNow.Year)
+                    return BadRequest(ApiResult<object>.Failure("400", "Year is out of valid range."));
+
+                var result = await _statisticService.GetMonthlyTicketTypeStatisticsAsync(monthYear);
+                return Ok(ApiResult<MonthlyTicketTypeStatisticDto>.Success(result, "200", "Monthly ticket type statistics retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpGet("monthly-food-and-drink-revenue")]
+        [SwaggerOperation(
+            Summary = "Get monthly food and drink revenue statistics",
+            Description = "Retrieves the total revenue and quantity sold for each food and drink item for a specified month and year."
+        )]
+        [ProducesResponseType(typeof(ApiResult<List<MonthlyFoodAndDrinkRevenueDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetMonthlyFoodAndDrinkRevenueAsync([FromQuery] MonthYearDto monthYear)
+        {
+            try
+            {
+                if (monthYear.Month < 1 || monthYear.Month > 12)
+                    return BadRequest(ApiResult<object>.Failure("400", "Month must be between 1 and 12."));
+                if (monthYear.Year < 2000 || monthYear.Year > DateTime.UtcNow.Year)
+                    return BadRequest(ApiResult<object>.Failure("400", "Year is out of valid range."));
+
+                var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+                return Ok(ApiResult<List<MonthlyFoodAndDrinkRevenueDto>>.Success(result, "200", "Monthly food and drink revenue statistics retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
     }
 }
