@@ -561,5 +561,62 @@ namespace MovieTheater.UnitTest.Controllers
             // Assert
             Assert.IsType<ObjectResult>(result);
         }
+
+        [Fact]
+        public async Task GetUnclaimedPromotionsByUser_Success_ReturnsOkResult()
+        {
+            // Arrange
+            var promotions = new List<PromotionResponseDto>
+    {
+        new PromotionResponseDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "Unclaimed Promotion 1",
+            DiscountValue = 0.1m,
+            Detail = "Detail 1",
+            EventId = Guid.NewGuid(),
+            IsUsed = false
+        },
+        new PromotionResponseDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "Unclaimed Promotion 2",
+            DiscountValue = 0.2m,
+            Detail = "Detail 2",
+            EventId = Guid.NewGuid(),
+            IsUsed = false
+        }
+    };
+
+            _mockPromotionService.Setup(s => s.GetUnclaimedPromotionsByUserAsync())
+                .ReturnsAsync(promotions);
+
+            // Act
+            var result = await _controller.GetUnclaimedPromotionsByUser();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var apiResult = Assert.IsType<ApiResult<IEnumerable<PromotionResponseDto>>>(okResult.Value);
+            Assert.True(apiResult.IsSuccess);
+            var resultList = apiResult.Value.Data.ToList();
+            Assert.Equal(2, resultList.Count());
+            Assert.Equal("Unclaimed Promotion 1", resultList[0].Title);
+            Assert.Equal("Unclaimed Promotion 2", resultList[1].Title);
+            Assert.Equal("Unclaimed promotions retrieved successfully.", apiResult.Value.Message);
+        }
+
+        [Fact]
+        public async Task GetUnclaimedPromotionsByUser_ServiceThrowsException_ReturnsErrorResponse()
+        {
+            // Arrange
+            _mockPromotionService.Setup(s => s.GetUnclaimedPromotionsByUserAsync())
+                .ThrowsAsync(new Exception("Test exception"));
+
+            // Act
+            var result = await _controller.GetUnclaimedPromotionsByUser();
+
+            // Assert
+            Assert.IsType<ObjectResult>(result);
+        }
     }
 }
