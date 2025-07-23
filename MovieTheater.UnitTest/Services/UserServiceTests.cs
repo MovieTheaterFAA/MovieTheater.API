@@ -342,6 +342,50 @@ namespace MovieTheater.UnitTest.Services
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
         }
 
+        [Fact]
+        public async Task UpdateUserInfo_WhenPhoneNumberChanged_UpdatesTicketsGuestPhoneNumber()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var oldPhone = "1234567890";
+            var newPhone = "0987654321";
+            var user = new User
+            {
+                Id = userId,
+                FullName = "Original Name",
+                PhoneNumber = oldPhone
+            };
+            var updateDto = new UserUpdateDto
+            {
+                PhoneNumber = newPhone
+            };
+
+            _mockUserRepository.Setup(repo => repo.GetByIdAsync(userId))
+                .ReturnsAsync(user);
+
+            // Mock ticket repository and tickets
+            var ticket = new Ticket { GuestPhoneNumber = oldPhone };
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketsRepository = new Mock<IGenericRepository<Ticket>>();
+            mockTicketsRepository.Setup(repo => repo.GetQueryable())
+                .Returns(tickets.AsQueryable());
+            mockTicketsRepository.Setup(repo => repo.Update(It.IsAny<Ticket>()))
+                .ReturnsAsync(true);
+            _mockUnitOfWork.Setup(uow => uow.Tickets)
+                .Returns(mockTicketsRepository.Object);
+
+            // Act
+            var result = await _userService.UpdateUserInfo(userId, updateDto);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(newPhone, result.PhoneNumber);
+            Assert.Equal(newPhone, ticket.GuestPhoneNumber);
+            mockTicketsRepository.Verify(repo => repo.Update(It.Is<Ticket>(t => t.GuestPhoneNumber == newPhone)), Times.Once);
+            _mockUserRepository.Verify(repo => repo.Update(It.Is<User>(u => u.PhoneNumber == newPhone)), Times.Once);
+            _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
+        }
+
         #endregion
     }
 }

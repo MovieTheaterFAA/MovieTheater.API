@@ -239,6 +239,77 @@ namespace MovieTheater.UnitTest.Services
             Assert.False(result);
         }
 
+        [Fact]
+        public void GetEffectiveUserId_WhenImpersonatingButIdInvalid_ReturnsCurrentUserId()
+        {
+            // Arrange
+            var currentUserId = Guid.NewGuid();
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("Id", "not-a-guid");
+            _mockClaimsService.Setup(c => c.GetCurrentUserId).Returns(currentUserId);
+
+            // Act
+            var result = _service.GetEffectiveUserId();
+
+            // Assert
+            Assert.Equal(currentUserId, result);
+        }
+
+        [Fact]
+        public void GetImpersonatedBy_WhenImpersonatingButAdminIdInvalid_ReturnsNull()
+        {
+            // Arrange
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("AdminIdOriginal", "not-a-guid");
+
+            // Act
+            var result = _service.GetImpersonatedBy();
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void IsImpersonating_WhenSessionValueIsNotTrue_ReturnsFalse()
+        {
+            // Arrange
+            SetupSessionTryGetValue("IsImpersonating", "false");
+
+            // Act
+            var result = _service.IsImpersonating();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task StopImpersonationAsync_WhenImpersonatingButAdminIdOriginalMissing_ReturnsFalse()
+        {
+            // Arrange
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("AdminIdOriginal", null!);
+
+            // Act
+            var result = await _service.StopImpersonationAsync();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task StopImpersonationAsync_WhenImpersonatingButAdminIdOriginalEmpty_ReturnsFalse()
+        {
+            // Arrange
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("AdminIdOriginal", "");
+
+            // Act
+            var result = await _service.StopImpersonationAsync();
+
+            // Assert
+            Assert.False(result);
+        }
+
         private void SetupSessionTryGetValue(string key, string value)
         {
             if (value == null)
