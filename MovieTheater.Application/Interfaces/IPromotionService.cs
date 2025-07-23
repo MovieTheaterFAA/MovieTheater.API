@@ -23,6 +23,6 @@ namespace MovieTheater.Application.Interfaces
 
         Task<IEnumerable<PromotionResponseDto>> GetClaimedPromotionsByUserAsync(Guid userId);
 
-        Task<IEnumerable<PromotionResponseDto>> GetUnclaimedPromotionsByUserAsync(Guid? userId = null);
+        Task<IEnumerable<PromotionResponseDto>> GetUnclaimedPromotionsByUserAsync();
     }
 }
