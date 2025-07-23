@@ -213,6 +213,53 @@ namespace MovieTheater.Application.Services
             }
         }
 
+        public async Task<List<ShowTimeSeatDto>> GetShowTimeSeatStatusAsync(Guid showTimeId)
+        {
+            try
+            {
+                CleanupExpiredHolds();
+                var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+                if (showTime == null)
+                {
+                    _loggerService.Warn($"Showtime not found for showTimeId: {showTimeId}");
+                    throw new KeyNotFoundException("Showtime not found.");
+                }
+
+                var seats = await _unitOfWork.Seats.GetQueryable()
+                    .Where(s => s.CinemaRoomId == showTime.CinemaRoomId)
+                    .ToListAsync();
+
+                var showTimeSeats = await _unitOfWork.ShowTimeSeats.GetQueryable()
+                    .Where(sts => sts.ShowTimeId == showTimeId)
+                    .ToListAsync();
+
+                var result = seats.Select(seat =>
+                {
+                    var sts = showTimeSeats.FirstOrDefault(x => x.SeatId == seat.Id);
+                    return new ShowTimeSeatDto
+                    {
+                        SeatId = seat.Id,
+                        Row = seat.Row,
+                        Number = seat.Number,
+                        Type = seat.Type,
+                        Status = sts?.Status ?? (_holdingSeats.Any(h =>
+                                                h.Key.seatId == seat.Id &&
+                                                h.Key.showTimeId == showTimeId &&
+                                                h.Value.expireAt > DateTime.UtcNow)
+                                                ? SeatStatus.Holding : SeatStatus.Available)
+                    };
+                }).ToList();
+
+                _loggerService.Success($"Broadcasted seat status for showtime {showTimeId} with {result.Count} seats.");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Error broadcasting seat status for showtime {showTimeId}: {ex.Message}");
+                throw new InvalidOperationException("An error occurred while broadcasting seat status.", ex);
+            }
+        }
+
         //================== User & Admin Methods ===================///
         public async Task<List<ShowTimeSeatDto>> GetSeatsByShowTimeAsync(Guid showTimeId)
         {
