@@ -328,6 +328,107 @@ namespace MovieTheater.UnitTest.Services
             }
         }
 
+        [Fact]
+        public void GetEffectiveUserId_WhenSessionIsNull_ReturnsCurrentUserId()
+        {
+            // Arrange
+            var currentUserId = Guid.NewGuid();
+            _mockContext.Setup(c => c.Session).Returns((ISession)null!);
+            _mockClaimsService.Setup(c => c.GetCurrentUserId).Returns(currentUserId);
+
+            // Act
+            var result = _service.GetEffectiveUserId();
+
+            // Assert
+            Assert.Equal(currentUserId, result);
+        }
+
+        [Fact]
+        public void GetEffectiveUserId_WhenImpersonatingButIdIsNull_ReturnsCurrentUserId()
+        {
+            // Arrange
+            var currentUserId = Guid.NewGuid();
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("Id", null!);
+            _mockClaimsService.Setup(c => c.GetCurrentUserId).Returns(currentUserId);
+
+            // Act
+            var result = _service.GetEffectiveUserId();
+
+            // Assert
+            Assert.Equal(currentUserId, result);
+        }
+
+        [Fact]
+        public void GetEffectiveUserId_WhenImpersonatingButIdIsEmpty_ReturnsCurrentUserId()
+        {
+            // Arrange
+            var currentUserId = Guid.NewGuid();
+            SetupSessionTryGetValue("IsImpersonating", "true");
+            SetupSessionTryGetValue("Id", "");
+            _mockClaimsService.Setup(c => c.GetCurrentUserId).Returns(currentUserId);
+
+            // Act
+            var result = _service.GetEffectiveUserId();
+
+            // Assert
+            Assert.Equal(currentUserId, result);
+        }
+
+        [Fact]
+        public void GetImpersonatedBy_WhenSessionIsNull_ReturnsNull()
+        {
+            // Arrange
+            _mockContext.Setup(c => c.Session).Returns((ISession)null!);
+
+            // Act
+            var result = _service.GetImpersonatedBy();
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void IsImpersonating_WhenSessionIsNull_ReturnsFalse()
+        {
+            // Arrange
+            _mockContext.Setup(c => c.Session).Returns((ISession)null!);
+
+            // Act
+            var result = _service.IsImpersonating();
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task StartImpersonationAsync_WhenAdminIsNull_ThrowsForbiddenException()
+        {
+            // Arrange
+            var adminId = Guid.NewGuid();
+            var targetUserId = Guid.NewGuid();
+            _mockClaimsService.Setup(c => c.GetCurrentUserId).Returns(adminId);
+            _mockUnitOfWork.Setup(u => u.Users.GetByIdAsync(adminId, It.IsAny<System.Linq.Expressions.Expression<Func<User, object>>[]>()))
+                .ReturnsAsync((User)null!);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() =>
+                _service.StartImpersonationAsync(targetUserId, "Testing"));
+        }
+
+        [Fact]
+        public async Task StopImpersonationAsync_WhenSessionIsNull_ReturnsFalse()
+        {
+            // Arrange
+            _mockContext.Setup(c => c.Session).Returns((ISession)null!);
+
+            // Act
+            var result = await _service.StopImpersonationAsync();
+
+            // Assert
+            Assert.False(result);
+        }
+
         private delegate void TryGetValueCallback(string key, out byte[] value);
     }
 }

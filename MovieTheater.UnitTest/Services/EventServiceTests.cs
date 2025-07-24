@@ -641,5 +641,251 @@ namespace MovieTheater.UnitTest.Services
                 s.Contains("Error while cleaning up expired events"))), Times.Once);
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Never);
         }
+
+        [Fact]
+        public async Task GetAllEventsAsync_SortByStartTime_ReturnsSorted()
+        {
+            // Arrange
+            var events = new List<Event>
+    {
+        new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow.AddDays(2), EndTime = DateTime.UtcNow.AddDays(3), IsDeleted = false, Promotions = new List<Promotion>() },
+        new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow.AddDays(1), EndTime = DateTime.UtcNow.AddDays(4), IsDeleted = false, Promotions = new List<Promotion>() }
+    };
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
+            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+
+            // Act
+            var result = await _eventService.GetAllEventsAsync(null, "starttime", false, 1, 10);
+
+            // Assert
+            Assert.Equal(events[1].Name, result.Items[0].Name); // B có StartTime sớm hơn
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_SortByEndTimeDescending_ReturnsSorted()
+        {
+            // Arrange
+            var events = new List<Event>
+    {
+        new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(1), IsDeleted = false, Promotions = new List<Promotion>() },
+        new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(2), IsDeleted = false, Promotions = new List<Promotion>() }
+    };
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
+            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+
+            // Act
+            var result = await _eventService.GetAllEventsAsync(null, "endtime", true, 1, 10);
+
+            // Assert
+            Assert.Equal(events[1].Name, result.Items[0].Name); // B có EndTime muộn hơn
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_SortByNull_UsesDefaultSort()
+        {
+            // Arrange
+            var events = new List<Event>
+    {
+        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() },
+        new Event { Id = Guid.NewGuid(), Name = "B", IsDeleted = false, Promotions = new List<Promotion>() }
+    };
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
+            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+
+            // Act
+            var result = await _eventService.GetAllEventsAsync(null, null, false, 1, 10);
+
+            // Assert
+            Assert.Equal(events[0].Id, result.Items[0].Id); // Default sort by Id
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_SearchIsNullOrWhitespace_ReturnsAll()
+        {
+            // Arrange
+            var events = new List<Event>
+    {
+        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() }
+    };
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
+            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+
+            // Act
+            var result1 = await _eventService.GetAllEventsAsync(null, "name", false, 1, 10);
+            var result2 = await _eventService.GetAllEventsAsync("", "name", false, 1, 10);
+            var result3 = await _eventService.GetAllEventsAsync("   ", "name", false, 1, 10);
+
+            // Assert
+            Assert.Single(result1.Items);
+            Assert.Single(result2.Items);
+            Assert.Single(result3.Items);
+        }
+
+        [Fact]
+        public async Task GetAllEventsAsync_EventWithNullPromotions_DoesNotThrow()
+        {
+            // Arrange
+            var events = new List<Event>
+    {
+        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = null! }
+    };
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
+            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+
+            // Act
+            var result = await _eventService.GetAllEventsAsync(null, "name", false, 1, 10);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result.Items[0].Promotions);
+        }
+
+        [Fact]
+        public async Task AddEventAsync_WithNullDetail_DoesNotThrow()
+        {
+            // Arrange
+            var eventDto = new EventRequestDto
+            {
+                Name = "Test Event",
+                StartTime = DateTime.UtcNow.AddDays(1),
+                EndTime = DateTime.UtcNow.AddDays(7),
+                Detail = null!
+            };
+            _mockEventRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<Event, bool>>>())).ReturnsAsync((Event)null!);
+            _mockEventRepository.Setup(repo => repo.AddAsync(It.IsAny<Event>())).ReturnsAsync((Event e) => e);
+
+            // Act
+            var result = await _eventService.AddEventAsync(eventDto);
+
+            // Assert
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public async Task AddEventAsync_WhenUnexpectedException_Throws()
+        {
+            // Arrange
+            var eventDto = new EventRequestDto
+            {
+                Name = "Test Event",
+                StartTime = DateTime.UtcNow.AddDays(1),
+                EndTime = DateTime.UtcNow.AddDays(7),
+                Detail = "Test"
+            };
+            _mockEventRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<Event, bool>>>())).ReturnsAsync((Event)null!);
+            _mockEventRepository.Setup(repo => repo.AddAsync(It.IsAny<Event>())).ReturnsAsync((Event e) => e);
+            _mockUnitOfWork.Setup(uow => uow.SaveChangesAsync()).ThrowsAsync(new Exception("Unexpected"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _eventService.AddEventAsync(eventDto));
+            // Không verify logger.Error vì code không log cho Exception thường
+        }
+
+        [Fact]
+        public async Task DeleteEventByIdAsync_WithNullPromotions_DoesNotThrow()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var eventEntity = new Event
+            {
+                Id = eventId,
+                Name = "Test Event",
+                IsDeleted = false,
+                Promotions = null!
+            };
+            _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(eventEntity);
+
+            // Act
+            var result = await _eventService.DeleteEventByIdAsync(eventId);
+
+            // Assert
+            Assert.True(result);
+            _mockPromotionRepository.Verify(repo => repo.SoftRemoveRange(It.IsAny<List<Promotion>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteEventByIdAsync_AlreadyDeletedEvent_ReturnsFalse()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var eventEntity = new Event
+            {
+                Id = eventId,
+                Name = "Test Event",
+                IsDeleted = true,
+                Promotions = new List<Promotion>()
+            };
+            _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(eventEntity);
+
+            // Act
+            var result = await _eventService.DeleteEventByIdAsync(eventId);
+
+            // Assert
+            Assert.False(result);
+            _mockLoggerService.Verify(logger => logger.Warn(It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateEventAsync_EventIsDeleted_ThrowsException()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var eventEntity = new Event
+            {
+                Id = eventId,
+                Name = "Test Event",
+                IsDeleted = true
+            };
+            var updateDto = new EventUpdateDto { Name = "New Name" };
+            _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(eventEntity);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _eventService.UpdateEventAsync(eventId, updateDto));
+            _mockLoggerService.Verify(logger => logger.Warn(It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateEventAsync_ImageAndDetailUnchanged_DoesNotUpdate()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var eventEntity = new Event
+            {
+                Id = eventId,
+                Name = "Test Event",
+                Detail = "Detail",
+                Image = "img.jpg",
+                IsDeleted = false
+            };
+            var updateDto = new EventUpdateDto { Image = "img.jpg", Detail = "Detail" };
+            _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(eventEntity);
+
+            // Act
+            var result = await _eventService.UpdateEventAsync(eventId, updateDto);
+
+            // Assert
+            Assert.NotNull(result);
+            _mockEventRepository.Verify(repo => repo.Update(It.IsAny<Event>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateEventAsync_WhenUnexpectedException_ThrowsAndLogs()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var eventEntity = new Event
+            {
+                Id = eventId,
+                Name = "Test Event",
+                IsDeleted = false
+            };
+            var updateDto = new EventUpdateDto { Name = "New Name" };
+            _mockEventRepository.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(eventEntity);
+            _mockEventRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<Event, bool>>>())).ThrowsAsync(new Exception("Unexpected"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _eventService.UpdateEventAsync(eventId, updateDto));
+            _mockLoggerService.Verify(logger => logger.Error(It.IsAny<string>()), Times.Once);
+        }
     }
 }

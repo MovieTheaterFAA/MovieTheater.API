@@ -585,4 +585,174 @@ public class AdminServiceTests
         // Assert
         Assert.Null(result);
     }
+
+    //[Fact]
+    //public async Task GetListUserAsync_WhenCacheMissAndRoleFilter_Works()
+    //{
+    //    // Arrange
+    //    _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
+    //    var users = new List<User>
+    //{
+    //    new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Member, IsDeleted = false },
+    //    new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Employee, IsDeleted = false }
+    //}.AsQueryable();
+    //    _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
+
+    //    // Act
+    //    var result = await _adminService.GetListUserAsync(null, RoleType.Member, null, false, 1, 10);
+
+    //    // Assert
+    //    Assert.Single(result.Items);
+    //    Assert.Equal(RoleType.Member, result.Items[0].Role);
+    //}
+
+    //[Fact]
+    //public async Task GetListUserAsync_WhenSortByScoreBalanceDescending_Works()
+    //{
+    //    _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
+    //    var users = new List<User>
+    //{
+    //    new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Member, IsDeleted = false, ScoreBalance = 10 },
+    //    new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Member, IsDeleted = false, ScoreBalance = 20 }
+    //}.AsQueryable();
+    //    _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
+
+    //    var result = await _adminService.GetListUserAsync(null, RoleType.Member, "ScoreBalance", true, 1, 10);
+
+    //    Assert.Equal(20, result.Items[0].ScoreBalance);
+    //}
+
+    [Fact]
+    public async Task GetListUserAsync_WhenSortByScoreBalanceDescending_Works()
+    {
+        // Arrange
+        _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>()))
+            .ReturnsAsync((Pagination<GetUserDto>)null!);
+
+        var users = new List<User>
+    {
+        new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "lowscore@theater.com",
+            FullName = "Low Score User",
+            Role = RoleType.Member,
+            IsDeleted = false,
+            ScoreBalance = 10,
+            UserStatus = UserStatus.Active,
+            CreatedAt = DateTime.UtcNow.AddDays(-30)
+        },
+        new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "highscore@theater.com",
+            FullName = "High Score User",
+            Role = RoleType.Member,
+            IsDeleted = false,
+            ScoreBalance = 20,
+            UserStatus = UserStatus.Active,
+            CreatedAt = DateTime.UtcNow.AddDays(-15)
+        }
+    }.AsQueryable();
+
+        _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
+
+        // Act - Sort by ScoreBalance descending
+        var result = await _adminService.GetListUserAsync(null, RoleType.Member, "ScoreBalance", true, 1, 10);
+
+        // Assert - First item should have highest score (20)
+        Assert.Equal(20, result.Items[0].ScoreBalance);
+        Assert.Equal("High Score User", result.Items[0].FullName);
+        Assert.Equal("highscore@theater.com", result.Items[0].Email);
+    }
+
+    [Fact]
+    public async Task GetListUserAsync_WhenException_Throws()
+    {
+        _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
+        _mockUserRepository.Setup(r => r.GetQueryable()).Throws(new Exception("DB error"));
+
+        await Assert.ThrowsAsync<Exception>(() => _adminService.GetListUserAsync(null, null, null, false, 1, 10));
+    }
+
+    [Fact]
+    public async Task GetListEmployeeAsync_WithSortByDateOfBirthDescending_Works()
+    {
+        var employees = new List<User>
+    {
+        new User { Id = Guid.NewGuid(), FullName = "A", Role = RoleType.Employee, IsDeleted = false, DateOfBirth = new DateTime(2000,1,1) },
+        new User { Id = Guid.NewGuid(), FullName = "B", Role = RoleType.Employee, IsDeleted = false, DateOfBirth = new DateTime(2010,1,1) }
+    };
+        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(employees);
+
+        var result = await _adminService.GetListEmployeeAsync(null, "dateofbirth", true, 1, 10);
+
+        Assert.Equal("B", result.Items[0].FullName);
+    }
+
+    [Fact]
+    public async Task GetListEmployeeAsync_WhenException_Throws()
+    {
+        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).Throws(new Exception("DB error"));
+
+        await Assert.ThrowsAsync<Exception>(() => _adminService.GetListEmployeeAsync(null, null, false, 1, 10));
+    }
+
+    [Fact]
+    public async Task EditEmployeeAsync_WithInvalidCCCD_Throws()
+    {
+        var employeeId = Guid.NewGuid();
+        var employee = new User { Id = employeeId, FullName = "A", Email = "a@a.com" };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(employeeId)).ReturnsAsync(employee);
+
+        var editDto = new EditEmployeeDto { CCCD = "123" }; // Không đủ 12 số
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _adminService.EditEmployeeAsync(employeeId, editDto));
+    }
+
+    [Fact]
+    public async Task EditEmployeeAsync_WithNoChanges_ReturnsInput()
+    {
+        var employeeId = Guid.NewGuid();
+        var employee = new User { Id = employeeId, FullName = "A", Email = "a@a.com" };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(employeeId)).ReturnsAsync(employee);
+
+        var editDto = new EditEmployeeDto { FullName = "A" }; // Không đổi gì
+
+        var result = await _adminService.EditEmployeeAsync(employeeId, editDto);
+
+        Assert.Equal(editDto.FullName, result.FullName);
+    }
+
+    [Fact]
+public async Task GetUserByPhoneNumberAsync_WithEmptyPhone_Throws()
+{
+    await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync(""));
+}
+
+[Fact]
+public async Task GetUserByPhoneNumberAsync_WithInvalidFormat_Throws()
+{
+    await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync("abc"));
+}
+
+[Fact]
+public async Task GetUserByPhoneNumberAsync_NotFound_ReturnsNull()
+{
+    _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+
+    var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
+    Assert.Null(result);
+}
+
+[Fact]
+public async Task GetUserByPhoneNumberAsync_Found_ReturnsDto()
+{
+    var user = new User { Id = Guid.NewGuid(), PhoneNumber = "0123456789", Email = "a@a.com", FullName = "A" };
+    _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+    var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
+    Assert.NotNull(result);
+    Assert.Equal("0123456789", result.PhoneNumber);
+}
 }

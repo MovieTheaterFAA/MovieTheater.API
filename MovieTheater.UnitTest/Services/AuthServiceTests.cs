@@ -618,5 +618,172 @@ public class AuthServiceTests
         _mockEmailService.Verify(email => email.SendEmployeeCredentialsEmailAsync(
             It.IsAny<EmployeeCredentialsEmailDto>()), Times.Once);
     }
+
+    [Fact]
+    public async Task ResendOtpAsync_UserNotFound_ThrowsException()
+    {
+        // Arrange
+        var email = "notfound@example.com";
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _authService.ResendOtpAsync(email, OtpPurpose.Register));
+    }
+
+    [Fact]
+    public async Task ResendOtpAsync_UserAlreadyVerified_ThrowsException()
+    {
+        // Arrange
+        var email = "verified@example.com";
+        var user = new User { Email = email, IsEmailVerified = true };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _authService.ResendOtpAsync(email, OtpPurpose.Register));
+    }
+
+    [Fact]
+    public async Task ResendOtpAsync_ForgotPassword_SendsForgotPasswordOtp()
+    {
+        // Arrange
+        var email = "forgot@example.com";
+        var user = new User { Email = email, IsEmailVerified = true };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act
+        var result = await _authService.ResendOtpAsync(email, OtpPurpose.ForgotPassword);
+
+        // Assert
+        Assert.True(result);
+        _mockEmailService.Verify(e => e.SendForgotPasswordOtpEmailAsync(It.Is<EmailRequestDto>(dto => dto.To == email)), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendForgotPasswordOtpAsync_UserFound_SendsEmail()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var user = new User { Email = email, IsEmailVerified = true };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act
+        var method = typeof(AuthService).GetMethod("SendForgotPasswordOtpAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var task = (Task<bool>)method.Invoke(_authService, new object[] { email })!;
+        var result = await task;
+
+        // Assert
+        Assert.True(result);
+        _mockEmailService.Verify(e => e.SendForgotPasswordOtpEmailAsync(It.Is<EmailRequestDto>(dto => dto.To == email)), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendRegisterOtpAsync_UserAlreadyVerified_ThrowsException()
+    {
+        // Arrange
+        var email = "verified@example.com";
+        var user = new User { Email = email, IsEmailVerified = true };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act & Assert
+        var method = typeof(AuthService).GetMethod("SendRegisterOtpAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        await Assert.ThrowsAsync<Exception>(() => (Task<bool>)method.Invoke(_authService, new object[] { email })!);
+    }
+
+    [Fact]
+    public async Task SendRegisterOtpAsync_UserNotVerified_SendsEmail()
+    {
+        // Arrange
+        var email = "unverified@example.com";
+        var user = new User { Email = email, IsEmailVerified = false, FullName = "Test" };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act
+        var method = typeof(AuthService).GetMethod("SendRegisterOtpAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var task = (Task<bool>)method.Invoke(_authService, new object[] { email })!;
+        var result = await task;
+
+        // Assert
+        Assert.True(result);
+        _mockEmailService.Verify(e => e.SendOtpVerificationEmailAsync(It.Is<EmailRequestDto>(dto => dto.To == email)), Times.Once);
+    }
+
+    [Fact]
+    public async Task VerifyOtpAsync_OtpNotFound_ReturnsFalse()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var otp = "123456";
+        _mockUnitOfWork.Setup(uow => uow.OtpStorages.FirstOrDefaultAsync(It.IsAny<Expression<Func<OtpStorage, bool>>>())).ReturnsAsync((OtpStorage)null!);
+
+        // Act
+        var method = typeof(AuthService).GetMethod("VerifyOtpAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var task = (Task<bool>)method.Invoke(_authService, new object[] { email, otp, OtpPurpose.Register })!;
+        var result = await task;
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_UserNotFound_ReturnsFalseOrNull()
+    {
+        // Arrange
+        var email = "notfound@example.com";
+        var otp = "123456";
+        var newPassword = "NewPassword123!";
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+
+        // Act
+        var result = await _authService.ResetPasswordAsync(email, otp, newPassword);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_OtpInvalid_ThrowsException()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var otp = "123456";
+        var newPassword = "NewPassword123!";
+        var user = new User { Email = email, IsEmailVerified = true };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+
+        // Act
+        var result = await _authService.ResetPasswordAsync(email, otp, newPassword);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task EmployeeCreateCustomerAsync_EmailExists_ThrowsException()
+    {
+        // Arrange
+        var employeeId = Guid.NewGuid();
+        var customerDto = new AddCustomerDto
+        {
+            Email = "existing@example.com",
+            FullName = "Existing Customer",
+            PhoneNumber = "0123456789"
+        };
+        var existingUser = new User { Email = customerDto.Email };
+        _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(existingUser);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _authService.EmployeeCreateCustomerAsync(customerDto, employeeId));
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_UserNotFound_ThrowsException()
+    {
+        // Arrange
+        var refreshTokenDto = new TokenRefreshRequestDto { RefreshToken = "notfound" };
+        _mockUserRepository.Setup(repo => repo.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _authService.RefreshTokenAsync(refreshTokenDto, _mockConfiguration.Object));
+    }
 }
 

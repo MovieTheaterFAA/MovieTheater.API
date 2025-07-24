@@ -125,6 +125,12 @@ namespace MovieTheater.Application.Services
                     return false;
                 }
 
+                if (eventEntity.IsDeleted)
+                {
+                    _loggerService.Warn($"Event with ID {eventId} is already deleted.");
+                    return false;
+                }
+
                 var oldValue = new
                 {
                     eventEntity.IsDeleted
