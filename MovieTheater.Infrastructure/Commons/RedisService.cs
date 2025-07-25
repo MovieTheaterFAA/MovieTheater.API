@@ -49,7 +49,6 @@ namespace MovieTheater.Infrastructure.Commons
             }
         }
 
-        // New method to get keys by pattern
         public async Task<IEnumerable<string>> GetKeysByPatternAsync(string pattern)
         {
             var keys = new List<string>();
@@ -70,6 +69,16 @@ namespace MovieTheater.Infrastructure.Commons
             });
 
             return keys;
+        }
+
+        // Flushes all keys in all databases of the Redis server
+        public async Task FlushAllAsync()
+        {
+            foreach (var endpoint in _connection.GetEndPoints())
+            {
+                var server = _connection.GetServer(endpoint);
+                await server.FlushDatabaseAsync();
+            }
         }
     }
 }
