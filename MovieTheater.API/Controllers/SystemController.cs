@@ -6,6 +6,7 @@ using MovieTheater.Application.Utils;
 using MovieTheater.Domain;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
+using MovieTheater.Infrastructure.Interfaces;
 
 namespace MovieTheater.API.Controllers;
 
@@ -15,11 +16,13 @@ public class SystemController : ControllerBase
 {
     private readonly MovieTheaterDbContext _context;
     private readonly ILoggerService _logger;
+    private readonly IRedisService _redisService;
 
-    public SystemController(MovieTheaterDbContext context, ILoggerService logger, IAuditLogService auditLogService)
+    public SystemController(MovieTheaterDbContext context, ILoggerService logger, IAuditLogService auditLogService, IRedisService redisService)
     {
         _context = context;
         _logger = logger;
+        _redisService = redisService;
     }
 
     [HttpPost("seed-all-data")]
@@ -28,6 +31,7 @@ public class SystemController : ControllerBase
         try
         {
             await ClearDatabase(_context);
+            await _redisService.FlushAllAsync();
 
             await SeedUserAsync();
             await SeedMovieAsync();
@@ -199,7 +203,7 @@ public class SystemController : ControllerBase
     {
         Name = "Ne Zha 2",
         FromDate = new DateTime(2025, 1, 29, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 31, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Lü Yanting", "Han Mo" },
         ActorsUrl = new List<string>
         { "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fyanting-lu.jpg&version_id=null",
@@ -220,7 +224,7 @@ public class SystemController : ControllerBase
     {
         Name = "A Minecraft Movie",
         FromDate = new DateTime(2025, 4, 4, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Jason Momoa", "Jack Black" },
         ActorsUrl = new List<string>{
             "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fjason-momoa.jpg&version_id=null",
@@ -241,7 +245,7 @@ public class SystemController : ControllerBase
     {
         Name = "Lilo & Stitch",
         FromDate = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Maia Kealoha", "Zach Galifianakis" },
         ActorsUrl = new List<string>{ "", "" },
         Director = "Dean Fleischer Camp",
@@ -257,7 +261,7 @@ public class SystemController : ControllerBase
     {
         Name = "Detective Chinatown 1900",
         FromDate = new DateTime(2025, 2, 14, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Wang Baoqiang", "Liu Haoran" },
         ActorsUrl = new List<string>{ "", "" },
         Director = "Chen Sicheng",
@@ -273,7 +277,7 @@ public class SystemController : ControllerBase
     {
         Name = "Mission: Impossible – The Final Reckoning",
         FromDate = new DateTime(2025, 5, 23, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Tom Cruise", "Hayley Atwell" },
         ActorsUrl = new List<string>{
             "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Ftom-cruise.jpg&version_id=null",
@@ -293,7 +297,7 @@ public class SystemController : ControllerBase
     {
         Name = "Captain America: Brave New World",
         FromDate = new DateTime(2025, 5, 2, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 30, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 30, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Anthony Mackie", "Liv Tyler" },
         ActorsUrl = new List<string>{
             "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fanthony-mackie.jpg&version_id=null",
@@ -314,7 +318,7 @@ public class SystemController : ControllerBase
     {
         Name = "Thunderbolts",
         FromDate = new DateTime(2025, 4, 25, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Sebastian Stan", "Florence Pugh" },
         ActorsUrl = new List<string>{
             "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Fsebastian-stan.jpg&version_id=null",
@@ -335,7 +339,7 @@ public class SystemController : ControllerBase
     {
         Name = "Sinners",
         FromDate = new DateTime(2025, 3, 20, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Kiernan Shipka", "Jena Malone" },
         ActorsUrl = new List<string>{ "", "" },
         Director = "Ryan Coogler",
@@ -351,7 +355,7 @@ public class SystemController : ControllerBase
     {
         Name = "Final Destination Bloodlines",
         FromDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 7, 20, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Tony Todd", "Brec Bassinger" },
         ActorsUrl = new List<string>{
             "https://minio.fpt-devteam.fun/api/v1/buckets/movietheater-bucket/objects/download?preview=true&prefix=movie-actor%2Ftony-todd.jpg&version_id=null",
@@ -372,7 +376,7 @@ public class SystemController : ControllerBase
     {
         Name = "Snow White",
         FromDate = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-        ToDate = new DateTime(2025, 6, 15, 0, 0, 0, DateTimeKind.Utc),
+        ToDate = new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc),
         Actors = new List<string>{ "Rachel Zegler", "Gal Gadot" },
         ActorsUrl = new List<string>{ "", "" },
         Director = "Marc Webb",
