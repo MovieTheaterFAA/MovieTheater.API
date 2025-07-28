@@ -1,18 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MockQueryable;
 using Moq;
-using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Application.Services;
 using MovieTheater.Domain.DTOs.ShowTimeDTOs;
 using MovieTheater.Domain.Entities;
-using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
-using Xunit;
 using static MovieTheater.Domain.DTOs.ShowTimeDTOs.BatchShowtimeRequestDto;
 
 namespace MovieTheater.UnitTest.Services
@@ -297,6 +290,257 @@ namespace MovieTheater.UnitTest.Services
 
             Assert.NotNull(result);
             Assert.Single(result);
+        }
+
+        [Fact]
+        public async Task AddBatchShowTimesAsync_SuccessfullyAddsShowTimes()
+        {
+            // Arrange
+            var nextWeek = DateTime.UtcNow.Date.AddDays(7 - (int)DateTime.UtcNow.DayOfWeek);
+            var movieId = Guid.NewGuid();
+            var roomId = Guid.NewGuid();
+            var dto = new BatchShowTimeRequestDto
+            {
+                CinemaRoomId = roomId,
+                ShowTimes = new List<BatchShowtimeRequestDto.SingleShowTimeDto>
+                {
+                    new() { MovieId = movieId, StartTime = nextWeek.AddHours(10) },
+                    new() { MovieId = movieId, StartTime = nextWeek.AddHours(14) }
+                }
+            };
+
+            // Mock cinema room
+            _mockRoomRepo.Setup(r => r.GetByIdAsync(dto.CinemaRoomId))
+                .ReturnsAsync(new CinemaRoom { Id = dto.CinemaRoomId });
+
+            // Mock movie repository - this is used in the validation and creation phases
+            var movies = new List<Movie>
+            {
+                new Movie { Id = movieId, RunningTime = 120 }
+            };
+            _mockMovieRepo.Setup(m => m.GetQueryable())
+                .Returns(movies.AsQueryable().BuildMock());
+
+            // Mock ShowTime repository for overlap validation
+            // This is critical - GetShowTimesByRoomAndDateAsync uses GetQueryable() directly
+            var existingShowTimes = new List<ShowTime>(); // Empty list = no existing showtimes = no overlaps
+            _mockShowTimeRepo.Setup(r => r.GetQueryable())
+                .Returns(existingShowTimes.AsQueryable().BuildMock());
+
+            // Mock repository operations
+            _mockShowTimeRepo.Setup(r => r.AddRangeAsync(It.IsAny<List<ShowTime>>()))
+                .Returns(Task.CompletedTask);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
+                .ReturnsAsync(1);
+            _mockAuditLogRepo.Setup(a => a.AddAsync(It.IsAny<AuditLog>()))
+                .ReturnsAsync(new AuditLog());
+
+            // Mock Redis operations
+            _mockRedisService.Setup(r => r.RemoveByPatternAsync(It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.AddBatchShowTimesAsync(dto);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Count);
+            Assert.All(result, st =>
+            {
+                Assert.Equal(movieId, st.MovieId);
+                Assert.Equal(dto.CinemaRoomId, st.CinemaRoomId);
+                Assert.Equal(TimeSpan.FromMinutes(135), st.Duration); // 120 + 15 minutes
+            });
+
+            // Verify repository calls
+            _mockShowTimeRepo.Verify(r => r.AddRangeAsync(It.Is<List<ShowTime>>(st => st.Count == 2)), Times.Once);
+            _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Exactly(2)); // Once for showtimes, once for audit log
+            _mockAuditLogRepo.Verify(a => a.AddAsync(It.IsAny<AuditLog>()), Times.Once);
+
+            // Verify Redis cache invalidation calls
+            _mockRedisService.Verify(r => r.RemoveByPatternAsync(It.IsAny<string>()), Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public async Task UpdateShowTimeAsync_SuccessfullyUpdatesShowTime()
+        {
+            // Arrange
+            var showTimeId = Guid.NewGuid();
+            var movieId = Guid.NewGuid();
+            var roomId = Guid.NewGuid();
+            var newShowDate = DateTime.UtcNow.AddDays(1);
+
+            var dto = new UpdateShowtimeDto
+            {
+                MovieId = movieId,
+                CinemaRoomId = roomId,
+                ShowDate = newShowDate
+            };
+
+            var existingShowTime = new ShowTime
+            {
+                Id = showTimeId,
+                MovieId = Guid.NewGuid(),
+                CinemaRoomId = Guid.NewGuid(),
+                ShowDate = DateTime.UtcNow,
+                Duration = TimeSpan.FromMinutes(100),
+                IsDeleted = false
+            };
+
+            _mockShowTimeRepo.Setup(r => r.GetByIdAsync(showTimeId)).ReturnsAsync(existingShowTime);
+            _mockMovieRepo.Setup(m => m.GetByIdAsync(movieId)).ReturnsAsync(new Movie { Id = movieId, RunningTime = 150 });
+            _mockRoomRepo.Setup(r => r.GetByIdAsync(roomId)).ReturnsAsync(new CinemaRoom { Id = roomId });
+
+            // Mock no overlapping showtimes
+            _mockShowTimeRepo.Setup(r => r.GetQueryable()).Returns(new List<ShowTime>().AsQueryable().BuildMock());
+            _mockShowTimeRepo.Setup(r => r.Update(It.IsAny<ShowTime>())).ReturnsAsync(true);
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+            // Act
+            var result = await _service.UpdateShowTimeAsync(showTimeId, dto);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(showTimeId, result.Id);
+            Assert.Equal(movieId, result.MovieId);
+            Assert.Equal(roomId, result.CinemaRoomId);
+            Assert.Equal(newShowDate, result.ShowDate);
+            Assert.Equal(TimeSpan.FromMinutes(165), result.Duration); // 150 + 15 minutes
+
+            _mockShowTimeRepo.Verify(r => r.Update(It.IsAny<ShowTime>()), Times.Once);
+            _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetShowTimesByDateAsync_FetchesFromDatabaseWhenCacheMiss()
+        {
+            // Arrange
+            var date = DateTime.UtcNow.Date;
+            var movieId = Guid.NewGuid();
+            var roomId = Guid.NewGuid();
+            var showTimes = new List<ShowTime>
+            {
+                new ShowTime
+                {
+                    Id = Guid.NewGuid(),
+                    MovieId = movieId,
+                    CinemaRoomId = roomId,
+                    ShowDate = date.AddHours(10),
+                    Duration = TimeSpan.FromMinutes(120),
+                    IsDeleted = false
+                }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<List<ShowtimeResponseDTO>>(It.IsAny<string>()))
+                .ReturnsAsync((List<ShowtimeResponseDTO>)null!);
+            _mockShowTimeRepo.Setup(r => r.GetQueryable()).Returns(showTimes.AsQueryable().BuildMock());
+            _mockRedisService.Setup(r => r.SetAsync(It.IsAny<string>(), It.IsAny<List<ShowtimeResponseDTO>>(), It.IsAny<TimeSpan>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.GetShowTimesByDateAsync(date, movieId, roomId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(movieId, result[0].MovieId);
+            Assert.Equal(roomId, result[0].CinemaRoomId);
+
+            _mockRedisService.Verify(r => r.SetAsync(It.IsAny<string>(), It.IsAny<List<ShowtimeResponseDTO>>(), TimeSpan.FromMinutes(5)), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetShowTimesByDateAsync_ReturnsEmptyListWhenNoShowTimesFound()
+        {
+            // Arrange
+            var date = DateTime.UtcNow.Date;
+
+            _mockRedisService.Setup(r => r.GetAsync<List<ShowtimeResponseDTO>>(It.IsAny<string>()))
+                .ReturnsAsync((List<ShowtimeResponseDTO>)null!);
+            _mockShowTimeRepo.Setup(r => r.GetQueryable()).Returns(new List<ShowTime>().AsQueryable().BuildMock());
+
+            // Act
+            var result = await _service.GetShowTimesByDateAsync(date, null, null);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task GetShowTimesByMovieAndDateAsync_FetchesFromDatabaseWhenCacheMiss()
+        {
+            // Arrange
+            var movieId = Guid.NewGuid();
+            var date = DateTime.UtcNow.Date;
+            var showTimes = new List<ShowTime>
+            {
+                new ShowTime
+                {
+                    Id = Guid.NewGuid(),
+                    MovieId = movieId,
+                    CinemaRoomId = Guid.NewGuid(),
+                    ShowDate = date.AddHours(15),
+                    Duration = TimeSpan.FromMinutes(90),
+                    IsDeleted = false
+                }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<List<ShowtimeResponseDTO>>(It.IsAny<string>()))
+                .ReturnsAsync((List<ShowtimeResponseDTO>)null!);
+            _mockShowTimeRepo.Setup(r => r.GetQueryable()).Returns(showTimes.AsQueryable().BuildMock());
+            _mockRedisService.Setup(r => r.SetAsync(It.IsAny<string>(), It.IsAny<List<ShowtimeResponseDTO>>(), It.IsAny<TimeSpan>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.GetShowTimesByMovieAndDateAsync(movieId, date);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(movieId, result[0].MovieId);
+
+            _mockRedisService.Verify(r => r.SetAsync(It.IsAny<string>(), It.IsAny<List<ShowtimeResponseDTO>>(), TimeSpan.FromMinutes(5)), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetShowTimesByMovieAndDateAsync_ReturnsEmptyListWhenNoShowTimesFound()
+        {
+            // Arrange
+            var movieId = Guid.NewGuid();
+
+            _mockRedisService.Setup(r => r.GetAsync<List<ShowtimeResponseDTO>>(It.IsAny<string>()))
+                .ReturnsAsync((List<ShowtimeResponseDTO>)null!);
+            _mockShowTimeRepo.Setup(r => r.GetQueryable()).Returns(new List<ShowTime>().AsQueryable().BuildMock());
+
+            // Act
+            var result = await _service.GetShowTimesByMovieAndDateAsync(movieId, DateTime.UtcNow.Date);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task UpdateShowTimeAsync_ThrowsIfCinemaRoomNotFound()
+        {
+            // Arrange
+            var showTimeId = Guid.NewGuid();
+            var dto = new UpdateShowtimeDto
+            {
+                MovieId = Guid.NewGuid(),
+                CinemaRoomId = Guid.NewGuid(),
+                ShowDate = DateTime.UtcNow.AddDays(1)
+            };
+
+            _mockShowTimeRepo.Setup(r => r.GetByIdAsync(showTimeId)).ReturnsAsync(new ShowTime { IsDeleted = false });
+            _mockMovieRepo.Setup(m => m.GetByIdAsync(dto.MovieId)).ReturnsAsync(new Movie { RunningTime = 120 });
+            _mockRoomRepo.Setup(r => r.GetByIdAsync(dto.CinemaRoomId)).ReturnsAsync((CinemaRoom)null!);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateShowTimeAsync(showTimeId, dto));
+            Assert.Contains("An error occurred while updating the showtime", ex.Message);
+            Assert.IsType<KeyNotFoundException>(ex.InnerException);
         }
     }
 }
