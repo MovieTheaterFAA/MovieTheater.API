@@ -189,6 +189,12 @@ namespace MovieTheater.Application.Services
                     h => h.RelatedBookingId == booking.Id && h.ChangeType == ScoreChangeType.Use);
                 _loggerService.Info($"[RefundScoreForBookingAsync] Used score history for bookingId {bookingId}: {usedScoreHistory?.ScoreValue ?? 0}");
 
+                if (usedScoreHistory == null)
+                {
+                    _loggerService.Error("[RefundScoreForBookingAsync] Used score history not found for booking.");
+                    throw new KeyNotFoundException("Score history not found for refund.");
+                }
+
                 if (usedScoreHistory != null && usedScoreHistory.ScoreValue > 0)
                 {
                     _loggerService.Info($"[RefundScoreForBookingAsync] Found used score history for bookingId: {bookingId}, ScoreValue: {usedScoreHistory.ScoreValue}");
