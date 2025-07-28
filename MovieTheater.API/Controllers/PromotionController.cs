@@ -105,7 +105,6 @@ namespace MovieTheater.API.Controllers
         {
             try
             {
-
                 var result = await _promotionService.UpdatePromotionAsync(id, dto);
                 return Ok(ApiResult<PromotionResponseDto>.Success(result!, "200", "Updated promotion successfully."));
             }
@@ -144,7 +143,6 @@ namespace MovieTheater.API.Controllers
                 return StatusCode(statusCode, errorResponse);
             }
         }
-
 
         [HttpPost("{id}/claim")]
         [Authorize]
@@ -239,6 +237,30 @@ namespace MovieTheater.API.Controllers
                 var userId = _claimsService.GetCurrentUserId;
                 var result = await _promotionService.GetClaimedPromotionsByUserAsync(userId);
                 return Ok(ApiResult<IEnumerable<PromotionResponseDto>>.Success(result, "200", "Claimed promotions retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                var statusCode = ExceptionUtils.ExtractStatusCode(ex);
+                var errorResponse = ExceptionUtils.CreateErrorResponse<object>(ex);
+                return StatusCode(statusCode, errorResponse);
+            }
+        }
+
+        [HttpGet("unclaimed")]
+        [Authorize]
+        [SwaggerOperation(
+            Summary = "Get all promotions not yet claimed by the user",
+            Description = "Returns a list of promotions that the current user has not claimed."
+        )]
+        [ProducesResponseType(typeof(ApiResult<IEnumerable<PromotionResponseDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResult<object>), 400)]
+        [ProducesResponseType(typeof(ApiResult<object>), 500)]
+        public async Task<IActionResult> GetUnclaimedPromotionsByUser()
+        {
+            try
+            {
+                var result = await _promotionService.GetUnclaimedPromotionsByUserAsync();
+                return Ok(ApiResult<IEnumerable<PromotionResponseDto>>.Success(result, "200", "Unclaimed promotions retrieved successfully."));
             }
             catch (Exception ex)
             {

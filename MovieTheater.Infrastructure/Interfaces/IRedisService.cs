@@ -8,5 +8,6 @@
         Task RemoveAsync(string key);
         Task RemoveByPatternAsync(string pattern);
         Task<IEnumerable<string>> GetKeysByPatternAsync(string pattern);
+        Task FlushAllAsync();
     }
 }
