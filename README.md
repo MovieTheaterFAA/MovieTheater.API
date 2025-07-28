@@ -1,92 +1,446 @@
-# Team01_BE
+# MovieTheater.API
 
+A comprehensive movie theater management system built with .NET 8, featuring booking management, payment processing, real-time seat selection, and administrative tools.
 
+## Architecture
 
-## Getting started
+This project follows Clean Architecture principles with the following layers:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **MovieTheater.API** - Web API layer with controllers and configuration
+- **MovieTheater.Application** - Business logic, services, and SignalR hubs
+- **MovieTheater.Domain** - Entities, DTOs, and domain models
+- **MovieTheater.Infrastructure** - Data access, repositories, and external services
+- **MovieTheater.UnitTest** - Unit test suite
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Features
 
-## Add your files
+- **User Management** - Registration, authentication, JWT tokens, role-based access
+- **Movie Management** - CRUD operations, scheduling, metadata management
+- **Booking System** - Real-time seat selection, booking management, expiry handling
+- **Payment Integration** - Stripe payment processing, invoice generation
+- **Food & Drinks** - Concession stand management and ordering
+- **Real-time Updates** - SignalR for live seat availability and chat
+- **Event Management** - Special events and promotions
+- **Analytics** - Booking analytics and reporting
+- **File Management** - MinIO integration for media storage
+- **Email Service** - Automated email notifications via Resend
+- **AI Integration** - Gemini API for chatbot functionality
+- **QR Code Generation** - Ticket verification system
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Prerequisites
 
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- [PostgreSQL](https://www.postgresql.org/download/)
+- [Redis](https://redis.io/download)
+- [Git](https://git-scm.com/downloads)
+
+## Technology Stack
+
+### Backend
+- **.NET 8** - Web API framework
+- **Entity Framework Core 8** - ORM for database operations
+- **PostgreSQL** - Primary database
+- **Redis** - Caching and session management
+- **SignalR** - Real-time communication
+
+### Third-Party Services
+- **Stripe** - Payment processing
+- **MinIO** - Object storage for files and media
+- **Resend** - Email service
+- **Google Gemini API** - AI chatbot functionality
+
+### Key NuGet Packages
+- `Microsoft.AspNetCore.Authentication.JwtBearer` - JWT authentication
+- `Microsoft.EntityFrameworkCore.Design` - EF Core design-time tools
+- `Npgsql.EntityFrameworkCore.PostgreSQL` - PostgreSQL provider
+- `StackExchange.Redis` - Redis client
+- `Stripe.net` - Stripe payment integration
+- `Minio` - MinIO object storage client
+- `QRCoder` - QR code generation
+- `Resend` - Email service client
+
+## Quick Start
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd MovieTheater.API
 ```
-cd existing_repo
-git remote add origin http://git.fa.edu.vn/hcm25_cpl_net_05/team01_be.git
-git branch -M main
-git push -uf origin main
+
+### 2. Environment Setup
+
+Create `appsettings.Development.json` in the MovieTheater.API folder:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=movietheater_db;Username=postgres;Password=your_password",
+    "Redis": "localhost:6379,abortConnect=false"
+  },
+  "JWT": {
+    "SecretKey": "your-secret-key-minimum-32-characters",
+    "Issuer": "MovieTheater_Issuer",
+    "Audience": "MovieTheater_Audience"
+  },
+  "GEMINI_API_KEY": "your-gemini-api-key",
+  "RESEND_APITOKEN": "your-resend-api-token",
+  "RESEND_FROM": "noreply@yourdomain.com",
+  "MINIO_ENDPOINT": "localhost:9000",
+  "MINIO_HOST": "http://localhost:9000",
+  "MINIO_ACCESS_KEY": "minioadmin",
+  "MINIO_SECRET_KEY": "minioadmin",
+  "Stripe": {
+    "SecretKey": "sk_test_your_stripe_secret_key",
+    "PublishableKey": "pk_test_your_stripe_publishable_key"
+  }
+}
 ```
 
-## Integrate with your tools
+### 3. Using Docker (Recommended)
 
-- [ ] [Set up project integrations](http://git.fa.edu.vn/hcm25_cpl_net_05/team01_be/-/settings/integrations)
+```bash
+# Start all services
+docker-compose up -d
 
-## Collaborate with your team
+# View logs
+docker-compose logs -f
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+# Stop services
+docker-compose down
+```
 
-## Test and Deploy
+This starts:
+- MovieTheater API on `http://localhost:5000`
+- PostgreSQL database on `localhost:5433`
+- Redis cache on `localhost:6380`
 
-Use the built-in continuous integration in GitLab.
+### 4. Manual Setup
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Start dependencies:
+```bash
+# PostgreSQL
+docker run --name movietheater-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=movietheater_db -p 5432:5432 -d postgres:15
 
-***
+# Redis
+docker run --name movietheater-redis -p 6379:6379 -d redis:latest
+```
 
-# Editing this README
+Restore and run:
+```bash
+dotnet restore
+cd MovieTheater.API
+dotnet ef database update --project ../MovieTheater.Domain
+dotnet run
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Configuration
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Environment Variables
 
-## Name
-Choose a self-explaining name for your project.
+| Variable | Description |
+|----------|-------------|
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
+| `ConnectionStrings__Redis` | Redis connection string |
+| `JWT__SecretKey` | JWT signing key |
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `RESEND_APITOKEN` | Resend email service token |
+| `MINIO_ENDPOINT` | MinIO server endpoint |
+| `MINIO_ACCESS_KEY` | MinIO access key |
+| `MINIO_SECRET_KEY` | MinIO secret key |
+| `Stripe__SecretKey` | Stripe secret key |
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## API Documentation
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Access Swagger UI at: `http://localhost:5000/swagger`
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Key Endpoints
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/login` | User authentication |
+| `POST /api/auth/register` | User registration |
+| `GET /api/movies` | Get all movies |
+| `POST /api/bookings` | Create booking |
+| `GET /api/showtimes` | Get showtimes |
+| `POST /api/payments/create-checkout-session` | Create Stripe payment |
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Testing
+
+```bash
+# Run all tests
+dotnet test
+
+# Run specific test project
+dotnet test MovieTheater.UnitTest/
+```
+
+## VPS Deployment
+
+### Prerequisites for VPS
+
+- Ubuntu 20.04+ or CentOS 8+
+- Docker and Docker Compose installed
+- Domain name pointing to your VPS IP
+- SSL certificate (recommended)
+
+### 1. Server Setup
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+### 2. Deploy Application
+
+```bash
+# Clone repository
+git clone <your-repository-url>
+cd MovieTheater.API
+
+# Create production environment file
+cp docker-compose.yml docker-compose.production.yml
+```
+
+Edit `docker-compose.production.yml`:
+
+```yaml
+services:
+  movietheater.api:
+    image: ch1mple/movietheater-api:latest
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=movietheater_db;Username=postgres;Password=your_secure_password
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - GEMINI_API_KEY=your_production_gemini_key
+      - JWT__SecretKey=your_production_jwt_secret_key_64_characters_minimum
+      - RESEND_APITOKEN=your_production_resend_token
+      - MINIO_ENDPOINT=your_vps_ip:9000
+      - MINIO_HOST=https://minio.yourdomain.com
+      - Stripe__SecretKey=sk_live_your_stripe_live_key
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_secure_password
+      POSTGRES_DB: movietheater_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: your_minio_user
+      MINIO_ROOT_PASSWORD: your_minio_password
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+```
+
+### 3. Start Services
+
+```bash
+# Start all services
+docker-compose -f docker-compose.production.yml up -d
+
+# Check logs
+docker-compose -f docker-compose.production.yml logs -f
+
+# Run database migrations
+docker-compose -f docker-compose.production.yml exec movietheater.api dotnet ef database update --project MovieTheater.Domain
+```
+
+### 4. MinIO Configuration
+
+Access MinIO console at `http://your_vps_ip:9001`
+
+1. Login with your MinIO credentials
+2. Create bucket named `movietheater-files`
+3. Set bucket policy to public read for movie images
+4. Configure DNS/subdomain for MinIO (optional)
+
+### 5. Nginx Reverse Proxy (Optional)
+
+Install Nginx:
+```bash
+sudo apt install nginx
+```
+
+Configure `/etc/nginx/sites-available/movietheater`:
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /ws {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# MinIO proxy (optional)
+server {
+    listen 80;
+    server_name minio.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:9000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+Enable site:
+```bash
+sudo ln -s /etc/nginx/sites-available/movietheater /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 6. SSL Certificate (Recommended)
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get certificate
+sudo certbot --nginx -d yourdomain.com -d minio.yourdomain.com
+```
+
+### 7. Firewall Configuration
+
+```bash
+# Configure UFW
+sudo ufw allow ssh
+sudo ufw allow 'Nginx Full'
+sudo ufw allow 5000
+sudo ufw allow 9000
+sudo ufw enable
+```
+
+### 8. Monitoring and Maintenance
+
+Create systemd service for auto-restart:
+
+```bash
+# Create service file
+sudo nano /etc/systemd/system/movietheater.service
+```
+
+```ini
+[Unit]
+Description=MovieTheater API
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/path/to/MovieTheater.API
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.production.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.production.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable service:
+```bash
+sudo systemctl enable movietheater.service
+sudo systemctl start movietheater.service
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Database Connection**
+```bash
+docker-compose logs postgres
+docker exec -it movietheater_postgres_1 psql -U postgres -d movietheater_db
+```
+
+**Redis Connection**
+```bash
+docker-compose logs redis
+docker exec -it movietheater_redis_1 redis-cli ping
+```
+
+**Application Logs**
+```bash
+docker-compose logs movietheater.api
+```
+
+**Port Conflicts**
+```bash
+sudo netstat -tulpn | grep :5000
+sudo lsof -i :5000
+```
+
+## Security Considerations
+
+- Use strong passwords for all services
+- Enable firewall and close unnecessary ports  
+- Keep Docker images updated
+- Use environment variables for secrets
+- Enable SSL/HTTPS in production
+- Regular database backups
+- Monitor application logs
 
 ## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+For issues and questions:
+- Check application logs
+- Review configuration files
+- Verify all services are running
+- Check firewall and network settings
