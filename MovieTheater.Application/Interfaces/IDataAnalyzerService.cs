@@ -21,5 +21,6 @@ namespace MovieTheater.Application.Interfaces
         Task<IReadOnlyList<CinemaRoom>> GetAllCinemaRoomsAsync();
 
         Task<IReadOnlyList<SeatType>> GetAllSeatTypesAsync();
+        Task<IReadOnlyList<ShowTime>> GetAllShowTimesAsync();
     }
 }

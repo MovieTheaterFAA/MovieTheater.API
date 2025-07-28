@@ -36,7 +36,7 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             await SeedMovieAsync();
             await SeedCinemaRoomAsync();
-            await SeedShowTimeForAllRoomsAndMoviesAsync();
+            //await SeedShowTimeForAllRoomsAndMoviesAsync();
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
