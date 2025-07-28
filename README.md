@@ -305,37 +305,48 @@ Configure `/etc/nginx/sites-available/movietheater`:
 
 ```nginx
 server {
-    listen 80;
-    server_name yourdomain.com;
+    server_name movietheaterapi.ae-tao-fullstack-api.site;
 
     location / {
-        proxy_pass http://localhost:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass         http://127.0.0.1:5001;
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection "keep-alive";
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
     }
 
-    location /ws {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+    location /hubs/ {
+    proxy_pass         http://127.0.0.1:5001/hubs/;
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection "Upgrade";
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
     }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/movietheaterapi.ae-tao-fullstack-api.site/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/movietheaterapi.ae-tao-fullstack-api.site/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
 }
 
-# MinIO proxy (optional)
 server {
-    listen 80;
-    server_name minio.yourdomain.com;
+    if ($host = movietheaterapi.ae-tao-fullstack-api.site) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
 
-    location / {
-        proxy_pass http://localhost:9000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
+    listen 80;
+    server_name movietheaterapi.ae-tao-fullstack-api.site;
+    return 404; # managed by Certbot
 }
 ```
 
