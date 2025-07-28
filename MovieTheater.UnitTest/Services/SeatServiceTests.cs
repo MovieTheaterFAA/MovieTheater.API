@@ -9,6 +9,8 @@ using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 
 namespace MovieTheater.UnitTest.Services;
@@ -207,5 +209,229 @@ public class SeatServiceTests
         _mockShowTimeSeatRepository.Setup(r => r.GetQueryable()).Returns(new List<ShowTimeSeat>().AsQueryable().BuildMock());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _seatService.GetSeatByIdAsync(seatId));
+    }
+
+    [Fact]
+    public async Task HoldSeatsAsync_AttemptHoldBookedOrSoldSeats()
+    {
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var showTime = new ShowTime { Id = showTimeId, CinemaRoomId = Guid.NewGuid() };
+        var seat = new Seat { Id = seatId, CinemaRoomId = showTime.CinemaRoomId };
+        var showTimeSeat = new ShowTimeSeat { SeatId = seatId, ShowTimeId = showTimeId, Status = SeatStatus.Booked };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId)).ReturnsAsync(showTime);
+        _mockSeatRepository.Setup(r => r.GetQueryable()).Returns(new List<Seat> { seat }.AsQueryable().BuildMock());
+        _mockShowTimeSeatRepository.Setup(r => r.GetQueryable()).Returns(new List<ShowTimeSeat> { showTimeSeat }.AsQueryable().BuildMock());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _seatService.HoldSeatsAsync(userId, showTimeId, new List<Guid> { seatId }));
+    }
+
+
+    [Fact]
+    public void CleanupExpiredHolds_RemovesExpiredHolds()
+    {
+        var seatId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+
+        // Dùng Reflection để lấy _holdingSeats
+        var holdingSeatsField = typeof(SeatService).GetField("_holdingSeats", BindingFlags.NonPublic | BindingFlags.Static);
+        var holdingSeats = (ConcurrentDictionary<(Guid, Guid), (Guid userId, DateTime expireAt)>)holdingSeatsField!.GetValue(null)!;
+
+        holdingSeats.Clear();
+        // Add expired and valid holds
+        holdingSeats.TryAdd((seatId, showTimeId), (Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-1)));
+        holdingSeats.TryAdd((Guid.NewGuid(), showTimeId), (Guid.NewGuid(), DateTime.UtcNow.AddMinutes(10)));
+
+        var cleanupMethod = typeof(SeatService).GetMethod("CleanupExpiredHolds", BindingFlags.NonPublic | BindingFlags.Static);
+        cleanupMethod!.Invoke(null, null);
+
+        Assert.DoesNotContain(holdingSeats, kvp => kvp.Value.expireAt < DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void CleanupExpiredHolds_ValidHoldsRemain()
+    {
+        var seatId1 = Guid.NewGuid();
+        var showTimeId1 = Guid.NewGuid();
+        var seatId2 = Guid.NewGuid();
+        var showTimeId2 = Guid.NewGuid();
+
+        // Dùng Reflection để lấy _holdingSeats
+        var holdingSeatsField = typeof(SeatService).GetField("_holdingSeats", BindingFlags.NonPublic | BindingFlags.Static);
+        var holdingSeats = (ConcurrentDictionary<(Guid, Guid), (Guid userId, DateTime expireAt)>)holdingSeatsField!.GetValue(null)!;
+
+        holdingSeats.Clear();
+
+        // Thêm 2 hold hợp lệ (chưa hết hạn)
+        holdingSeats.TryAdd((seatId1, showTimeId1), (Guid.NewGuid(), DateTime.UtcNow.AddMinutes(5)));
+        holdingSeats.TryAdd((seatId2, showTimeId2), (Guid.NewGuid(), DateTime.UtcNow.AddMinutes(10)));
+
+        // Gọi hàm cleanup
+        var cleanupMethod = typeof(SeatService).GetMethod("CleanupExpiredHolds", BindingFlags.NonPublic | BindingFlags.Static);
+        cleanupMethod!.Invoke(null, null);
+
+        // Assert: vẫn còn đúng 2 hold hợp lệ
+        Assert.Equal(2, holdingSeats.Count);
+    }
+
+    [Fact]
+    public async Task GetShowTimeSeatStatusAsync_ReturnsAvailableIfNotHeld()
+    {
+        // Arrange
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+        var cinemaRoomId = Guid.NewGuid();
+
+        var showTime = new ShowTime { Id = showTimeId, CinemaRoomId = cinemaRoomId };
+        var seat = new Seat { Id = seatId, CinemaRoomId = cinemaRoomId };
+        var showTimeSeat = new ShowTimeSeat { SeatId = seatId, ShowTimeId = showTimeId, Status = SeatStatus.Available };
+
+        // Mock ShowTimeSeat
+        var mockShowTimeSeatDbSet = new List<ShowTimeSeat> { showTimeSeat }
+            .AsQueryable()
+            .BuildMockDbSet();
+
+        // Mock Seat
+        var mockSeatDbSet = new List<Seat> { seat }
+            .AsQueryable()
+            .BuildMockDbSet();
+
+        _mockShowTimeRepository
+            .Setup(r => r.GetByIdAsync(showTimeId))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockShowTimeSeatDbSet.Object);
+
+        _mockSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockSeatDbSet.Object);
+
+        // Act
+        var result = await _seatService.GetShowTimeSeatStatusAsync(showTimeId);
+
+        // Assert
+        Assert.Contains(result, s => s.Status == SeatStatus.Available);
+    }
+
+    [Fact]
+    public async Task GetShowTimeSeatStatusAsync_ReturnsBookedIfBooked()
+    {
+        // Arrange
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+        var cinemaRoomId = Guid.NewGuid();
+
+        var showTime = new ShowTime { Id = showTimeId, CinemaRoomId = cinemaRoomId };
+        var seat = new Seat { Id = seatId, CinemaRoomId = cinemaRoomId };
+        var showTimeSeat = new ShowTimeSeat
+        {
+            SeatId = seatId,
+            ShowTimeId = showTimeId,
+            Status = SeatStatus.Booked
+        };
+
+        // Mock DbSets
+        var mockShowTimeSeatDbSet = new List<ShowTimeSeat> { showTimeSeat }
+            .AsQueryable()
+            .BuildMockDbSet();
+
+        var mockSeatDbSet = new List<Seat> { seat }
+            .AsQueryable()
+            .BuildMockDbSet();
+
+        // Setup mock returns
+        _mockShowTimeRepository
+            .Setup(r => r.GetByIdAsync(showTimeId))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockShowTimeSeatDbSet.Object);
+
+        _mockSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockSeatDbSet.Object);
+
+        // Act
+        var result = await _seatService.GetShowTimeSeatStatusAsync(showTimeId);
+
+        // Assert
+        Assert.Contains(result, s => s.Status == SeatStatus.Booked);
+    }
+
+    [Fact]
+    public async Task GetSeatsByShowTimeAsync_MixedSeatStatuses()
+    {
+        // Arrange
+        var showTimeId = Guid.NewGuid();
+        var cinemaRoomId = Guid.NewGuid();
+        var seatIds = Enumerable.Range(1, 3).Select(_ => Guid.NewGuid()).ToList();
+
+        var showTime = new ShowTime { Id = showTimeId, CinemaRoomId = cinemaRoomId };
+
+        var showTimeSeats = new List<ShowTimeSeat>
+    {
+        new() { SeatId = seatIds[0], ShowTimeId = showTimeId, Status = SeatStatus.Holding },
+        new() { SeatId = seatIds[1], ShowTimeId = showTimeId, Status = SeatStatus.Booked },
+        new() { SeatId = seatIds[2], ShowTimeId = showTimeId, Status = SeatStatus.Sold }
+    };
+
+        var seats = new List<Seat>
+    {
+        new() { Id = seatIds[0], CinemaRoomId = cinemaRoomId },
+        new() { Id = seatIds[1], CinemaRoomId = cinemaRoomId },
+        new() { Id = seatIds[2], CinemaRoomId = cinemaRoomId }
+    };
+
+        var mockShowTimeSeatDbSet = showTimeSeats.AsQueryable().BuildMockDbSet();
+        var mockSeatDbSet = seats.AsQueryable().BuildMockDbSet();
+
+        _mockShowTimeRepository
+            .Setup(r => r.GetByIdAsync(showTimeId))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockShowTimeSeatDbSet.Object);
+
+        _mockSeatRepository
+            .Setup(r => r.GetQueryable())
+            .Returns(mockSeatDbSet.Object); // 👈 Rất quan trọng
+
+        // Act
+        var result = await _seatService.GetSeatsByShowTimeAsync(showTimeId);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, s => s.Status == SeatStatus.Holding);
+        Assert.Contains(result, s => s.Status == SeatStatus.Booked);
+        Assert.Contains(result, s => s.Status == SeatStatus.Sold);
+    }
+
+
+    [Fact]
+    public async Task GetSeatsByShowTimeAsync_ShowTimeNotFound_Throws()
+    {
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ShowTime)null!);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _seatService.GetSeatsByShowTimeAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetSeatsByShowTimeAsync_LogsErrorOnException()
+    {
+        var showTimeId = Guid.NewGuid();
+        var showTime = new ShowTime { Id = showTimeId, CinemaRoomId = Guid.NewGuid() };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId)).ReturnsAsync(showTime);
+        _mockShowTimeSeatRepository.Setup(r => r.GetQueryable()).Throws(new Exception("DB error"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _seatService.GetSeatsByShowTimeAsync(showTimeId));
+        _mockLoggerService.Verify(l => l.Error(It.IsAny<string>()), Times.AtLeastOnce());
+
     }
 }
