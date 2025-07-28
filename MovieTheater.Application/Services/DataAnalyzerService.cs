@@ -74,13 +74,20 @@ namespace MovieTheater.Application.Services
                 .ToListAsync();
         }
 
-        public Task<IReadOnlyList<SeatType>> GetAllSeatTypesAsync()
+        public async Task<IReadOnlyList<SeatType>> GetAllSeatTypesAsync()
         {
             var seatTypes = System.Enum.GetValues(typeof(SeatType))
                 .Cast<SeatType>()
                 .ToList()
                 .AsReadOnly();
-            return Task.FromResult((IReadOnlyList<SeatType>)seatTypes);
+            return await Task.FromResult((IReadOnlyList<SeatType>)seatTypes);
+        }
+
+        public async Task<IReadOnlyList<ShowTime>> GetAllShowTimesAsync()
+        {
+            return await _context.Showtimes
+                .Where(st => !st.IsDeleted)
+                .ToListAsync();
         }
     }
 }
