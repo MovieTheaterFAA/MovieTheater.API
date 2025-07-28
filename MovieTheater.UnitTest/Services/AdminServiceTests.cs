@@ -740,4 +740,179 @@ public async Task GetUserByPhoneNumberAsync_Found_ReturnsDto()
     Assert.NotNull(result);
     Assert.Equal("0123456789", result.PhoneNumber);
 }
+    [Fact]
+    public async Task AddEmployeeAsync_WhenDbUpdateException_LogsErrorAndRethrows()
+    {
+        var employeeDto = new AddEmployeeRequestDto { Email = "dbfail@example.com", FullName = "DbFail" };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+        _mockUserRepository.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync(new User { Email = employeeDto.Email });
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ThrowsAsync(new DbUpdateException("DB error"));
+
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => _adminService.AddEmployeeAsync(employeeDto));
+        _mockLoggerService.Verify(l => l.Error(It.Is<string>(msg => msg.Contains("DbUpdateException"))), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("search", null)]
+    [InlineData(null, RoleType.Employee)]
+    [InlineData("search", RoleType.Employee)]
+    public async Task GetListUserAsync_SearchAndRoleCombinations(string? search, RoleType? role)
+    {
+        _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
+        var users = new List<User>
+    {
+        new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Employee, IsDeleted = false },
+        new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Member, IsDeleted = false }
+    }.AsQueryable().BuildMock();
+        _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
+
+        var result = await _adminService.GetListUserAsync(search, role, null, false, 1, 10);
+        Assert.NotNull(result);
+        Assert.True(result.Items.Count >= 0);
+    }
+
+    [Fact]
+    public async Task EditEmployeeAsync_UserNotFound_ThrowsKeyNotFoundException()
+    {
+        var employeeId = Guid.NewGuid();
+        _mockUserRepository.Setup(r => r.GetByIdAsync(employeeId)).ReturnsAsync((User)null!);
+        var editDto = new EditEmployeeDto { FullName = "Update" };
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _adminService.EditEmployeeAsync(employeeId, editDto));
+    }
+
+    [Fact]
+    public async Task EditEmployeeAsync_PartialUpdate_NullFields()
+    {
+        var employeeId = Guid.NewGuid();
+        var employee = new User
+        {
+            Id = employeeId,
+            FullName = "Original",
+            Email = "original@example.com",
+            DateOfBirth = new DateTime(1990, 1, 1),
+            Sex = Gender.Male,
+            CCCD = "012345678912",
+            PhoneNumber = "0987654321",
+            Address = "Original Address"
+        };
+        var editDto = new EditEmployeeDto { FullName = "Updated Name" }; // Only FullName updated
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(employeeId)).ReturnsAsync(employee);
+
+        var result = await _adminService.EditEmployeeAsync(employeeId, editDto);
+        Assert.Equal("Updated Name", result.FullName);
+        Assert.Equal(employee.DateOfBirth, result.DateOfBirth);
+        Assert.Equal(employee.Address, result.Address);
+    }
+
+    [Fact]
+    public async Task BanUserAsync_UserNotFound_ReturnsFalse()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync((User)null!);
+
+        var result = await _adminService.BanUserAsync(userId, adminId);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task BanUserAsync_AlreadyBanned_ReturnsFalse()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var user = new User { Id = userId, UserStatus = UserStatus.Banned, IsDeleted = false };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var result = await _adminService.BanUserAsync(userId, adminId);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task BanUserAsync_StatusChange_Succeeds()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var user = new User { Id = userId, UserStatus = UserStatus.Active, IsDeleted = false };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var result = await _adminService.BanUserAsync(userId, adminId);
+        Assert.True(result);
+        Assert.Equal(UserStatus.Banned, user.UserStatus);
+    }
+
+    [Fact]
+    public async Task UnbanUserAsync_UserNotFound_ReturnsFalse()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync((User)null!);
+
+        var result = await _adminService.UnbanUserAsync(userId, adminId);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UnbanUserAsync_NotBanned_ReturnsFalse()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var user = new User { Id = userId, UserStatus = UserStatus.Active, IsDeleted = false };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var result = await _adminService.UnbanUserAsync(userId, adminId);
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UnbanUserAsync_StatusChange_Succeeds()
+    {
+        var userId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var user = new User { Id = userId, UserStatus = UserStatus.Banned, IsDeleted = false };
+        _mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var result = await _adminService.UnbanUserAsync(userId, adminId);
+        Assert.True(result);
+        Assert.Equal(UserStatus.Active, user.UserStatus);
+    }
+
+    [Fact]
+    public void ToAddEmployeeDto_MapsDtoToEntityCorrectly()
+    {
+        var dto = new AddEmployeeRequestDto
+        {
+            FullName = "Test Name",
+            DateOfBirth = new DateTime(2000, 1, 1),
+            Sex = Gender.Female,
+            CCCD = "123456789012",
+            Email = "test@example.com",
+            PhoneNumber = "0123456789",
+            Address = "Test Address"
+        };
+
+        var service = new AdminService(
+            _mockUnitOfWork.Object,
+            _mockLoggerService.Object,
+            _mockEmailService.Object,
+            _mockClaimsService.Object,
+            _mockAuditLogService.Object,
+            _mockRedisService.Object
+        );
+
+        var user = service.GetType()
+            .GetMethod("ToAddEmployeeDto", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .Invoke(service, new object[] { dto, null }) as User;
+
+        Assert.NotNull(user);
+        Assert.Equal(dto.FullName, user.FullName);
+        Assert.Equal(dto.DateOfBirth, user.DateOfBirth);
+        Assert.Equal(dto.Sex, user.Sex);
+        Assert.Equal(dto.CCCD, user.CCCD);
+        Assert.Equal(dto.Email, user.Email);
+        Assert.Equal(dto.PhoneNumber, user.PhoneNumber);
+        Assert.Equal(dto.Address, user.Address);
+    }
 }
