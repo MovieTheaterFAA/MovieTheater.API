@@ -160,7 +160,7 @@ public class AdminService : IAdminService
                     u.Email.ToLower().Contains(searchLower));
             }
 
-            var totalUsers =  query.Count();
+            var totalUsers = await query.CountAsync();
 
             if (!string.IsNullOrEmpty(sortBy))
             {
@@ -173,10 +173,10 @@ public class AdminService : IAdminService
             }
             else query = query.OrderBy(u => u.Id);
 
-            var users = query
+            var users = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             var userDtos = users.Select(u => new GetUserDto
             {

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MockQueryable;
 using Moq;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -586,41 +587,25 @@ public class AdminServiceTests
         Assert.Null(result);
     }
 
-    //[Fact]
-    //public async Task GetListUserAsync_WhenCacheMissAndRoleFilter_Works()
-    //{
-    //    // Arrange
-    //    _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
-    //    var users = new List<User>
-    //{
-    //    new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Member, IsDeleted = false },
-    //    new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Employee, IsDeleted = false }
-    //}.AsQueryable();
-    //    _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
+    [Fact]
+    public async Task GetListUserAsync_WhenCacheMissAndRoleFilter_Works()
+    {
+        // Arrange
+        _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
+        var users = new List<User>
+    {
+        new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Member, IsDeleted = false },
+        new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Employee, IsDeleted = false }
+    }.AsQueryable().BuildMock();
+        _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
 
-    //    // Act
-    //    var result = await _adminService.GetListUserAsync(null, RoleType.Member, null, false, 1, 10);
+        // Act
+        var result = await _adminService.GetListUserAsync(null, RoleType.Member, null, false, 1, 10);
 
-    //    // Assert
-    //    Assert.Single(result.Items);
-    //    Assert.Equal(RoleType.Member, result.Items[0].Role);
-    //}
-
-    //[Fact]
-    //public async Task GetListUserAsync_WhenSortByScoreBalanceDescending_Works()
-    //{
-    //    _mockRedisService.Setup(r => r.GetAsync<Pagination<GetUserDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<GetUserDto>)null!);
-    //    var users = new List<User>
-    //{
-    //    new User { Id = Guid.NewGuid(), Email = "a@a.com", FullName = "A", Role = RoleType.Member, IsDeleted = false, ScoreBalance = 10 },
-    //    new User { Id = Guid.NewGuid(), Email = "b@b.com", FullName = "B", Role = RoleType.Member, IsDeleted = false, ScoreBalance = 20 }
-    //}.AsQueryable();
-    //    _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
-
-    //    var result = await _adminService.GetListUserAsync(null, RoleType.Member, "ScoreBalance", true, 1, 10);
-
-    //    Assert.Equal(20, result.Items[0].ScoreBalance);
-    //}
+        // Assert
+        Assert.Single(result.Items);
+        Assert.Equal(RoleType.Member, result.Items[0].Role);
+    }
 
     [Fact]
     public async Task GetListUserAsync_WhenSortByScoreBalanceDescending_Works()
@@ -653,7 +638,7 @@ public class AdminServiceTests
             UserStatus = UserStatus.Active,
             CreatedAt = DateTime.UtcNow.AddDays(-15)
         }
-    }.AsQueryable();
+    }.AsQueryable().BuildMock();
 
         _mockUserRepository.Setup(r => r.GetQueryable()).Returns(users);
 
