@@ -36,7 +36,7 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             await SeedMovieAsync();
             await SeedCinemaRoomAsync();
-            //await SeedShowTimeForAllRoomsAndMoviesAsync();
+            await SeedShowTimeForAllRoomsAndMoviesAsync();
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
@@ -434,6 +434,15 @@ public class SystemController : ControllerBase
         var today = DateTime.UtcNow.Date;
         var endOfJuly = new DateTime(today.Year, 7, 31);
 
+        // Define standard showtime slots (3-4 per day)
+        var dailyTimeSlots = new List<TimeSpan>
+        {
+            new TimeSpan(9, 0, 0),   // 9:00 AM
+            new TimeSpan(14, 30, 0), // 2:30 PM  
+            new TimeSpan(19, 0, 0),  // 7:00 PM
+            new TimeSpan(21, 45, 0)  // 9:45 PM
+        };
+
         foreach (var movie in movies)
         {
             if (!movie.RunningTime.HasValue) continue;
@@ -446,54 +455,40 @@ public class SystemController : ControllerBase
                 var currentDay = today;
                 while (currentDay <= endOfJuly)
                 {
-                    // For each day, schedule multiple showtimes from 8AM to midnight
-                    var scheduledWindows = new List<(DateTime Start, DateTime End)>();
-                    var startHour = 8;
-                    var endHour = 24;
-                    var runningTime = movie.RunningTime.Value;
-                    var restTime = 15; // 15 minutes rest after each show
-
-                    var hour = startHour;
-                    while (hour < endHour)
+                    // Randomly select 3-4 time slots for this day
+                    var selectedSlots = dailyTimeSlots.OrderBy(_ => random.Next()).Take(random.Next(3, 5)).OrderBy(t => t).ToList();
+                    
+                    var daySchedule = new List<(DateTime Start, DateTime End)>();
+                    
+                    foreach (var timeSlot in selectedSlots)
                     {
-                        // Randomize minute (0, 15, 30, 45) for some variety
-                        var minute = random.Next(0, 4) * 15;
-                        var start = currentDay.AddHours(hour).AddMinutes(minute);
-
-                        // Calculate end time (movie duration + rest)
-                        var duration = TimeSpan.FromMinutes(runningTime);
-                        var totalDuration = duration.Add(TimeSpan.FromMinutes(restTime));
-                        var end = start.Add(totalDuration);
-
-                        // Check for overlap with already scheduled showtimes for this day/room/movie
-                        bool overlap = scheduledWindows.Any(w => w.Start < end && start < w.End);
-                        if (!overlap && end.Hour <= endHour)
+                        var showStart = currentDay.Add(timeSlot);
+                        var movieDuration = TimeSpan.FromMinutes(movie.RunningTime.Value);
+                        var showEnd = showStart.Add(movieDuration);
+                        var restEnd = showEnd.AddMinutes(15); // 15 minutes rest
+                        
+                        // Check for overlap with already scheduled shows for this room/day
+                        bool hasOverlap = daySchedule.Any(existing => 
+                            showStart < existing.End && restEnd > existing.Start);
+                        
+                        if (!hasOverlap)
                         {
                             showtimes.Add(new ShowTime
                             {
                                 Id = Guid.NewGuid(),
                                 CinemaRoomId = room.Id,
                                 MovieId = movie.Id,
-                                ShowDate = start,
-                                Duration = duration,
+                                ShowDate = showStart,
+                                Duration = movieDuration,
                                 CreatedAt = DateTime.UtcNow,
                                 CreatedBy = Guid.Empty // System seed
                             });
-                            scheduledWindows.Add((start, end));
-                            // Move hour forward to after this showtime (plus rest)
-                            hour = end.Hour;
-                            // If the end minute is not 0, move to next quarter
-                            if (end.Minute > 0)
-                            {
-                                hour = end.Hour;
-                            }
-                        }
-                        else
-                        {
-                            // If overlap or out of range, try next 15-min slot
-                            hour += 1;
+                            
+                            // Add to day schedule (including rest time)
+                            daySchedule.Add((showStart, restEnd));
                         }
                     }
+                    
                     currentDay = currentDay.AddDays(1);
                 }
             }
@@ -502,7 +497,7 @@ public class SystemController : ControllerBase
         await _context.Showtimes.AddRangeAsync(showtimes);
         await _context.SaveChangesAsync();
 
-        _logger.Success($"Seeded {showtimes.Count} non-overlapping showtimes for all movies in random 2 cinema rooms each, from today to end of July, with multiple showtimes per day.");
+        _logger.Success($"Seeded {showtimes.Count} showtimes with 3-4 shows per day, 15-minute rest between shows, no overlaps.");
     }
 
     private async Task SeedSeatsForAllCinemaRoomsAsync()
