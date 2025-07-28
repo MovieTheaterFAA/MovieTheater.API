@@ -1,12 +1,12 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
 using MovieTheater.Domain.DTOs.SeatDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -320,6 +320,23 @@ namespace MovieTheater.Application.Services
                     return new List<SeatResponseDto>();
                 }
 
+                var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
+                if (showTime == null)
+                {
+                    _loggerService.Warn($"Showtime {showTimeId} not found");
+                    throw new KeyNotFoundException($"Showtime with ID {showTimeId} not found");
+                }
+
+                var allSeatsInRoom = await _unitOfWork.Seats.GetQueryable()
+                .Where(s => s.CinemaRoomId == showTime.CinemaRoomId && !s.IsDeleted)
+                .ToDictionaryAsync(s => s.Id, s => s);
+
+                if (allSeatsInRoom.Count == 0)
+                {
+                    _loggerService.Warn($"No seats found for cinema room {showTime.CinemaRoomId}");
+                    throw new KeyNotFoundException($"No seats found for cinema room {showTime.CinemaRoomId}");
+                }
+
                 var uniqueSeatIds = seatIds.Distinct().ToList();
                 if (uniqueSeatIds.Count != seatIds.Count)
                 {
@@ -371,23 +388,6 @@ namespace MovieTheater.Application.Services
                 {
                     _loggerService.Warn($"User {userId} attempted to exceed 8-seat limit (total: {totalSeatCount}) for showtime {showTimeId}");
                     throw new InvalidOperationException($"You cannot hold more than 8 seats in total. You currently have {totalSeatCount - newSeatsToHold.Count} seats and are trying to hold {newSeatsToHold.Count} more.");
-                }
-
-                var showTime = await _unitOfWork.ShowTimes.GetByIdAsync(showTimeId);
-                if (showTime == null)
-                {
-                    _loggerService.Warn($"Showtime {showTimeId} not found");
-                    throw new KeyNotFoundException($"Showtime with ID {showTimeId} not found");
-                }
-
-                var allSeatsInRoom = await _unitOfWork.Seats.GetQueryable()
-                    .Where(s => s.CinemaRoomId == showTime.CinemaRoomId && !s.IsDeleted)
-                    .ToDictionaryAsync(s => s.Id, s => s);
-
-                if (allSeatsInRoom.Count == 0)
-                {
-                    _loggerService.Warn($"No seats found for cinema room {showTime.CinemaRoomId}");
-                    throw new KeyNotFoundException($"No seats found for cinema room {showTime.CinemaRoomId}");
                 }
 
                 foreach (var seatId in seatIds)
