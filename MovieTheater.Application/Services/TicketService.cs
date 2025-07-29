@@ -5,7 +5,6 @@ using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
 using QRCoder;
-using Stripe.V2;
 using System.Text.Json;
 
 namespace MovieTheater.Application.Services;
@@ -76,11 +75,6 @@ public class TicketService : ITicketService
                 TicketSeats = new List<TicketSeat>(),
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink>()
             };
-            if (ticket == null)
-            {
-                _loggerService.Warn($"Failed to create ticket object for booking ID: {bookingId}");
-                throw new InvalidOperationException("Failed to create ticket object.");
-            }
 
             // Add seats to the ticket
             if (booking.BookingSeats == null)
@@ -627,9 +621,6 @@ public class TicketService : ITicketService
     }
     private decimal GetSeatPrice(Seat seat)
     {
-        // Logic to determine seat price based on seat type
-        if (seat == null)
-            return 0;
 
         return seat.Type switch
         {
