@@ -1,12 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using Moq;
+﻿using Moq;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
-using MovieTheater.Application.Services;
 using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
-using MovieTheater.Infrastructure.Commons;
 using MovieTheater.Infrastructure.Interfaces;
 using System.Linq.Expressions;
 using System.Text.Json;
@@ -27,13 +24,10 @@ namespace MovieTheater.UnitTest.Services
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLoggerService = new Mock<ILoggerService>();
             _mockRedisService = new Mock<IRedisService>();
-            _mockAuditLogRepository = new Mock<IGenericRepository<AuditLog>>();
             _mockUserRepository = new Mock<IGenericRepository<User>>();
 
             _mockUnitOfWork.Setup(uow => uow.AuditLogs).Returns(_mockAuditLogRepository.Object);
             _mockUnitOfWork.Setup(uow => uow.Users).Returns(_mockUserRepository.Object);
-
-            _auditLogService = new AuditLogService(_mockUnitOfWork.Object, _mockLoggerService.Object, _mockRedisService.Object);
         }
 
         [Fact]
