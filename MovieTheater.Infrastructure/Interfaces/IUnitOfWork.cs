@@ -23,5 +23,7 @@ public interface IUnitOfWork : IDisposable
     IGenericRepository<ClaimedPromotion> ClaimedPromotions { get; }
     IGenericRepository<Ticket> Tickets { get; }
     IGenericRepository<ScoreHistory> ScoreHistories { get; }
+    IGenericRepository<TicketSeat> TicketSeats { get; }
+    IGenericRepository<TicketFoodAndDrink> TicketFoodAndDrinks { get; }
     Task<int> SaveChangesAsync();
 }
