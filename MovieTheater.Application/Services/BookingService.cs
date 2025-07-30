@@ -301,21 +301,21 @@ public class BookingService : IBookingService
                 if (member == null)
                 {
                     _loggerService.Warn($"No member found for booking ID: {completeBooking.Id}");
-                    continue;
+                    throw new KeyNotFoundException($"Member for booking ID {completeBooking.Id} not found.");
                 }
 
                 var showTime = completeBooking.Showtime;
                 if (showTime == null)
                 {
                     _loggerService.Warn($"No showtime found for booking ID: {completeBooking.Id}");
-                    continue;
+                    throw new KeyNotFoundException($"Showtime for booking ID {completeBooking.Id} not found.");
                 }
 
                 var movie = await _unitOfWork.Movies.GetByIdAsync(showTime.MovieId);
                 if (movie == null)
                 {
                     _loggerService.Warn($"No movie found for showtime ID: {showTime.Id}");
-                    continue;
+                    throw new KeyNotFoundException($"Movie for showtime ID {showTime.Id} not found.");
                 }
 
                 var bookingSeats = completeBooking.BookingSeats;
@@ -566,9 +566,6 @@ public class BookingService : IBookingService
 
     private decimal GetSeatPrice(Seat seat)
     {
-        // Logic to determine seat price based on seat type
-        if (seat == null)
-            return 0;
 
         return seat.Type switch
         {

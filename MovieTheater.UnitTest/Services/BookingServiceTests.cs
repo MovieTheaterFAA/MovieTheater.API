@@ -442,6 +442,515 @@ public class BookingServiceTests
             l => l.Info($"No bookings found for user ID: {userId}"),
             Times.Once);
     }
+    [Fact]
+    public async Task GetUserBookingsAsync_ShowtimeNotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "John Doe"
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = user,
+            ShowtimeId = Guid.NewGuid(),
+            Showtime = null, // This is the key - showtime is null
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid(), BookingId = bookingId }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _bookingService.GetUserBookingsAsync(userId));
+
+        Assert.Equal($"Showtime for booking ID {bookingId} not found.", ex.Message);
+
+        _mockLoggerService.Verify(
+            l => l.Warn($"No showtime found for booking ID: {bookingId}"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserBookingsAsync_MovieNotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "John Doe"
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = movieId // Valid showtime with movieId
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = user,
+            ShowtimeId = showTimeId,
+            Showtime = showTime, // Valid showtime
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid(), BookingId = bookingId }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        // Setup movie repository to return null - this is the key part
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync((Movie)null!);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _bookingService.GetUserBookingsAsync(userId));
+
+        Assert.Equal($"Movie for showtime ID {showTimeId} not found.", ex.Message);
+
+        _mockLoggerService.Verify(
+            l => l.Warn($"No movie found for showtime ID: {showTimeId}"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserBookingsAsync_MemberNotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = movieId
+        };
+
+        var movie = new Movie
+        {
+            Id = movieId,
+            Name = "Test Movie"
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = null, // This is the key - member is null
+            ShowtimeId = showTimeId,
+            Showtime = showTime,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid(), BookingId = bookingId }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync(movie);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _bookingService.GetUserBookingsAsync(userId));
+
+        Assert.Equal($"Member for booking ID {bookingId} not found.", ex.Message);
+
+        _mockLoggerService.Verify(
+            l => l.Warn($"No member found for booking ID: {bookingId}"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserBookingsAsync_EmptySeatsCollection_LogsWarningAndContinuesProcessing()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "John Doe"
+        };
+
+        var movie = new Movie
+        {
+            Id = movieId,
+            Name = "Test Movie"
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = movieId
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = user,
+            ShowtimeId = showTimeId,
+            Showtime = showTime,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>(), // Empty list instead of null
+            BookingFoods = new List<BookingFood>()
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync(movie);
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat>());
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        // Act
+        var result = await _bookingService.GetUserBookingsAsync(userId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        var bookingDto = result.First();
+        Assert.Equal(bookingId, bookingDto.Id);
+        Assert.Equal("John Doe", bookingDto.MemberName);
+        Assert.Equal("Test Movie", bookingDto.Movie);
+        Assert.Empty(bookingDto.BookingSeats); // Should be empty list
+
+        // Verify that the warning was logged
+        _mockLoggerService.Verify(
+            l => l.Warn($"No seats found for booking ID: {bookingId}"),
+            Times.Once);
+
+        // Verify that processing continued and success was logged
+        _mockLoggerService.Verify(
+            l => l.Success($"Successfully retrieved 1 bookings for user ID: {userId}"),
+            Times.Once);
+    }
+    [Fact]
+    public async Task GetUserBookingsAsync_WithBookingFoods_ReturnsBookingsWithFoodDetails()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var foodId1 = Guid.NewGuid();
+        var foodId2 = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "John Doe"
+        };
+
+        var movie = new Movie
+        {
+            Id = movieId,
+            Name = "Test Movie"
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = movieId
+        };
+
+        var food1 = new FoodAndDrink
+        {
+            Id = foodId1,
+            Name = "Popcorn",
+            Price = 15000,
+            Type = FoodType.Food
+        };
+
+        var food2 = new FoodAndDrink
+        {
+            Id = foodId2,
+            Name = "Cola",
+            Price = 8000,
+            Type = FoodType.Drink
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = user,
+            ShowtimeId = showTimeId,
+            Showtime = showTime,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 100000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, BookingId = bookingId }
+            },
+            BookingFoods = new List<BookingFood>
+            {
+                new() { FoodAndDrinkId = foodId1, BookingId = bookingId, Quantity = 2 },
+                new() { FoodAndDrinkId = foodId2, BookingId = bookingId, Quantity = 1 }
+            }
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync(movie);
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat>
+            {
+                new() { Id = seatId, Row = "A", Number = 1 }
+            });
+
+        // This is the key setup - mock the food repository to return foods
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink> { food1, food2 });
+
+        // Act
+        var result = await _bookingService.GetUserBookingsAsync(userId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+
+        var bookingDto = result.First();
+        Assert.Equal(bookingId, bookingDto.Id);
+        Assert.Equal("John Doe", bookingDto.MemberName);
+        Assert.Equal("Test Movie", bookingDto.Movie);
+
+        // Verify booking foods are properly populated
+        Assert.NotNull(bookingDto.BookingFoods);
+        Assert.Equal(2, bookingDto.BookingFoods.Count);
+
+        var popcornFood = bookingDto.BookingFoods.FirstOrDefault(f => f.Name == "Popcorn");
+        Assert.NotNull(popcornFood);
+        Assert.Equal(foodId1, popcornFood.FoodId);
+        Assert.Equal(2, popcornFood.Quantity);
+        Assert.Equal(15000, popcornFood.Price);
+
+        var colaFood = bookingDto.BookingFoods.FirstOrDefault(f => f.Name == "Cola");
+        Assert.NotNull(colaFood);
+        Assert.Equal(foodId2, colaFood.FoodId);
+        Assert.Equal(1, colaFood.Quantity);
+        Assert.Equal(8000, colaFood.Price);
+
+        // Verify that the food repository was called with the correct food IDs
+        _mockFoodAndDrinkRepository.Verify(r => r.GetAllAsync(
+            It.Is<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(
+                expr => expr != null), // Verify the predicate was provided
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()),
+            Times.Once);
+
+        _mockLoggerService.Verify(
+            l => l.Success($"Successfully retrieved 1 bookings for user ID: {userId}"),
+            Times.Once);
+    }
+    [Fact]
+    public async Task GetUserBookingsAsync_WithBookingFoodsButFoodsNotFound_ReturnsBookingsWithEmptyFoodList()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var foodId1 = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "John Doe"
+        };
+
+        var movie = new Movie
+        {
+            Id = movieId,
+            Name = "Test Movie"
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = movieId
+        };
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            MemberId = userId,
+            Member = user,
+            ShowtimeId = showTimeId,
+            Showtime = showTime,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 100000,
+            Status = "Created",
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, BookingId = bookingId }
+            },
+            BookingFoods = new List<BookingFood>
+            {
+                new() { FoodAndDrinkId = foodId1, BookingId = bookingId, Quantity = 2 }
+            }
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync(movie);
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat>
+            {
+                new() { Id = seatId, Row = "A", Number = 1 }
+            });
+
+        // Mock food repository to return empty list (foods not found or deleted)
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        // Act
+        var result = await _bookingService.GetUserBookingsAsync(userId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+
+        var bookingDto = result.First();
+        Assert.Equal(bookingId, bookingDto.Id);
+        Assert.Equal("John Doe", bookingDto.MemberName);
+        Assert.Equal("Test Movie", bookingDto.Movie);
+
+        // Verify booking foods list is empty when no foods are found
+        Assert.NotNull(bookingDto.BookingFoods);
+        Assert.Empty(bookingDto.BookingFoods);
+
+        // Verify that the food repository was still called
+        _mockFoodAndDrinkRepository.Verify(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()),
+            Times.Once);
+    }
+    [Fact]
+    public async Task GetUserBookingsAsync_DatabaseError_LogsErrorAndThrowsException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var exceptionMessage = "Database connection error";
+
+        // Setup the booking repository to throw an exception
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ThrowsAsync(new Exception(exceptionMessage));
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            _bookingService.GetUserBookingsAsync(userId));
+
+        Assert.Equal(exceptionMessage, ex.Message);
+
+        // Verify that the error was logged with the correct message
+        _mockLoggerService.Verify(
+            l => l.Error($"An unexpected error occurred while fetching bookings for user ID {userId}: {exceptionMessage}"),
+            Times.Once);
+
+        // Verify that the info log was called before the exception
+        _mockLoggerService.Verify(
+            l => l.Info($"Fetching bookings for user ID: {userId}"),
+            Times.Once);
+    }
 
     [Fact]
     public async Task GetAllBookingsAsync_ValidParameters_ReturnsPaginatedResults()
@@ -502,7 +1011,306 @@ public class BookingServiceTests
         Assert.NotNull(result);
         Assert.Single(result.Items);
     }
+    [Fact]
+    public async Task GetAllBookingsAsync_MemberNotFound_ThrowsException()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
 
+        var booking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created"
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        // Setup the GetByIdAsync to return a booking with null member
+        var completeBooking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            Member = null, // This is the key - member is null
+            Showtime = new ShowTime { Id = Guid.NewGuid() },
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid() }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(completeBooking);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            _bookingService.GetAllBookingsAsync());
+
+        Assert.Equal("An error occurred while retrieving booking items. Please try again later.", ex.Message);
+
+        // Verify that the error was logged with the original KeyNotFoundException message
+        _mockLoggerService.Verify(
+            l => l.Error(It.Is<string>(msg => msg.Contains("Failed to retrieve bookings") && msg.Contains($"Member for booking ID {bookingId} not found"))),
+            Times.Once);
+
+        // Verify that the initial info log was called
+        _mockLoggerService.Verify(
+            l => l.Info($"Fetching bookings - Page 1, PageSize 10, Status: , Search: "),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllBookingsAsync_ShowtimeNotFound_ThrowsException()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created"
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        // Setup the GetByIdAsync to return a booking with null showtime
+        var completeBooking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            Member = new User { Id = Guid.NewGuid(), FullName = "Test User" }, // Valid member
+            Showtime = null, // This is the key - showtime is null
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid() }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(completeBooking);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            _bookingService.GetAllBookingsAsync());
+
+        Assert.Equal("An error occurred while retrieving booking items. Please try again later.", ex.Message);
+
+        // Verify that the error was logged with the original KeyNotFoundException message
+        _mockLoggerService.Verify(
+            l => l.Error(It.Is<string>(msg => msg.Contains("Failed to retrieve bookings") && msg.Contains($"Showtime for booking ID {bookingId} not found"))),
+            Times.Once);
+
+        // Verify that the initial info log was called
+        _mockLoggerService.Verify(
+            l => l.Info($"Fetching bookings - Page 1, PageSize 10, Status: , Search: "),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllBookingsAsync_MovieNotFound_ThrowsException()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var movieId = Guid.NewGuid();
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created"
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        // Setup the GetByIdAsync to return a booking with valid member and showtime, but movie will be null
+        var completeBooking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 80000,
+            Status = "Created",
+            Member = new User { Id = Guid.NewGuid(), FullName = "Test User" }, // Valid member
+            Showtime = new ShowTime { Id = showTimeId, MovieId = movieId }, // Valid showtime with movieId
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid() }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(completeBooking);
+
+        // Setup movie repository to return null - this is the key part
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(movieId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync((Movie)null!);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            _bookingService.GetAllBookingsAsync());
+
+        Assert.Equal("An error occurred while retrieving booking items. Please try again later.", ex.Message);
+
+        // Verify that the error was logged with the original KeyNotFoundException message
+        _mockLoggerService.Verify(
+            l => l.Error(It.Is<string>(msg => msg.Contains("Failed to retrieve bookings") && msg.Contains($"Movie for showtime ID {showTimeId} not found"))),
+            Times.Once);
+
+        // Verify that the initial info log was called
+        _mockLoggerService.Verify(
+            l => l.Info($"Fetching bookings - Page 1, PageSize 10, Status: , Search: "),
+            Times.Once);
+    }
+    [Fact]
+    public async Task GetAllBookingsAsync_WithBookingFoods_ReturnsBookingsWithFoodDetails()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
+        var foodId1 = Guid.NewGuid();
+        var foodId2 = Guid.NewGuid();
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 120000,
+            Status = "Created"
+        };
+
+        var bookings = new List<Booking> { booking };
+
+        var food1 = new FoodAndDrink
+        {
+            Id = foodId1,
+            Name = "Popcorn",
+            Price = 15000,
+            Type = FoodType.Food
+        };
+
+        var food2 = new FoodAndDrink
+        {
+            Id = foodId2,
+            Name = "Cola",
+            Price = 8000,
+            Type = FoodType.Drink
+        };
+
+        // Setup the GetByIdAsync to return a booking with food items
+        var completeBooking = new Booking
+        {
+            Id = bookingId,
+            BookingDate = DateTime.UtcNow,
+            TotalAmount = 120000,
+            Status = "Created",
+            Member = new User { Id = Guid.NewGuid(), FullName = "Test User" },
+            Showtime = new ShowTime { Id = Guid.NewGuid(), MovieId = Guid.NewGuid() },
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = Guid.NewGuid() }
+            },
+            BookingFoods = new List<BookingFood>
+            {
+                new() { FoodAndDrinkId = foodId1, Quantity = 2 },
+                new() { FoodAndDrinkId = foodId2, Quantity = 1 }
+            }
+        };
+
+        _mockBookingRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(bookings);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(completeBooking);
+
+        _mockMovieRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Movie, object>>[]>()))
+            .ReturnsAsync(new Movie { Id = Guid.NewGuid(), Name = "Test Movie" });
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat>
+            {
+                new() { Id = Guid.NewGuid(), Row = "A", Number = 1 }
+            });
+
+        // This is the key setup - mock the food repository to return foods
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink> { food1, food2 });
+
+        // Act
+        var result = await _bookingService.GetAllBookingsAsync();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result.Items);
+
+        var bookingDto = result.Items.First();
+        Assert.Equal(bookingId, bookingDto.Id);
+        Assert.Equal("Test User", bookingDto.MemberName);
+        Assert.Equal("Test Movie", bookingDto.Movie);
+
+        // Verify booking foods are properly populated
+        Assert.NotNull(bookingDto.BookingFoods);
+        Assert.Equal(2, bookingDto.BookingFoods.Count);
+
+        var popcornFood = bookingDto.BookingFoods.FirstOrDefault(f => f.Name == "Popcorn");
+        Assert.NotNull(popcornFood);
+        Assert.Equal(foodId1, popcornFood.FoodId);
+        Assert.Equal(2, popcornFood.Quantity);
+        Assert.Equal(15000, popcornFood.Price);
+
+        var colaFood = bookingDto.BookingFoods.FirstOrDefault(f => f.Name == "Cola");
+        Assert.NotNull(colaFood);
+        Assert.Equal(foodId2, colaFood.FoodId);
+        Assert.Equal(1, colaFood.Quantity);
+        Assert.Equal(8000, colaFood.Price);
+
+        // Verify that the food repository was called with the correct food IDs
+        _mockFoodAndDrinkRepository.Verify(r => r.GetAllAsync(
+            It.Is<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(
+                expr => expr != null), // Verify the predicate was provided
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()),
+            Times.Once);
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Retrieved 1 bookings on page 1 successfully"))),
+            Times.Once);
+    }
     [Fact]
     public async Task GetAllBookingsAsync_WithSearch_ReturnsFilteredResults()
     {
@@ -647,6 +1455,365 @@ public class BookingServiceTests
     }
 
     [Fact]
+    public async Task CreateBookingAsync_WithVIPSeat_CalculatesCorrectTotalAmount()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var request = new CreateBookingRequest
+        {
+            ShowTimeId = showTimeId,
+            SeatIds = new List<Guid> { seatId },
+            FoodItems = new List<FoodOrderItem>()
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = Guid.NewGuid()
+        };
+
+        var vipSeat = new Seat
+        {
+            Id = seatId,
+            Row = "V",
+            Number = 1,
+            Type = SeatType.VIP // VIP seat type
+        };
+
+        var createdBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            MemberId = userId,
+            ShowtimeId = showTimeId,
+            BookingDate = DateTime.UtcNow,
+            Status = "Created",
+            TotalAmount = 120000, // VIP seat price
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, Seat = vipSeat }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTime, object>>[]>()))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ReturnsAsync(new List<ShowTimeSeat>());
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat> { vipSeat });
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        _mockBookingRepository.Setup(r => r.AddAsync(It.IsAny<Booking>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        // Act
+        var result = await _bookingService.CreateBookingAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(120000, result.TotalAmount); // VIP seat price
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Booking created successfully with ID:"))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBookingAsync_WithCoupleSeat_CalculatesCorrectTotalAmount()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var request = new CreateBookingRequest
+        {
+            ShowTimeId = showTimeId,
+            SeatIds = new List<Guid> { seatId },
+            FoodItems = new List<FoodOrderItem>()
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = Guid.NewGuid()
+        };
+
+        var coupleSeat = new Seat
+        {
+            Id = seatId,
+            Row = "C",
+            Number = 1,
+            Type = SeatType.Couple // Couple seat type
+        };
+
+        var createdBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            MemberId = userId,
+            ShowtimeId = showTimeId,
+            BookingDate = DateTime.UtcNow,
+            Status = "Created",
+            TotalAmount = 200000, // Couple seat price
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, Seat = coupleSeat }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTime, object>>[]>()))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ReturnsAsync(new List<ShowTimeSeat>());
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat> { coupleSeat });
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        _mockBookingRepository.Setup(r => r.AddAsync(It.IsAny<Booking>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        // Act
+        var result = await _bookingService.CreateBookingAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(200000, result.TotalAmount); // Couple seat price
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Booking created successfully with ID:"))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBookingAsync_WithNormalSeat_CalculatesCorrectTotalAmount()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+
+        var request = new CreateBookingRequest
+        {
+            ShowTimeId = showTimeId,
+            SeatIds = new List<Guid> { seatId },
+            FoodItems = new List<FoodOrderItem>()
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = Guid.NewGuid()
+        };
+
+        var normalSeat = new Seat
+        {
+            Id = seatId,
+            Row = "A",
+            Number = 1,
+            Type = SeatType.Normal // Normal seat type (default case)
+        };
+
+        var createdBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            MemberId = userId,
+            ShowtimeId = showTimeId,
+            BookingDate = DateTime.UtcNow,
+            Status = "Created",
+            TotalAmount = 80000, // Normal seat price (default)
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, Seat = normalSeat }
+            },
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTime, object>>[]>()))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ReturnsAsync(new List<ShowTimeSeat>());
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat> { normalSeat });
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        _mockBookingRepository.Setup(r => r.AddAsync(It.IsAny<Booking>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        // Act
+        var result = await _bookingService.CreateBookingAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(80000, result.TotalAmount); // Normal seat price
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Booking created successfully with ID:"))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBookingAsync_WithMultipleDifferentSeatTypes_CalculatesCorrectTotalAmount()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var vipSeatId = Guid.NewGuid();
+        var normalSeatId = Guid.NewGuid();
+        var coupleSeatId = Guid.NewGuid();
+
+        var request = new CreateBookingRequest
+        {
+            ShowTimeId = showTimeId,
+            SeatIds = new List<Guid> { vipSeatId, normalSeatId, coupleSeatId },
+            FoodItems = new List<FoodOrderItem>()
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = Guid.NewGuid()
+        };
+
+        var vipSeat = new Seat
+        {
+            Id = vipSeatId,
+            Row = "V",
+            Number = 1,
+            Type = SeatType.VIP
+        };
+
+        var normalSeat = new Seat
+        {
+            Id = normalSeatId,
+            Row = "A",
+            Number = 1,
+            Type = SeatType.Normal
+        };
+
+        var coupleSeat = new Seat
+        {
+            Id = coupleSeatId,
+            Row = "C",
+            Number = 1,
+            Type = SeatType.Couple
+        };
+
+        var seats = new List<Seat> { vipSeat, normalSeat, coupleSeat };
+
+        // Total: VIP (120000) + Normal (80000) + Couple (200000) = 400000
+        var createdBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            MemberId = userId,
+            ShowtimeId = showTimeId,
+            BookingDate = DateTime.UtcNow,
+            Status = "Created",
+            TotalAmount = 400000,
+            BookingSeats = seats.Select(seat => new BookingSeat
+            {
+                SeatId = seat.Id,
+                Seat = seat
+            }).ToList(),
+            BookingFoods = new List<BookingFood>()
+        };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTime, object>>[]>()))
+            .ReturnsAsync(showTime);
+
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ReturnsAsync(new List<ShowTimeSeat>());
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(seats);
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink>());
+
+        _mockBookingRepository.Setup(r => r.AddAsync(It.IsAny<Booking>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        // Act
+        var result = await _bookingService.CreateBookingAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(400000, result.TotalAmount); // VIP + Normal + Couple = 120000 + 80000 + 200000
+        Assert.Equal(3, result.BookingSeats.Count);
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Booking created successfully with ID:"))),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task CreateBookingAsync_ValidRequest_ReturnsBookingDto()
     {
         // Arrange
@@ -741,6 +1908,130 @@ public class BookingServiceTests
         Assert.Equal(showTimeId, result.ShowTimeId);
         Assert.Single(result.BookingSeats);
         Assert.Single(result.BookingFoods);
+
+        _mockLoggerService.Verify(
+            l => l.Info($"Starting booking creation for user: {userId}, showtime: {showTimeId}"),
+            Times.Once);
+
+        _mockLoggerService.Verify(
+            l => l.Success(It.Is<string>(msg => msg.Contains("Booking created successfully with ID:"))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateBookingAsync_ExistingSeatFound_UpdatesExistingSeatStatus()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+        var foodId = Guid.NewGuid();
+
+        var request = new CreateBookingRequest
+        {
+            ShowTimeId = showTimeId,
+            SeatIds = new List<Guid> { seatId },
+            FoodItems = new List<FoodOrderItem>
+            {
+                new() { FoodId = foodId, Quantity = 1 }
+            }
+        };
+
+        var showTime = new ShowTime
+        {
+            Id = showTimeId,
+            MovieId = Guid.NewGuid()
+        };
+
+        var seat = new Seat
+        {
+            Id = seatId,
+            Row = "A",
+            Number = 1,
+            Type = SeatType.Normal
+        };
+
+        var food = new FoodAndDrink
+        {
+            Id = foodId,
+            Name = "Popcorn",
+            Price = 15000
+        };
+
+        // Key part - existing ShowTimeSeat with Available status
+        var existingShowTimeSeat = new ShowTimeSeat
+        {
+            ShowTimeId = showTimeId,
+            SeatId = seatId,
+            Status = SeatStatus.Available,
+            Seat = seat // This is important for the condition check
+        };
+
+        var createdBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            MemberId = userId,
+            ShowtimeId = showTimeId,
+            BookingDate = DateTime.UtcNow,
+            Status = "Created",
+            TotalAmount = 95000,
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId, Seat = seat }
+            },
+            BookingFoods = new List<BookingFood>
+            {
+                new() { FoodAndDrinkId = foodId, Quantity = 1, FoodAndDrink = food }
+            }
+        };
+
+        _mockShowTimeRepository.Setup(r => r.GetByIdAsync(showTimeId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTime, object>>[]>()))
+            .ReturnsAsync(showTime);
+
+        // Setup to return the existing ShowTimeSeat with Available status
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ReturnsAsync(new List<ShowTimeSeat> { existingShowTimeSeat });
+
+        _mockSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Seat, object>>[]>()))
+            .ReturnsAsync(new List<Seat> { seat });
+
+        _mockFoodAndDrinkRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<FoodAndDrink, object>>[]>()))
+            .ReturnsAsync(new List<FoodAndDrink> { food });
+
+        _mockBookingRepository.Setup(r => r.AddAsync(It.IsAny<Booking>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(createdBooking);
+
+        _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+        // Act
+        var result = await _bookingService.CreateBookingAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal(showTimeId, result.ShowTimeId);
+        Assert.Single(result.BookingSeats);
+        Assert.Single(result.BookingFoods);
+
+        // Verify that the existing seat status was updated to Booked
+        Assert.Equal(SeatStatus.Booked, existingShowTimeSeat.Status);
+
+        // Verify that Update was called on the existing seat (not AddAsync)
+        _mockShowTimeSeatRepository.Verify(r => r.Update(existingShowTimeSeat), Times.Once);
+
+        // Verify that AddAsync was NOT called for ShowTimeSeats (since we're updating existing)
+        _mockShowTimeSeatRepository.Verify(r => r.AddAsync(It.IsAny<ShowTimeSeat>()), Times.Never);
 
         _mockLoggerService.Verify(
             l => l.Info($"Starting booking creation for user: {userId}, showtime: {showTimeId}"),
@@ -893,6 +2184,56 @@ public class BookingServiceTests
 
         _mockBookingRepository.Verify(r => r.SoftRemove(booking), Times.Once);
         _mockShowTimeSeatRepository.Verify(r => r.UpdateRange(It.IsAny<List<ShowTimeSeat>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelBookingAsync_DatabaseError_LogsErrorAndThrowsException()
+    {
+        // Arrange
+        var bookingId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+        var showTimeId = Guid.NewGuid();
+        var exceptionMessage = "Database connection error";
+
+        var booking = new Booking
+        {
+            Id = bookingId,
+            ShowtimeId = showTimeId,
+            MemberId = Guid.NewGuid(),
+            BookingSeats = new List<BookingSeat>
+            {
+                new() { SeatId = seatId }
+            }
+        };
+
+        _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
+            It.IsAny<System.Linq.Expressions.Expression<Func<Booking, object>>[]>()))
+            .ReturnsAsync(booking);
+
+        // Setup ShowTimeSeats repository to throw an exception
+        _mockShowTimeSeatRepository.Setup(r => r.GetAllAsync(
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, bool>>>(),
+            It.IsAny<System.Linq.Expressions.Expression<Func<ShowTimeSeat, object>>[]>()))
+            .ThrowsAsync(new Exception(exceptionMessage));
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            _bookingService.CancelBookingAsync(bookingId));
+
+        Assert.Equal(exceptionMessage, ex.Message);
+
+        // Verify that the error was logged with the correct message
+        _mockLoggerService.Verify(
+            l => l.Error($"Error cancelling booking {bookingId}: {exceptionMessage}"),
+            Times.Once);
+
+        // Verify that the info log was called before the exception
+        _mockLoggerService.Verify(
+            l => l.Info($"Starting booking cancellation for ID: {bookingId}"),
+            Times.Once);
+
+        // Verify that SaveChangesAsync was never called due to the exception
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
