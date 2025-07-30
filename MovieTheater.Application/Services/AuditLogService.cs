@@ -12,13 +12,11 @@ namespace MovieTheater.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILoggerService _loggerService;
-        private readonly IRedisService _redisService;
 
-        public AuditLogService(IUnitOfWork unitOfWork, ILoggerService loggerService, IRedisService redisService)
+        public AuditLogService(IUnitOfWork unitOfWork, ILoggerService loggerService)
         {
             _unitOfWork = unitOfWork;
             _loggerService = loggerService;
-            _redisService = redisService;
         }
 
         public async Task LogAsync(Guid adminId, AuditActionType actionType, string entityType, Guid entityId, object oldValue, object newValue, string changedFields, string reason = null)
@@ -38,23 +36,12 @@ namespace MovieTheater.Application.Services
 
             await _unitOfWork.AuditLogs.AddAsync(log);
             await _unitOfWork.SaveChangesAsync();
-            await _redisService.RemoveByPatternAsync("auditlog:list:");
         }
 
         public async Task<Pagination<AuditLogDto>> ViewLogAsync(string? search, AuditActionType? actionType, string? entityType, bool isDescending, int page, int pageSize)
         {
             try
             {
-                var cacheKey = $"auditlog:list:{search}:{actionType}:{entityType}:{isDescending}:{page}:{pageSize}";
-                var cached = await _redisService.GetAsync<Pagination<AuditLogDto>>(cacheKey);
-                if (cached != null)
-                {
-                    _loggerService.Info($"[CACHE HIT] {cacheKey}");
-                    return cached;
-                }
-
-                _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
-
                 var logs = await _unitOfWork.AuditLogs.GetAllAsync();
                 var users = await _unitOfWork.Users.GetAllAsync();
                 var query = logs.AsQueryable();
@@ -82,8 +69,8 @@ namespace MovieTheater.Application.Services
                 var totalLogs = query.Count();
 
                 query = isDescending
-                    ? query.OrderByDescending(log => log.Timestamp)
-                    : query.OrderBy(log => log.Timestamp);
+                    ? query.OrderBy(log => log.Timestamp)
+                    : query.OrderByDescending(log => log.Timestamp);
 
                 var pagedLogs = query
                     .Skip((page - 1) * pageSize)
@@ -105,7 +92,6 @@ namespace MovieTheater.Application.Services
                 }).ToList();
 
                 var paginated = new Pagination<AuditLogDto>(result, totalLogs, page, pageSize);
-                await _redisService.SetAsync(cacheKey, paginated, TimeSpan.FromMinutes(5));
 
                 _loggerService.Success($"Retrieved {pagedLogs.Count} audit logs on page {page} successfully.");
                 return paginated;

@@ -353,11 +353,13 @@ public class TicketService : ITicketService
 
             _loggerService.Info($"User phone number: {phoneNumber}");
             // Get all tickets for the user
-            var tickets = await _unitOfWork.Tickets.GetAllAsync(
-                t => (t.GuestPhoneNumber == phoneNumber) && !t.IsDeleted,
-                t => t.TicketSeats,
-                t => t.TicketFoodAndDrinks,
-                t => t.Showtime);
+            var tickets = (await _unitOfWork.Tickets.GetAllAsync(
+            t => (t.GuestPhoneNumber == phoneNumber) && !t.IsDeleted,
+            t => t.TicketSeats,
+            t => t.TicketFoodAndDrinks,
+            t => t.Showtime))
+            .OrderBy(t => t.CreatedAt)
+            .ToList();
 
             if (!tickets.Any())
             {
