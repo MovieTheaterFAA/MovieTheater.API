@@ -200,7 +200,7 @@ namespace MovieTheater.Application.Services
 
                 var tickets = await _unitOfWork.Tickets.GetQueryable()
                     .Where(t => !t.IsDeleted && t.CreatedAt.Year == monthYear.Year && t.CreatedAt.Month == monthYear.Month)
-                    .Include(t => t.TicketFoodAndDrinks).ThenInclude(t => t.FoodAndDrinkId)
+                    .Include(t => t.TicketFoodAndDrinks).ThenInclude(t => t.FoodAndDrink)
                     .ToListAsync();
 
                 var groupedByFood = tickets
@@ -232,7 +232,6 @@ namespace MovieTheater.Application.Services
                         _loggerService.Info($"Offline food and drinks revenue for {group.Key.Name} (ID: {group.Key.FoodAndDrinkId}) in month {monthYear.Month}/{monthYear.Year}: {totalRevenue}");
                     }
 
-                    // Online food and drinks revenue
                     var onlineTickets = group
                         .Where(fd => fd.Ticket.TicketType == TicketType.Online)
                         .ToList();
