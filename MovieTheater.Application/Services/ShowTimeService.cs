@@ -69,25 +69,54 @@ namespace MovieTheater.Application.Services
                 showtimeWindows.Add((start, end, idx));
             }
 
-            // Check for overlap with existing showtimes in the same room and date (any movie)
-            foreach (var entry in dto.ShowTimes)
+            // Check for overlaps within the batch itself
+            for (int i = 0; i < showtimeWindows.Count; i++)
             {
-                var existingShowTimes = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, entry.StartTime.Date);
+                for (int j = i + 1; j < showtimeWindows.Count; j++)
+                {
+                    var window1 = showtimeWindows[i];
+                    var window2 = showtimeWindows[j];
 
-                var movie = movies[entry.MovieId];
-                var newStart = entry.StartTime;
-                var newEnd = newStart.Add(TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15));
+                    if (window1.Start < window2.End && window2.Start < window1.End)
+                    {
+                        var entry1 = dto.ShowTimes[window1.Index];
+                        var entry2 = dto.ShowTimes[window2.Index];
 
-                foreach (var existing in existingShowTimes)
+                        _loggerService.Error(
+                            $"[AddBatchShowTimesAsync] Overlap detected within batch: " +
+                            $"Showtime 1 (MovieId: {entry1.MovieId}, Start: {window1.Start:O}, End: {window1.End:O}) " +
+                            $"Showtime 2 (MovieId: {entry2.MovieId}, Start: {window2.Start:O}, End: {window2.End:O})"
+                        );
+                        throw new InvalidOperationException("One or more showtimes in the batch overlap with each other. Please check the start times and durations.");
+                    }
+                }
+            }
+
+            // Get all existing showtimes for the room across all affected dates
+            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
+            var allExistingShowTimes = new List<ShowtimeResponseDTO>();
+
+            foreach (var date in affectedDates)
+            {
+                var existingForDate = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, date);
+                allExistingShowTimes.AddRange(existingForDate);
+            }
+
+            // Check for overlap with existing showtimes
+            foreach (var window in showtimeWindows)
+            {
+                var entry = dto.ShowTimes[window.Index];
+
+                foreach (var existing in allExistingShowTimes)
                 {
                     var existingStart = existing.ShowDate;
                     var existingEnd = existing.ShowDate.Add(existing.Duration);
 
-                    if (newStart < existingEnd && existingStart < newEnd)
+                    if (window.Start < existingEnd && existingStart < window.End)
                     {
                         _loggerService.Error(
                             $"[AddBatchShowTimesAsync] Overlap detected with existing showtime: " +
-                            $"New (MovieId: {entry.MovieId}, Start: {newStart:O}, End: {newEnd:O}) " +
+                            $"New (MovieId: {entry.MovieId}, Start: {window.Start:O}, End: {window.End:O}) " +
                             $"Existing (Id: {existing.Id}, MovieId: {existing.MovieId}, Start: {existingStart:O}, End: {existingEnd:O})"
                         );
                         throw new InvalidOperationException("One or more showtimes overlap with existing showtimes in this room. Please check the start times and durations.");
@@ -121,7 +150,6 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.SaveChangesAsync();
 
             // Remove all related showtime caches for this room and all affected movies/dates
-            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
             var affectedMovieIds = dto.ShowTimes.Select(st => st.MovieId).Distinct().ToList();
 
             // Invalidate all GetShowTimesByDateAsync cache keys for affected dates, movies, and room
