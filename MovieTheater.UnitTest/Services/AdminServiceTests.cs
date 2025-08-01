@@ -904,7 +904,7 @@ public async Task GetUserByPhoneNumberAsync_Found_ReturnsDto()
 
         var user = service.GetType()
             .GetMethod("ToAddEmployeeDto", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(service, new object[] { dto, null }) as User;
+            .Invoke(service, new object[] { dto, null! }) as User;
 
         Assert.NotNull(user);
         Assert.Equal(dto.FullName, user.FullName);

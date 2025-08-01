@@ -398,8 +398,8 @@ namespace MovieTheater.UnitTest.Services
 
             // Verify promotion logging - Updated to match the actual decimal formatting
             _mockLoggerService.Verify(
-                l => l.Info($"Applied promotion with discount {promotion.DiscountValue} to tickets {ticket.Id}. New seat revenue: 80,0"),
-                Times.Once);
+    l => l.Info($"Applied promotion with discount {promotion.DiscountValue} to tickets {ticket.Id}. New seat revenue: 80.0"),
+    Times.Once);
         }
 
         [Fact]
@@ -626,8 +626,8 @@ namespace MovieTheater.UnitTest.Services
 
             // Verify score discount logging - Fixed to match the actual decimal formatting
             _mockLoggerService.Verify(
-                l => l.Info($"Applied score deduction of 50 to tickets {ticket.Id}. New seat revenue: 50,0"),
-                Times.Once);
+    l => l.Info($"Applied score deduction of 50 to tickets {ticket.Id}. New seat revenue: 50.0"),
+    Times.Once);
         }
 
         // Helper class to mock DateTime.UtcNow for testing

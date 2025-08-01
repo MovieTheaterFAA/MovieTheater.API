@@ -1,6 +1,7 @@
 ﻿using Moq;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
+using MovieTheater.Application.Services;
 using MovieTheater.Domain.DTOs.AuditLogDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
@@ -14,7 +15,6 @@ namespace MovieTheater.UnitTest.Services
     {
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ILoggerService> _mockLoggerService;
-        private readonly Mock<IRedisService> _mockRedisService;
         private readonly IAuditLogService _auditLogService;
         private readonly Mock<IGenericRepository<AuditLog>> _mockAuditLogRepository;
         private readonly Mock<IGenericRepository<User>> _mockUserRepository;
@@ -23,11 +23,12 @@ namespace MovieTheater.UnitTest.Services
         {
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLoggerService = new Mock<ILoggerService>();
-            _mockRedisService = new Mock<IRedisService>();
             _mockUserRepository = new Mock<IGenericRepository<User>>();
+            _mockAuditLogRepository = new Mock<IGenericRepository<AuditLog>>();
 
             _mockUnitOfWork.Setup(uow => uow.AuditLogs).Returns(_mockAuditLogRepository.Object);
             _mockUnitOfWork.Setup(uow => uow.Users).Returns(_mockUserRepository.Object);
+            _auditLogService = new AuditLogService(_mockUnitOfWork.Object, _mockLoggerService.Object);
         }
 
         [Fact]
@@ -62,7 +63,6 @@ namespace MovieTheater.UnitTest.Services
     Times.Once);
 
             _mockUnitOfWork.Verify(uow => uow.SaveChangesAsync(), Times.Once);
-            _mockRedisService.Verify(redis => redis.RemoveByPatternAsync("auditlog:list:"), Times.Once);
         }
 
         [Fact]
@@ -86,38 +86,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task ViewLogAsync_WithCacheHit_ReturnsCachedData()
-        {
-            // Arrange
-            string search = "test";
-            AuditActionType? actionType = AuditActionType.Update;
-            string entityType = "User";
-            bool isDescending = true;
-            int page = 1;
-            int pageSize = 10;
-
-            var expectedResult = new Pagination<AuditLogDto>(
-                new List<AuditLogDto> { new AuditLogDto { Id = Guid.NewGuid() } },
-                1, page, pageSize);
-
-            var cacheKey = $"auditlog:list:{search}:{actionType}:{entityType}:{isDescending}:{page}:{pageSize}";
-
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(cacheKey))
-                .ReturnsAsync(expectedResult);
-
-            // Act
-            var result = await _auditLogService.ViewLogAsync(search, actionType, entityType, isDescending, page, pageSize);
-
-            // Assert
-            Assert.Same(expectedResult, result);
-            _mockLoggerService.Verify(logger => logger.Info(It.Is<string>(s => s.Contains("[CACHE HIT]"))), Times.Once);
-
-            // Verify we don't query the database when cache is hit
-            _mockAuditLogRepository.Verify(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task ViewLogAsync_WithCacheMiss_QueriesDatabaseAndCachesResult()
+        public async Task ViewLogAsync_QueriesDatabaseAndLogsResult()
         {
             // Arrange
             string search = null!;
@@ -128,40 +97,32 @@ namespace MovieTheater.UnitTest.Services
             int pageSize = 10;
 
             var auditLogs = new List<AuditLog>
-            {
-                new AuditLog {
-                    Id = Guid.NewGuid(),
-                    ActionType = AuditActionType.Create.ToString(),
-                    EntityType = "User",
-                    AdminId = Guid.NewGuid(),
-                    OldValue = null,
-                    NewValue = JsonSerializer.Serialize(new { Name = "New User" }),
-                    Timestamp = DateTime.UtcNow
-                },
-                new AuditLog {
-                    Id = Guid.NewGuid(),
-                    ActionType = AuditActionType.Update.ToString(),
-                    EntityType = "Movie",
-                    AdminId = Guid.NewGuid(),
-                    OldValue = JsonSerializer.Serialize(new { Title = "Old Title" }),
-                    NewValue = JsonSerializer.Serialize(new { Title = "New Title" }),
-                    Timestamp = DateTime.UtcNow.AddHours(-1)
-                }
-            };
+    {
+        new AuditLog {
+            Id = Guid.NewGuid(),
+            ActionType = AuditActionType.Create.ToString(),
+            EntityType = "User",
+            AdminId = Guid.NewGuid(),
+            OldValue = null,
+            NewValue = JsonSerializer.Serialize(new { Name = "New User" }),
+            Timestamp = DateTime.UtcNow
+        },
+        new AuditLog {
+            Id = Guid.NewGuid(),
+            ActionType = AuditActionType.Update.ToString(),
+            EntityType = "Movie",
+            AdminId = Guid.NewGuid(),
+            OldValue = JsonSerializer.Serialize(new { Title = "Old Title" }),
+            NewValue = JsonSerializer.Serialize(new { Title = "New Title" }),
+            Timestamp = DateTime.UtcNow.AddHours(-1)
+        }
+    };
 
             var users = new List<User>();
 
-            var cacheKey = $"auditlog:list:{search}:{actionType}:{entityType}:{isDescending}:{page}:{pageSize}";
-
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(cacheKey))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
-
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
-
             _mockUserRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(users);
-
-            _mockAuditLogRepository.Setup(repo => repo.GetQueryable())
-                .Returns(auditLogs.AsQueryable());
+            _mockAuditLogRepository.Setup(repo => repo.GetQueryable()).Returns(auditLogs.AsQueryable());
 
             // Act
             var result = await _auditLogService.ViewLogAsync(search, actionType, entityType, isDescending, page, pageSize);
@@ -173,9 +134,6 @@ namespace MovieTheater.UnitTest.Services
             Assert.Equal(page, result.CurrentPage);
             Assert.Equal(pageSize, result.PageSize);
 
-            _mockLoggerService.Verify(logger => logger.Info(It.Is<string>(s => s.Contains("[CACHE MISS]"))), Times.Once);
-            _mockRedisService.Verify(redis => redis.SetAsync(cacheKey, It.IsAny<Pagination<AuditLogDto>>(),
-                It.IsAny<TimeSpan>()), Times.Once);
             _mockLoggerService.Verify(logger => logger.Success(It.IsAny<string>()), Times.Once);
         }
 
@@ -200,9 +158,6 @@ namespace MovieTheater.UnitTest.Services
                     EntityType = "User"
                 }
             };
-
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
 
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
 
@@ -241,9 +196,6 @@ namespace MovieTheater.UnitTest.Services
                     EntityType = "Movie"
                 }
             };
-
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
 
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
 
@@ -288,8 +240,6 @@ namespace MovieTheater.UnitTest.Services
                 new User { Id = Guid.NewGuid(), FullName = "Admin User" }
             };
 
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
 
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
 
@@ -323,7 +273,7 @@ namespace MovieTheater.UnitTest.Services
                     Id = Guid.NewGuid(),
                     ActionType = AuditActionType.Create.ToString(),
                     EntityType = "User",
-                    Timestamp = now.AddMinutes(-10)
+                    Timestamp = now.AddMinutes(+10)
                 },
                 new AuditLog {
                     Id = Guid.NewGuid(),
@@ -333,8 +283,6 @@ namespace MovieTheater.UnitTest.Services
                 }
             };
 
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
 
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
 
@@ -376,9 +324,6 @@ namespace MovieTheater.UnitTest.Services
                 }
             };
 
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
-
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>())).ReturnsAsync(auditLogs);
 
             _mockUserRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(new List<User>());
@@ -407,8 +352,6 @@ namespace MovieTheater.UnitTest.Services
 
             var exception = new Exception("Query error");
 
-            _mockRedisService.Setup(redis => redis.GetAsync<Pagination<AuditLogDto>>(It.IsAny<string>()))
-                .ReturnsAsync((Pagination<AuditLogDto>)null!);
 
             _mockAuditLogRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<AuditLog, bool>>>(), It.IsAny<Expression<Func<AuditLog, object>>[]>()))
                 .ThrowsAsync(exception);

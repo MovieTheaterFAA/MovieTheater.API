@@ -217,7 +217,7 @@ public class BookingServiceTests
         var booking = new Booking
         {
             Id = bookingId,
-            Member = null,
+            Member = null!,
             Showtime = new ShowTime()
         };
 
@@ -245,7 +245,7 @@ public class BookingServiceTests
         {
             Id = bookingId,
             Member = new User { FullName = "Test User" },
-            Showtime = null
+            Showtime = null!
         };
 
         _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
@@ -301,7 +301,7 @@ public class BookingServiceTests
             Id = bookingId,
             Member = new User { FullName = "Test User" },
             Showtime = new ShowTime { MovieId = Guid.NewGuid() },
-            BookingSeats = null
+            BookingSeats = null!
         };
 
         _mockBookingRepository.Setup(r => r.GetByIdAsync(bookingId,
@@ -461,7 +461,7 @@ public class BookingServiceTests
             MemberId = userId,
             Member = user,
             ShowtimeId = Guid.NewGuid(),
-            Showtime = null, // This is the key - showtime is null
+            Showtime = null!, // This is the key - showtime is null
             BookingDate = DateTime.UtcNow,
             TotalAmount = 80000,
             Status = "Created",
