@@ -53,41 +53,53 @@ namespace MovieTheater.Application.Services
                             .ToDictionaryAsync(m => m.Id);
 
             // ===== Overlap validation for batch =====
-            // Prepare a list of (start, end, index) for each showtime in the batch
-            var showtimeWindows = new List<(DateTime Start, DateTime End, int Index)>();
-            for (int idx = 0; idx < dto.ShowTimes.Count; idx++)
+            // Prepare a list of (start, end, movieId) for each showtime in the batch
+            var showtimeWindows = new List<(DateTime Start, DateTime End, Guid MovieId)>();
+            foreach (var entry in dto.ShowTimes)
             {
-                var entry = dto.ShowTimes[idx];
                 if (!movies.TryGetValue(entry.MovieId, out var movie))
                     throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
 
                 var runningTime = movie.RunningTime ?? 0;
                 var duration = TimeSpan.FromMinutes(runningTime + 15); // movie + rest
+
                 var start = entry.StartTime;
                 var end = start.Add(duration);
 
-                showtimeWindows.Add((start, end, idx));
+                showtimeWindows.Add((start, end, entry.MovieId));
+
+                _loggerService.Info($"[AddBatchShowTimesAsync] Prepared showtime window: MovieId={entry.MovieId}, Start={start:O}, End={end:O}");
             }
 
-            // Check for overlap with existing showtimes in the same room and date (any movie)
-            foreach (var entry in dto.ShowTimes)
+            // Check for overlap with existing showtimes - get ALL existing showtimes for the room on relevant dates
+            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
+            var allExistingShowTimes = new List<ShowtimeResponseDTO>();
+
+            foreach (var date in affectedDates)
             {
-                var existingShowTimes = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, entry.StartTime.Date);
+                var existingForDate = await GetShowTimesByRoomAndDateAsync(dto.CinemaRoomId, date);
+                allExistingShowTimes.AddRange(existingForDate);
+                _loggerService.Info($"[AddBatchShowTimesAsync] Found {existingForDate.Count} existing showtimes for date {date:yyyy-MM-dd}");
+            }
 
-                var movie = movies[entry.MovieId];
-                var newStart = entry.StartTime;
-                var newEnd = newStart.Add(TimeSpan.FromMinutes((movie.RunningTime ?? 0) + 15));
+            // Check each new showtime against existing ones
+            foreach (var window in showtimeWindows)
+            {
+                _loggerService.Info($"[AddBatchShowTimesAsync] Checking overlap for MovieId={window.MovieId}, Start={window.Start:O}, End={window.End:O}");
 
-                foreach (var existing in existingShowTimes)
+                foreach (var existing in allExistingShowTimes)
                 {
                     var existingStart = existing.ShowDate;
                     var existingEnd = existing.ShowDate.Add(existing.Duration);
 
-                    if (newStart < existingEnd && existingStart < newEnd)
+                    // Log the comparison for debugging
+                    _loggerService.Info($"[AddBatchShowTimesAsync] Comparing with existing: Id={existing.Id}, Start={existingStart:O}, End={existingEnd:O}");
+
+                    if (window.Start < existingEnd && existingStart < window.End)
                     {
                         _loggerService.Error(
                             $"[AddBatchShowTimesAsync] Overlap detected with existing showtime: " +
-                            $"New (MovieId: {entry.MovieId}, Start: {newStart:O}, End: {newEnd:O}) " +
+                            $"New (MovieId: {window.MovieId}, Start: {window.Start:O}, End: {window.End:O}) " +
                             $"Existing (Id: {existing.Id}, MovieId: {existing.MovieId}, Start: {existingStart:O}, End: {existingEnd:O})"
                         );
                         throw new InvalidOperationException("One or more showtimes overlap with existing showtimes in this room. Please check the start times and durations.");
@@ -104,13 +116,16 @@ namespace MovieTheater.Application.Services
                     throw new InvalidOperationException($"Movie {entry.MovieId} not found.");
 
                 var runningTime = movie.RunningTime ?? 0;
-                var duration = TimeSpan.FromMinutes(runningTime + 15);  // Cộng thêm 15 phút
+                var duration = TimeSpan.FromMinutes(runningTime + 15);
+                var showDate = entry.StartTime;
+
+                _loggerService.Info($"[AddBatchShowTimesAsync] Creating showtime: MovieId={entry.MovieId}, ShowDate={showDate:O}, Duration={duration}");
 
                 showTimes.Add(new ShowTime
                 {
                     MovieId = entry.MovieId,
                     CinemaRoomId = dto.CinemaRoomId,
-                    ShowDate = DateTime.SpecifyKind(entry.StartTime, DateTimeKind.Utc),
+                    ShowDate = showDate,
                     Duration = duration,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = _claimsService.GetCurrentUserId
@@ -121,7 +136,6 @@ namespace MovieTheater.Application.Services
             await _unitOfWork.SaveChangesAsync();
 
             // Remove all related showtime caches for this room and all affected movies/dates
-            var affectedDates = dto.ShowTimes.Select(st => st.StartTime.Date).Distinct().ToList();
             var affectedMovieIds = dto.ShowTimes.Select(st => st.MovieId).Distinct().ToList();
 
             // Invalidate all GetShowTimesByDateAsync cache keys for affected dates, movies, and room
@@ -140,7 +154,6 @@ namespace MovieTheater.Application.Services
             await _redisService.RemoveByPatternAsync("showtime:date:all:*");
             await _redisService.RemoveByPatternAsync("showtime:movie:*:all");
 
-            // Audit log: log only primitive properties
             var newShowTimeData = showTimes.Select(st => new
             {
                 st.Id,
@@ -163,6 +176,8 @@ namespace MovieTheater.Application.Services
                 Reason = "Batch created showtimes"
             });
             await _unitOfWork.SaveChangesAsync();
+
+            _loggerService.Success($"[AddBatchShowTimesAsync] Successfully created {showTimes.Count} showtimes");
 
             return showTimes.Select(st => new ShowtimeResponseDTO
             {

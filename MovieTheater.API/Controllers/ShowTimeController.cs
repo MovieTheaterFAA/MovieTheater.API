@@ -29,10 +29,16 @@ namespace MovieTheater.API.Controllers
         [ProducesResponseType(typeof(ApiResult<object>), 400)]
         [ProducesResponseType(typeof(ApiResult<object>), 500)]
         public async Task<IActionResult> AddBatchShowTimesAsync(
-            [FromBody, SwaggerParameter("Batch showtime data to be added")] BatchShowTimeRequestDto batchShowTimeRequestDto)
+        [FromBody, SwaggerParameter("Batch showtime data to be added")] BatchShowTimeRequestDto batchShowTimeRequestDto)
         {
             try
             {
+                foreach (var showtime in batchShowTimeRequestDto.ShowTimes)
+                {
+                    if (showtime.StartTime.Kind == DateTimeKind.Unspecified)
+                        showtime.StartTime = DateTime.SpecifyKind(showtime.StartTime, DateTimeKind.Utc);
+                }
+
                 var result = await _showTimeService.AddBatchShowTimesAsync(batchShowTimeRequestDto);
                 return Ok(ApiResult<List<ShowtimeResponseDTO>>.Success(result, "200", "Batch showtimes added successfully."));
             }
