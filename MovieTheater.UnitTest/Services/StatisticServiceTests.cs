@@ -6,7 +6,6 @@ using MovieTheater.Domain.DTOs.StatisticDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System.Reflection;
 
 namespace MovieTheater.UnitTest.Services
 {
@@ -60,11 +59,11 @@ namespace MovieTheater.UnitTest.Services
 
             var users = new List<User>
             {
-                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 1) },
-                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 1 > 0 ? currentMonth - 1 : 12, 15) },
-                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 2 > 0 ? currentMonth - 2 : currentMonth - 2 + 12, 10) },
-                new() { Id = Guid.NewGuid(), Role = RoleType.Admin, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 5) }, // Should be excluded
-                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = true, CreatedAt = new DateTime(currentYear, currentMonth, 8) } // Should be excluded
+                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 1 > 0 ? currentMonth - 1 : 12, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 2 > 0 ? currentMonth - 2 : currentMonth - 2 + 12, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new() { Id = Guid.NewGuid(), Role = RoleType.Admin, IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 5, 0, 0, 0, DateTimeKind.Utc) }, // Should be excluded
+                new() { Id = Guid.NewGuid(), Role = RoleType.Member, IsDeleted = true, CreatedAt = new DateTime(currentYear, currentMonth, 8, 0, 0, 0, DateTimeKind.Utc) } // Should be excluded
             };
 
             var queryable = users.AsQueryable().BuildMock();
@@ -94,7 +93,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task GetRegisterPerMonthAsync_ThrowsException_LogsErrorAndRethrows()
+        public async Task GetRegisterPerMonthAsync_ThrowsException_LogsErrorAndRethraws()
         {
             // Arrange
             var expectedErrorMessage = "Database connection failed";
@@ -122,10 +121,10 @@ namespace MovieTheater.UnitTest.Services
 
             var tickets = new List<Ticket>
             {
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 1), TotalPrice = 100m },
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 15), TotalPrice = 200m },
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 1 > 0 ? currentMonth - 1 : 12, 10), TotalPrice = 150m },
-                new() { Id = Guid.NewGuid(), IsDeleted = true, CreatedAt = new DateTime(currentYear, currentMonth, 5), TotalPrice = 50m } // Should be excluded
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 1, 0, 0, 0, DateTimeKind.Utc), TotalPrice = 100m },
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth, 15, 0, 0, 0, DateTimeKind.Utc), TotalPrice = 200m },
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(currentYear, currentMonth - 1 > 0 ? currentMonth - 1 : 12, 10, 0, 0, 0, DateTimeKind.Utc), TotalPrice = 150m },
+                new() { Id = Guid.NewGuid(), IsDeleted = true, CreatedAt = new DateTime(currentYear, currentMonth, 5, 0, 0, 0, DateTimeKind.Utc), TotalPrice = 50m } // Should be excluded
             };
 
             var queryable = tickets.AsQueryable().BuildMock();
@@ -155,7 +154,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task GetMonthlyRevenueAsync_ThrowsException_LogsErrorAndRethrows()
+        public async Task GetMonthlyRevenueAsync_ThrowsException_LogsErrorAndRethraws()
         {
             // Arrange
             var expectedErrorMessage = "Database query failed";
@@ -265,7 +264,7 @@ namespace MovieTheater.UnitTest.Services
             {
                 Id = Guid.NewGuid(),
                 IsDeleted = false,
-                CreatedAt = new DateTime(2023, 6, 1),
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
                 TicketType = TicketType.Online,
                 Showtime = showtime,
                 BookingId = null, // Missing BookingId
@@ -305,7 +304,7 @@ namespace MovieTheater.UnitTest.Services
             {
                 Id = Guid.NewGuid(),
                 IsDeleted = false,
-                CreatedAt = new DateTime(2023, 6, 1),
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
                 TicketType = TicketType.Online,
                 Showtime = showtime,
                 BookingId = bookingId,
@@ -396,10 +395,13 @@ namespace MovieTheater.UnitTest.Services
             Assert.Equal(80m, movieResult.TotalRevenue); // 100 - (100 * 0.2) = 80
             Assert.Equal(1, movieResult.TotalTickets);
 
-            // Verify promotion logging - Updated to match the actual decimal formatting
+            // Verify promotion logging - Use It.Is to match the pattern since decimal formatting varies by culture
             _mockLoggerService.Verify(
-    l => l.Info($"Applied promotion with discount {promotion.DiscountValue} to tickets {ticket.Id}. New seat revenue: 80.0"),
-    Times.Once);
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains($"Applied promotion with discount {promotion.DiscountValue}") &&
+                    s.Contains($"to tickets {ticket.Id}") &&
+                    s.Contains("New seat revenue: 80"))),
+                Times.Once);
         }
 
         [Fact]
@@ -425,7 +427,7 @@ namespace MovieTheater.UnitTest.Services
             {
                 Id = ticketId,
                 IsDeleted = false,
-                CreatedAt = new DateTime(2023, 6, 1),
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
                 TicketType = TicketType.Offline,
                 TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
             };
@@ -466,10 +468,10 @@ namespace MovieTheater.UnitTest.Services
 
             var tickets = new List<Ticket>
             {
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 1), TicketType = TicketType.Online, GuestPhoneNumber = memberPhoneNumber },
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 5), TicketType = TicketType.Online, GuestPhoneNumber = guestPhoneNumber },
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 10), TicketType = TicketType.Offline, GuestPhoneNumber = memberPhoneNumber },
-                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 15), TicketType = TicketType.Offline, GuestPhoneNumber = guestPhoneNumber }
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc), TicketType = TicketType.Online, GuestPhoneNumber = memberPhoneNumber },
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 5, 0, 0, 0, DateTimeKind.Utc), TicketType = TicketType.Online, GuestPhoneNumber = guestPhoneNumber },
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 10, 0, 0, 0, DateTimeKind.Utc), TicketType = TicketType.Offline, GuestPhoneNumber = memberPhoneNumber },
+                new() { Id = Guid.NewGuid(), IsDeleted = false, CreatedAt = new DateTime(2023, 6, 15, 0, 0, 0, DateTimeKind.Utc), TicketType = TicketType.Offline, GuestPhoneNumber = guestPhoneNumber }
             };
 
             var users = new List<User>
@@ -500,7 +502,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task GetMonthlyTicketTypeStatisticsAsync_ThrowsException_LogsErrorAndRethrows()
+        public async Task GetMonthlyTicketTypeStatisticsAsync_ThrowsException_LogsErrorAndRethraws()
         {
             // Arrange
             var monthYear = new MonthYearDto(6, 2023);
@@ -519,7 +521,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task GetMonthlyRevenueMovieAsync_ThrowsException_LogsErrorAndRethrows()
+        public async Task GetMonthlyRevenueMovieAsync_ThrowsException_LogsErrorAndRethraws()
         {
             // Arrange
             var monthYear = new MonthYearDto(6, 2023);
@@ -538,7 +540,7 @@ namespace MovieTheater.UnitTest.Services
         }
 
         [Fact]
-        public async Task GetMonthlyFoodAndDrinkRevenueAsync_ThrowsException_LogsErrorAndRethrows()
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_ThrowsException_LogsErrorAndRethraws()
         {
             // Arrange
             var monthYear = new MonthYearDto(6, 2023);
@@ -624,29 +626,642 @@ namespace MovieTheater.UnitTest.Services
             Assert.Equal(50m, movieResult.TotalRevenue); // 100 - (100 * 0.5) = 50
             Assert.Equal(1, movieResult.TotalTickets);
 
-            // Verify score discount logging - Fixed to match the actual decimal formatting
+            // Verify score discount logging - Use It.Is to match the pattern since decimal formatting varies by culture
             _mockLoggerService.Verify(
-    l => l.Info($"Applied score deduction of 50 to tickets {ticket.Id}. New seat revenue: 50.0"),
-    Times.Once);
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains("Applied score deduction of 50") &&
+                    s.Contains($"to tickets {ticket.Id}") &&
+                    s.Contains("New seat revenue: 50"))),
+                Times.Once);
         }
 
-        // Helper class to mock DateTime.UtcNow for testing
-        public class DateTimeProvider : IDisposable
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_OnlineTicketMissingBookingId_ThrowsException()
         {
-            private readonly DateTime _fixedDateTime;
-            private readonly FieldInfo _utcNowField;
-            private readonly object _originalValue;
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
 
-            public DateTimeProvider(DateTime fixedDateTime)
-            {
-                _fixedDateTime = fixedDateTime;
-                // This is a simplified approach - in real scenarios you might need a more sophisticated time provider pattern
-            }
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
 
-            public void Dispose()
+            var ticketFoodAndDrink = new TicketFoodAndDrink
             {
-                // Reset if needed
-            }
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = null, // Missing BookingId
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear));
+
+            Assert.Contains($"Ticket {ticket.Id} missing BookingId", ex.Message);
+
+            // Verify warning logging
+            _mockLoggerService.Verify(
+                l => l.Warn($"[FoodRevenueCalc] Missing BookingId on Ticket {ticket.Id}"),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_InvoiceNotFound_ThrowsException()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice>().AsQueryable().BuildMock(); // Empty invoice list
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear));
+
+            Assert.Contains($"Invoice not found for Ticket {ticket.Id} with BookingId {bookingId}", ex.Message);
+
+            // Verify warning logging
+            _mockLoggerService.Verify(
+                l => l.Warn($"[FoodRevenueCalc] Invoice not found for Ticket {ticket.Id} with BookingId {bookingId}"),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_WithPromotionDiscount_CalculatesCorrectRevenue()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+            var promotionId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+            var promotion = new Promotion { Id = promotionId, DiscountValue = 0.2m }; // 20% discount
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = promotionId
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            _mockPromotionRepository.Setup(r => r.GetByIdAsync(promotionId)).ReturnsAsync(promotion);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory>().AsQueryable().BuildMock();
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            Assert.Equal(80m, foodResult.TotalRevenue); // (50 * 2) - (100 * 0.2) = 100 - 20 = 80
+            Assert.Equal(2, foodResult.TotalSold);
+
+            // Verify promotion logging
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains($"Applied promotion with discount {promotion.DiscountValue}") &&
+                    s.Contains("to food and drink Popcorn") &&
+                    s.Contains("New seat revenue: 80"))),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_PromotionNotFound_ThrowsException()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+            var promotionId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = promotionId
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            _mockPromotionRepository.Setup(r => r.GetByIdAsync(promotionId)).ReturnsAsync((Promotion)null);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear));
+
+            Assert.Contains($"Promotion {promotionId} not found for Invoice {invoice.Id}", ex.Message);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_WithScoreDiscount_CalculatesCorrectRevenue()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = null
+            };
+
+            var scoreHistory = new ScoreHistory
+            {
+                Id = Guid.NewGuid(),
+                RelatedBookingId = bookingId,
+                ChangeType = ScoreChangeType.Use,
+                ScoreValue = -30 // 30% discount
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory> { scoreHistory }.AsQueryable().BuildMock();
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            Assert.Equal(70m, foodResult.TotalRevenue); // (50 * 2) - (100 * 0.3) = 100 - 30 = 70
+            Assert.Equal(2, foodResult.TotalSold);
+
+            // Verify score discount logging
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains("Applied score deduction of 30") &&
+                    s.Contains("to food and drink Popcorn") &&
+                    s.Contains("New seat revenue: 70"))),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_WithBothPromotionAndScoreDiscounts_CalculatesCorrectRevenue()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+            var promotionId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+            var promotion = new Promotion { Id = promotionId, DiscountValue = 0.2m }; // 20% discount
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = promotionId
+            };
+
+            var scoreHistory = new ScoreHistory
+            {
+                Id = Guid.NewGuid(),
+                RelatedBookingId = bookingId,
+                ChangeType = ScoreChangeType.Use,
+                ScoreValue = -25 // 25% discount
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            _mockPromotionRepository.Setup(r => r.GetByIdAsync(promotionId)).ReturnsAsync(promotion);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory> { scoreHistory }.AsQueryable().BuildMock();
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            // Original: 100, Promotion discount: 20, Score discount: 25, Final: 100 - 20 - 25 = 55
+            Assert.Equal(55m, foodResult.TotalRevenue);
+            Assert.Equal(2, foodResult.TotalSold);
+
+            // Verify both promotion and score discount logging
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains($"Applied promotion with discount {promotion.DiscountValue}") &&
+                    s.Contains("to food and drink Popcorn"))),
+                Times.Once);
+
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains("Applied score deduction of 25") &&
+                    s.Contains("to food and drink Popcorn"))),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_ExcessiveDiscountsResultInZeroRevenue_CalculatesCorrectly()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+            var promotionId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+            var promotion = new Promotion { Id = promotionId, DiscountValue = 0.6m }; // 60% discount
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = promotionId
+            };
+
+            var scoreHistory = new ScoreHistory
+            {
+                Id = Guid.NewGuid(),
+                RelatedBookingId = bookingId,
+                ChangeType = ScoreChangeType.Use,
+                ScoreValue = -50 // 50% discount
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            _mockPromotionRepository.Setup(r => r.GetByIdAsync(promotionId)).ReturnsAsync(promotion);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory> { scoreHistory }.AsQueryable().BuildMock();
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            // Original: 100, Promotion discount: 60, Score discount: 50, Total discount: 110, but Math.Max(0, seatRevenue) ensures it's 0
+            Assert.Equal(0m, foodResult.TotalRevenue);
+            Assert.Equal(2, foodResult.TotalSold);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_ScoreDiscountCappedAt100Percent_CalculatesCorrectly()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 2
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = null
+            };
+
+            var scoreHistory = new ScoreHistory
+            {
+                Id = Guid.NewGuid(),
+                RelatedBookingId = bookingId,
+                ChangeType = ScoreChangeType.Use,
+                ScoreValue = -150 // 150% discount, but should be capped at 100%
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory> { scoreHistory }.AsQueryable().BuildMock();
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            // Original: 100, Score discount capped at 100%, Final: 100 - 100 = 0
+            Assert.Equal(0m, foodResult.TotalRevenue);
+            Assert.Equal(2, foodResult.TotalSold);
+
+            // Verify score discount logging shows the original value (150), not the capped value
+            // This is because the implementation logs Math.Abs(scoreHistory.ScoreValue) rather than the capped amount
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains("Applied score deduction of 150") && // Shows original value, not capped
+                    s.Contains("to food and drink Popcorn") &&
+                    s.Contains("New seat revenue: 0"))), // But the revenue is correctly capped
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMonthlyFoodAndDrinkRevenueAsync_OnlineTicketWithoutPromotionOrScore_CalculatesCorrectRevenue()
+        {
+            // Arrange
+            var monthYear = new MonthYearDto(6, 2023);
+            var foodId = Guid.NewGuid();
+            var ticketId = Guid.NewGuid();
+            var bookingId = Guid.NewGuid();
+
+            var foodAndDrink = new FoodAndDrink { Id = foodId, Name = "Popcorn", Price = 50m };
+
+            var ticketFoodAndDrink = new TicketFoodAndDrink
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticketId,
+                FoodAndDrinkId = foodId,
+                FoodAndDrink = foodAndDrink,
+                Quantity = 3
+            };
+
+            var ticket = new Ticket
+            {
+                Id = ticketId,
+                IsDeleted = false,
+                CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                TicketType = TicketType.Online,
+                BookingId = bookingId,
+                TicketFoodAndDrinks = new List<TicketFoodAndDrink> { ticketFoodAndDrink }
+            };
+
+            ticketFoodAndDrink.Ticket = ticket;
+
+            var invoice = new Invoice
+            {
+                Id = Guid.NewGuid(),
+                BookingId = bookingId,
+                PromotionId = null
+            };
+
+            var tickets = new List<Ticket> { ticket };
+            var mockTicketQueryable = tickets.AsQueryable().BuildMock();
+            _mockTicketRepository.Setup(r => r.GetQueryable()).Returns(mockTicketQueryable);
+
+            var mockInvoiceQueryable = new List<Invoice> { invoice }.AsQueryable().BuildMock();
+            _mockInvoiceRepository.Setup(r => r.GetQueryable()).Returns(mockInvoiceQueryable);
+
+            var mockScoreHistoryQueryable = new List<ScoreHistory>().AsQueryable().BuildMock(); // No score history
+            _mockScoreHistoryRepository.Setup(r => r.GetQueryable()).Returns(mockScoreHistoryQueryable);
+
+            // Act
+            var result = await _statisticService.GetMonthlyFoodAndDrinkRevenueAsync(monthYear);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+
+            var foodResult = result.First();
+            Assert.Equal(foodId, foodResult.FoodAndDrinkId);
+            Assert.Equal("Popcorn", foodResult.FoodAndDrinkName);
+            Assert.Equal(150m, foodResult.TotalRevenue); // 50 * 3 = 150 (no discounts applied)
+            Assert.Equal(3, foodResult.TotalSold);
+
+            // Verify initial revenue calculation logging
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains($"Calculating revenue for Ticket {ticket.Id}") &&
+                    s.Contains("with Food and Drink Popcorn") &&
+                    s.Contains("Initial seat revenue: 150"))),
+                Times.Once);
+
+            // Verify final revenue calculation logging
+            _mockLoggerService.Verify(
+                l => l.Info(It.Is<string>(s =>
+                    s.Contains($"Ticket {ticket.Id} revenue calculated: 150") &&
+                    s.Contains("Total Revenue: 150"))),
+                Times.Once);
         }
     }
 }
