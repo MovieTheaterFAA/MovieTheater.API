@@ -21,9 +21,9 @@ namespace MovieTheater.Application.Services.ThirdParty
             _cacheService = cacheService;
         }
 
-        public async Task<string> GenerateResponseAsync(string userPrompt)
+        public async Task<string> GenerateResponseAsync(string prompt)
         {
-            var fullPrompt = $"{GeminiContext.SystemPrompt}\n\"{userPrompt}\"";
+            var fullPrompt = $"{GeminiContext.SystemPrompt}\n\"{prompt}\"";
             var cacheKey = $"gemini:response:{fullPrompt.GetHashCode()}";
 
             // Try to get from cache

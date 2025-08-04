@@ -13,19 +13,13 @@ namespace MovieTheater.UnitTest.Controllers
     public class FoodAndDrinkControllerTests
     {
         private readonly Mock<IFoodAndDrinkService> _mockFoodAndDrinkService;
-        private readonly Mock<IClaimsService> _mockClaimsService;
-        private readonly Mock<ILoggerService> _mockLoggerService;
         private readonly FoodAndDrinkController _controller;
 
         public FoodAndDrinkControllerTests()
         {
             _mockFoodAndDrinkService = new Mock<IFoodAndDrinkService>();
-            _mockClaimsService = new Mock<IClaimsService>();
-            _mockLoggerService = new Mock<ILoggerService>();
             _controller = new FoodAndDrinkController(
-                _mockFoodAndDrinkService.Object,
-                _mockClaimsService.Object,
-                _mockLoggerService.Object
+                _mockFoodAndDrinkService.Object
             );
         }
 

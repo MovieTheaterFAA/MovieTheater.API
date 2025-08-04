@@ -148,13 +148,14 @@ namespace MovieTheater.UnitTest.Services
             // Arrange
             var service = CreateBlobServiceWithMockClient();
             var fileName = "test.jpg";
+            var folder = string.Empty;
             var fileStream = new MemoryStream();
 
             _mockMinioClient.Setup(x => x.BucketExistsAsync(It.IsAny<BucketExistsArgs>(), It.IsAny<CancellationToken>()))
                            .ReturnsAsync(true);
 
             // Act
-            await service.UploadFileAsync(fileName, fileStream);
+            await service.UploadFileAsync(fileName, fileStream, folder);
 
             // Assert
             _mockMinioClient.Verify(x => x.PutObjectAsync(It.IsAny<PutObjectArgs>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -346,12 +347,13 @@ namespace MovieTheater.UnitTest.Services
             // Arrange
             var service = CreateBlobServiceWithMockClient();
             var fileStream = new MemoryStream();
+            var folder = String.Empty;
 
             _mockMinioClient.Setup(x => x.BucketExistsAsync(It.IsAny<BucketExistsArgs>(), It.IsAny<CancellationToken>()))
                            .ReturnsAsync(true);
 
             // Act
-            await service.UploadFileAsync(fileName, fileStream);
+            await service.UploadFileAsync(fileName, fileStream, folder);
 
             // Assert
             _mockLogger.Verify(x => x.Info($"Uploading '{fileName}' (type={expectedContentType})..."), Times.Once);

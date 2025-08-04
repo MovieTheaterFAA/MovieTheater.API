@@ -15,14 +15,10 @@ namespace MovieTheater.API.Controllers
     public class FoodAndDrinkController : ControllerBase
     {
         private readonly IFoodAndDrinkService _foodAndDrinkService;
-        private readonly IClaimsService _claimsService;
-        private readonly ILoggerService _loggerService;
 
-        public FoodAndDrinkController(IFoodAndDrinkService foodAndDrinkService, IClaimsService claimsService, ILoggerService loggerService)
+        public FoodAndDrinkController(IFoodAndDrinkService foodAndDrinkService)
         {
             _foodAndDrinkService = foodAndDrinkService;
-            _claimsService = claimsService;
-            _loggerService = loggerService;
         }
         [HttpGet]
         [Authorize]

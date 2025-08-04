@@ -27,7 +27,7 @@ namespace MovieTheater.Application.Services
             _redisService = redisService;
         }
 
-        public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, FoodType? type = null)
+        public async Task<Pagination<FoodAndDrinkResponseDto>> GetAllFoodAndDrinkAsync(string? search, string? sortBy, bool isDescending, int page, int pageSize, FoodType? type )
         {
             try
             {
