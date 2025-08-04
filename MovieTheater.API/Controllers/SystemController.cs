@@ -41,8 +41,6 @@ public class SystemController : ControllerBase
             await SeedSeatsForAllCinemaRoomsAsync();
             await SeedShowTimeForAllRoomsAndMoviesAsync();
 
-            await SeedStatisticDemoDataAsync();
-
             return Ok(ApiResult<object>.Success(new
             {
                 Message = "Data seeded successfully."
@@ -815,131 +813,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Food and Drink seeded successfully.");
     }
-    private async Task SeedStatisticDemoDataAsync()
-    {
-        // Get seeded members, movies, showtimes, food/drinks
-        var members = await _context.Users.Where(u => u.Role == RoleType.Member).ToListAsync();
-        var movies = await _context.Movies.Where(m => m.Status == MovieStatus.NowShowing).ToListAsync();
-        var showtimes = await _context.Showtimes.ToListAsync();
-        var foodAndDrinks = await _context.FoodAndDrinks.ToListAsync();
-        var promotions = await _context.Promotions.ToListAsync();
-
-        var random = new Random();
-        var now = DateTime.UtcNow;
-
-        var bookings = new List<Booking>();
-        var tickets = new List<Ticket>();
-        var invoices = new List<Invoice>();
-        var payments = new List<Payment>();
-        var scoreHistories = new List<ScoreHistory>();
-        var ticketFoodAndDrinks = new List<TicketFoodAndDrink>();
-
-        // For each member, create 2-3 bookings in different months
-        foreach (var member in members)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                var showtime = showtimes[random.Next(showtimes.Count)];
-                var bookingDate = now.AddMonths(-random.Next(0, 6)).AddDays(-random.Next(0, 28));
-                var booking = new Booking
-                {
-                    Id = Guid.NewGuid(),
-                    MemberId = member.Id,
-                    ShowtimeId = showtime.Id,
-                    BookingDate = bookingDate,
-                    TotalAmount = 30000, 
-                    Status = "Completed",
-                    CreatedAt = bookingDate,
-                    CreatedBy = member.Id
-                };
-                bookings.Add(booking);
-
-                // Create a ticket for this booking
-                var isOnline = random.Next(2) == 0;
-                var ticket = new Ticket
-                {
-                    Id = Guid.NewGuid(),
-                    BookingId = booking.Id,
-                    TicketType = isOnline ? TicketType.Online : TicketType.Offline,
-                    TotalPrice = 120000 + random.Next(0, 3) * 50000,
-                    CreatedAt = bookingDate,
-                    CreatedBy = member.Id
-                };
-                tickets.Add(ticket);
-
-                // Create an invoice (sometimes with promotion)
-                var usePromotion = isOnline && promotions.Any() && random.Next(2) == 0;
-                var promotion = usePromotion ? promotions[random.Next(promotions.Count)] : null;
-                var invoice = new Invoice
-                {
-                    Id = Guid.NewGuid(),
-                    BookingId = booking.Id,
-                    InvoiceDate = bookingDate,
-                    Amount = ticket.TotalPrice,
-                    Status = "Paid",
-                    PromotionId = promotion?.Id,
-                    CreatedAt = bookingDate,
-                    CreatedBy = member.Id
-                };
-                invoices.Add(invoice);
-
-                // Create a payment
-                payments.Add(new Payment
-                {
-                    Id = Guid.NewGuid(),
-                    InvoiceId = invoice.Id,
-                    PaymentDate = bookingDate,
-                    Amount = ticket.TotalPrice,
-                    Provider = "Stripe",
-                    PaymentReference = Guid.NewGuid().ToString(),
-                    Status = "Success",
-                    CreatedAt = bookingDate,
-                    CreatedBy = member.Id
-                });
-
-                // Sometimes use score
-                if (isOnline && random.Next(2) == 0)
-                {
-                    scoreHistories.Add(new ScoreHistory
-                    {
-                        Id = Guid.NewGuid(),
-                        MemberId = member.Id,
-                        ChangeDate = bookingDate,
-                        ChangeType = ScoreChangeType.Use,
-                        ScoreValue = -random.Next(10, 50),
-                        RelatedBookingId = booking.Id,
-                        CreatedAt = bookingDate,
-                        CreatedBy = member.Id
-                    });
-                }
-
-                // Sometimes add food/drink to ticket
-                if (foodAndDrinks.Any() && random.Next(2) == 0)
-                {
-                    var food = foodAndDrinks[random.Next(foodAndDrinks.Count)];
-                    ticketFoodAndDrinks.Add(new TicketFoodAndDrink
-                    {
-                        Id = Guid.NewGuid(),
-                        TicketId = ticket.Id,
-                        FoodAndDrinkId = food.Id,
-                        Quantity = random.Next(1, 3),
-                        CreatedAt = bookingDate,
-                        CreatedBy = member.Id
-                    });
-                }
-            }
-        }
-
-        _logger.Info("Seeding statistic demo data (bookings, tickets, invoices, payments, score histories, food/drink sales)...");
-        await _context.Bookings.AddRangeAsync(bookings);
-        await _context.Tickets.AddRangeAsync(tickets);
-        await _context.Invoices.AddRangeAsync(invoices);
-        await _context.Payments.AddRangeAsync(payments);
-        await _context.ScoreHistory.AddRangeAsync(scoreHistories);
-        await _context.TicketFoodAndDrinks.AddRangeAsync(ticketFoodAndDrinks);
-        await _context.SaveChangesAsync();
-        _logger.Success("Statistic demo data seeded successfully.");
-    }
+    
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
