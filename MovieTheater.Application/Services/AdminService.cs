@@ -227,7 +227,7 @@ public class AdminService : IAdminService
                 );
             }
 
-            var totalEmployees = employeeUsers.Count();
+            var totalEmployees = await employeeUsers.CountAsync();
 
             employeeUsers = sortBy?.ToLower() switch
             {
@@ -236,10 +236,10 @@ public class AdminService : IAdminService
                 _ => employeeUsers.OrderBy(u => u.Id)
             };
 
-            var pagedEmployees = employeeUsers
+            var pagedEmployees = await employeeUsers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             var result = pagedEmployees.Select(user => new UserDto
             {

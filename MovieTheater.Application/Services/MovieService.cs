@@ -413,7 +413,12 @@ namespace MovieTheater.Application.Services
                     isUpdated = true;
                 }
 
-                if (movieUpdateDto.Rating >= 0 && movieUpdateDto.Rating <= 10 && movie.Rating != movieUpdateDto.Rating)
+                const float EPSILON = 0.1f;
+
+                if (movieUpdateDto.Rating.HasValue &&
+                    movieUpdateDto.Rating >= 0 &&
+                    movieUpdateDto.Rating <= 10 &&
+                    Math.Abs(movie.Rating - movieUpdateDto.Rating.Value) > EPSILON)
                 {
                     movie.Rating = movieUpdateDto.Rating.Value;
                     isUpdated = true;

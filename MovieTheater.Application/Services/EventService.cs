@@ -202,7 +202,7 @@ namespace MovieTheater.Application.Services
                     query = query.Where(e => !string.IsNullOrEmpty(e.Name) && e.Name.ToLower().Contains(lowerSearch));
                 }
 
-                var totalEvents = query.Count();
+                var totalEvents = await query.CountAsync();
 
                 query = sortBy?.ToLower() switch
                 {
@@ -212,10 +212,10 @@ namespace MovieTheater.Application.Services
                     _ => query.OrderBy(e => e.Id)
                 };
 
-                var pagedEvents = query
+                var pagedEvents = await query
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
-                    .ToList();
+                    .ToListAsync();
 
                 var result = pagedEvents.Select(e => new EventResponseDto
                 {

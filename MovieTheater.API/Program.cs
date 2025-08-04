@@ -140,4 +140,4 @@ app.UseSession();
 app.MapHub<SeatHub>("/hubs/seat").RequireCors("AllowFrontend");
 app.MapHub<ChatbotHub>("/hubs/chatbot").RequireCors("AllowFrontend");
 
-app.Run();
+await app.RunAsync();
