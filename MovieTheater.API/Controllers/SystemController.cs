@@ -36,10 +36,10 @@ public class SystemController : ControllerBase
             await SeedUserAsync();
             await SeedMovieAsync();
             await SeedCinemaRoomAsync();
-            await SeedShowTimeForAllRoomsAndMoviesAsync();
             await SeedFoodAndDrinkAsync();
             await SeedEventAndPromotionAsync();
             await SeedSeatsForAllCinemaRoomsAsync();
+            await SeedShowTimeForAllRoomsAndMoviesAsync();
 
             return Ok(ApiResult<object>.Success(new
             {
@@ -194,7 +194,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Users seeded successfully.");
     }
-
     private async Task SeedMovieAsync()
     {
         var movies = new List<Movie>
@@ -394,7 +393,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Movies seeded successfully.");
     }
-
     private async Task SeedCinemaRoomAsync()
     {
         var rooms = new List<CinemaRoom>
@@ -423,7 +421,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Cinema rooms seeded successfully.");
     }
-
     private async Task SeedShowTimeForAllRoomsAndMoviesAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
@@ -499,7 +496,6 @@ public class SystemController : ControllerBase
 
         _logger.Success($"Seeded {showtimes.Count} showtimes with 3-4 shows per day, 15-minute rest between shows, no overlaps.");
     }
-
     private async Task SeedSeatsForAllCinemaRoomsAsync()
     {
         var rooms = await _context.CinemaRooms.ToListAsync();
@@ -656,7 +652,6 @@ public class SystemController : ControllerBase
             _logger.Info("No new seats to seed.");
         }
     }
-
     private async Task SeedEventAndPromotionAsync()
     {
         var events = new List<Event>
@@ -716,7 +711,6 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Events and promotions seeded successfully.");
     }
-
     private async Task SeedFoodAndDrinkAsync()
     {
         var foodanddrinks = new List<FoodAndDrink>
@@ -819,6 +813,7 @@ public class SystemController : ControllerBase
         await _context.SaveChangesAsync();
         _logger.Success("Food and Drink seeded successfully.");
     }
+    
 
     private async Task ClearDatabase(MovieTheaterDbContext context)
     {
