@@ -164,7 +164,8 @@ public class AdminServiceTests
     public async Task GetListEmployeeAsync_WhenNoEmployee_ReturnsEmptyPagination()
     {
         // Arrange
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(new List<User>());
+        var emptyUsers = new List<User>().AsQueryable().BuildMock();
+        _mockUserRepository.Setup(r => r.GetQueryable()).Returns(emptyUsers);
 
         // Act
         var result = await _adminService.GetListEmployeeAsync(null, null, false, 1, 10);
@@ -214,24 +215,24 @@ public class AdminServiceTests
     {
         // Arrange
         var employees = new List<User>
-        {
-            new User {
-                Id = Guid.NewGuid(),
-                FullName = "Employee 1",
-                Email = "emp1@example.com",
-                Role = RoleType.Employee,
-                IsDeleted = false
-            },
-            new User {
-                Id = Guid.NewGuid(),
-                FullName = "Employee 2",
-                Email = "emp2@example.com",
-                Role = RoleType.Employee,
-                IsDeleted = false
-            }
-        };
+    {
+        new User {
+            Id = Guid.NewGuid(),
+            FullName = "Employee 1",
+            Email = "emp1@example.com",
+            Role = RoleType.Employee,
+            IsDeleted = false
+        },
+        new User {
+            Id = Guid.NewGuid(),
+            FullName = "Employee 2",
+            Email = "emp2@example.com",
+            Role = RoleType.Employee,
+            IsDeleted = false
+        }
+    }.AsQueryable().BuildMock();
 
-        _mockUserRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(employees);
+        _mockUserRepository.Setup(repo => repo.GetQueryable()).Returns(employees);
 
         // Act
         var result = await _adminService.GetListEmployeeAsync("emp", "fullname", false, 1, 10);
@@ -663,15 +664,19 @@ public class AdminServiceTests
     [Fact]
     public async Task GetListEmployeeAsync_WithSortByDateOfBirthDescending_Works()
     {
+        // Arrange
         var employees = new List<User>
     {
         new User { Id = Guid.NewGuid(), FullName = "A", Role = RoleType.Employee, IsDeleted = false, DateOfBirth = new DateTime(2000,1,1) },
         new User { Id = Guid.NewGuid(), FullName = "B", Role = RoleType.Employee, IsDeleted = false, DateOfBirth = new DateTime(2010,1,1) }
-    };
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>())).ReturnsAsync(employees);
+    }.AsQueryable().BuildMock();
 
+        _mockUserRepository.Setup(r => r.GetQueryable()).Returns(employees);
+
+        // Act
         var result = await _adminService.GetListEmployeeAsync(null, "dateofbirth", true, 1, 10);
 
+        // Assert
         Assert.Equal("B", result.Items[0].FullName);
     }
 
@@ -710,36 +715,36 @@ public class AdminServiceTests
     }
 
     [Fact]
-public async Task GetUserByPhoneNumberAsync_WithEmptyPhone_Throws()
-{
-    await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync(""));
-}
+    public async Task GetUserByPhoneNumberAsync_WithEmptyPhone_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync(""));
+    }
 
-[Fact]
-public async Task GetUserByPhoneNumberAsync_WithInvalidFormat_Throws()
-{
-    await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync("abc"));
-}
+    [Fact]
+    public async Task GetUserByPhoneNumberAsync_WithInvalidFormat_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _adminService.GetUserByPhoneNumberAsync("abc"));
+    }
 
-[Fact]
-public async Task GetUserByPhoneNumberAsync_NotFound_ReturnsNull()
-{
-    _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
+    [Fact]
+    public async Task GetUserByPhoneNumberAsync_NotFound_ReturnsNull()
+    {
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync((User)null!);
 
-    var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
-    Assert.Null(result);
-}
+        var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
+        Assert.Null(result);
+    }
 
-[Fact]
-public async Task GetUserByPhoneNumberAsync_Found_ReturnsDto()
-{
-    var user = new User { Id = Guid.NewGuid(), PhoneNumber = "0123456789", Email = "a@a.com", FullName = "A" };
-    _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
+    [Fact]
+    public async Task GetUserByPhoneNumberAsync_Found_ReturnsDto()
+    {
+        var user = new User { Id = Guid.NewGuid(), PhoneNumber = "0123456789", Email = "a@a.com", FullName = "A" };
+        _mockUserRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>())).ReturnsAsync(user);
 
-    var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
-    Assert.NotNull(result);
-    Assert.Equal("0123456789", result.PhoneNumber);
-}
+        var result = await _adminService.GetUserByPhoneNumberAsync("0123456789");
+        Assert.NotNull(result);
+        Assert.Equal("0123456789", result.PhoneNumber);
+    }
     [Fact]
     public async Task AddEmployeeAsync_WhenDbUpdateException_LogsErrorAndRethrows()
     {

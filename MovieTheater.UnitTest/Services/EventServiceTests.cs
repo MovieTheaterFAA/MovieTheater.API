@@ -1,5 +1,5 @@
-﻿using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using MockQueryable.Moq;
 using Moq;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -8,7 +8,7 @@ using MovieTheater.Domain.DTOs.EventDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using Xunit;
+using System.Linq.Expressions;
 
 namespace MovieTheater.UnitTest.Services
 {
@@ -289,10 +289,9 @@ namespace MovieTheater.UnitTest.Services
                 }
             };
 
-            _mockEventRepository.Setup(repo => repo.GetAllAsync(
-                It.IsAny<Expression<Func<Event, bool>>>(),
-                It.IsAny<Expression<Func<Event, object>>>()))
-                .ReturnsAsync(events);
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(repo => repo.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(search, sortBy, isDescending, page, pageSize);
@@ -320,10 +319,10 @@ namespace MovieTheater.UnitTest.Services
             _mockRedisService.Setup(redis => redis.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
                 .ReturnsAsync((Pagination<EventResponseDto>)null!);
 
-            _mockEventRepository.Setup(repo => repo.GetAllAsync(
-                It.IsAny<Expression<Func<Event, bool>>>(),
-                It.IsAny<Expression<Func<Event, object>>>()))
-                .ReturnsAsync(new List<Event>());
+            // Mock GetQueryable() to return an empty queryable that supports async operations
+            var emptyEvents = new List<Event>();
+            _mockEventRepository.Setup(repo => repo.GetQueryable())
+                .Returns(emptyEvents.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(search, sortBy, isDescending, page, pageSize);
@@ -647,12 +646,17 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var events = new List<Event>
-    {
-        new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow.AddDays(2), EndTime = DateTime.UtcNow.AddDays(3), IsDeleted = false, Promotions = new List<Promotion>() },
-        new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow.AddDays(1), EndTime = DateTime.UtcNow.AddDays(4), IsDeleted = false, Promotions = new List<Promotion>() }
-    };
-            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
-            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+            {
+                new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow.AddDays(2), EndTime = DateTime.UtcNow.AddDays(3), IsDeleted = false, Promotions = new List<Promotion>() },
+                new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow.AddDays(1), EndTime = DateTime.UtcNow.AddDays(4), IsDeleted = false, Promotions = new List<Promotion>() }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
+                .ReturnsAsync((Pagination<EventResponseDto>)null!);
+
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(r => r.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(null, "starttime", false, 1, 10);
@@ -666,12 +670,17 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var events = new List<Event>
-    {
-        new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(1), IsDeleted = false, Promotions = new List<Promotion>() },
-        new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(2), IsDeleted = false, Promotions = new List<Promotion>() }
-    };
-            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
-            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+            {
+                new Event { Id = Guid.NewGuid(), Name = "A", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(1), IsDeleted = false, Promotions = new List<Promotion>() },
+                new Event { Id = Guid.NewGuid(), Name = "B", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddDays(2), IsDeleted = false, Promotions = new List<Promotion>() }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
+                .ReturnsAsync((Pagination<EventResponseDto>)null!);
+
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(r => r.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(null, "endtime", true, 1, 10);
@@ -685,12 +694,17 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var events = new List<Event>
-    {
-        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() },
-        new Event { Id = Guid.NewGuid(), Name = "B", IsDeleted = false, Promotions = new List<Promotion>() }
-    };
-            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
-            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+            {
+                new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() },
+                new Event { Id = Guid.NewGuid(), Name = "B", IsDeleted = false, Promotions = new List<Promotion>() }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
+                .ReturnsAsync((Pagination<EventResponseDto>)null!);
+
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(r => r.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(null, null, false, 1, 10);
@@ -704,11 +718,16 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var events = new List<Event>
-    {
-        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() }
-    };
-            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
-            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+            {
+                new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = new List<Promotion>() }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
+                .ReturnsAsync((Pagination<EventResponseDto>)null!);
+
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(r => r.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result1 = await _eventService.GetAllEventsAsync(null, "name", false, 1, 10);
@@ -726,11 +745,16 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var events = new List<Event>
-    {
-        new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = null! }
-    };
-            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>())).ReturnsAsync((Pagination<EventResponseDto>)null!);
-            _mockEventRepository.Setup(r => r.GetAllAsync(null!, It.IsAny<Expression<Func<Event, object>>>())).ReturnsAsync(events);
+            {
+                new Event { Id = Guid.NewGuid(), Name = "A", IsDeleted = false, Promotions = null! }
+            };
+
+            _mockRedisService.Setup(r => r.GetAsync<Pagination<EventResponseDto>>(It.IsAny<string>()))
+                .ReturnsAsync((Pagination<EventResponseDto>)null!);
+
+            // Mock GetQueryable() to return a queryable that supports async operations
+            _mockEventRepository.Setup(r => r.GetQueryable())
+                .Returns(events.AsQueryable().BuildMockDbSet().Object);
 
             // Act
             var result = await _eventService.GetAllEventsAsync(null, "name", false, 1, 10);

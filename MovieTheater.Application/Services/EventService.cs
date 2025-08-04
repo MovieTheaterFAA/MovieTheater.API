@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,6 +10,7 @@ using MovieTheater.Domain.DTOs.PromotionDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
+using System.Text.Json;
 
 namespace MovieTheater.Application.Services
 {
@@ -193,8 +193,10 @@ namespace MovieTheater.Application.Services
 
                 _loggerService.Info($"[CACHE MISS] {cacheKey} — Fetching from DB");
 
-                var events = await _unitOfWork.Events.GetAllAsync(null!, e => e.Promotions);
-                var query = events.AsQueryable().Where(e => !e.IsDeleted);
+                // Start with IQueryable instead of loading all data into memory
+                var query = _unitOfWork.Events.GetQueryable()
+                    .Include(e => e.Promotions)
+                    .Where(e => !e.IsDeleted);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {

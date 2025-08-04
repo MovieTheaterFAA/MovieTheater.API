@@ -213,9 +213,9 @@ public class AdminService : IAdminService
         {
             _loggerService.Info($"Fetching employees - Page {page}, PageSize {pageSize}, Search: {search}");
 
-            var listUsers = await _unitOfWork.Users.GetAllAsync();
+            var employeeUsers = _unitOfWork.Users.GetQueryable()
+                .Where(u => u.Role == RoleType.Employee && !u.IsDeleted);
 
-            var employeeUsers = listUsers.Where(u => u.Role == RoleType.Employee && !u.IsDeleted).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {

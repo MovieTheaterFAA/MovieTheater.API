@@ -37,8 +37,8 @@ namespace MovieTheater.Application.Services
                 var cached = await _redisService.GetAsync<Pagination<FoodAndDrinkResponseDto>>(cacheKey);
                 if (cached != null) return cached;
 
-                var foodAndDrinks = await _unitOfWork.FoodAndDrinks.GetAllAsync(f => !f.IsDeleted);
-                var query = foodAndDrinks.AsQueryable();
+                // Use GetQueryable() instead of GetAllAsync() to work with IQueryable directly
+                var query = _unitOfWork.FoodAndDrinks.GetQueryable().Where(f => !f.IsDeleted);
 
                 if (type.HasValue)
                     query = query.Where(f => f.Type == type.Value);

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MockQueryable;
 using Moq;
 using MovieTheater.Application.Interfaces;
 using MovieTheater.Application.Interfaces.Commons;
@@ -7,12 +8,7 @@ using MovieTheater.Domain.DTOs.FoodAndDrinkDTOs;
 using MovieTheater.Domain.Entities;
 using MovieTheater.Domain.Enums;
 using MovieTheater.Infrastructure.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace MovieTheater.UnitTest.Services
 {
@@ -91,32 +87,35 @@ namespace MovieTheater.UnitTest.Services
         {
             // Arrange
             var foodItems = new List<FoodAndDrink>
-            {
-                new FoodAndDrink
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Popcorn",
-                    Price = 5.99m,
-                    Type = FoodType.Food,
-                    IsAvailable = true,
-                    IsDeleted = false
-                },
-                new FoodAndDrink
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Cola",
-                    Price = 3.99m,
-                    Type = FoodType.Drink,
-                    IsAvailable = true,
-                    IsDeleted = false
-                }
-            };
+    {
+        new FoodAndDrink
+        {
+            Id = Guid.NewGuid(),
+            Name = "Popcorn",
+            Price = 5.99m,
+            Type = FoodType.Food,
+            IsAvailable = true,
+            IsDeleted = false
+        },
+        new FoodAndDrink
+        {
+            Id = Guid.NewGuid(),
+            Name = "Cola",
+            Price = 3.99m,
+            Type = FoodType.Drink,
+            IsAvailable = true,
+            IsDeleted = false
+        }
+    };
 
             _mockRedisService.Setup(redis => redis.GetAsync<Pagination<FoodAndDrinkResponseDto>>(It.IsAny<string>()))
                 .ReturnsAsync((Pagination<FoodAndDrinkResponseDto>)null!);
 
-            _mockFoodAndDrinkRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<FoodAndDrink, bool>>>()))
-                .ReturnsAsync(foodItems);
+            // Create a mock IQueryable that supports async operations
+            var mockQueryable = foodItems.AsQueryable().BuildMock();
+
+            _mockFoodAndDrinkRepository.Setup(repo => repo.GetQueryable())
+                .Returns(mockQueryable);
 
             // Act
             var result = await _foodAndDrinkService.GetAllFoodAndDrinkAsync(null, null, false, 1, 10, null);
@@ -133,28 +132,32 @@ namespace MovieTheater.UnitTest.Services
         [InlineData("cola", "price", false, FoodType.Drink)]
         [InlineData("combo", null, false, FoodType.Combo)]
         public async Task GetAllFoodAndDrinkAsync_WithDifferentFilters_ReturnsFilteredResults(
-            string search, string? sortBy, bool isDescending, FoodType type)
+    string search, string? sortBy, bool isDescending, FoodType type)
         {
             // Arrange
             var foodItems = new List<FoodAndDrink>
-            {
-                new FoodAndDrink { Id = Guid.NewGuid(), Name = "Popcorn", Type = FoodType.Food, IsDeleted = false },
-                new FoodAndDrink { Id = Guid.NewGuid(), Name = "Cola", Type = FoodType.Drink, IsDeleted = false },
-                new FoodAndDrink { Id = Guid.NewGuid(), Name = "Combo Meal", Type = FoodType.Combo, IsDeleted = false }
-            };
+    {
+        new FoodAndDrink { Id = Guid.NewGuid(), Name = "Popcorn", Type = FoodType.Food, IsDeleted = false, Price = 5.99m },
+        new FoodAndDrink { Id = Guid.NewGuid(), Name = "Cola", Type = FoodType.Drink, IsDeleted = false, Price = 3.99m },
+        new FoodAndDrink { Id = Guid.NewGuid(), Name = "Combo Meal", Type = FoodType.Combo, IsDeleted = false, Price = 9.99m }
+    };
 
             _mockRedisService.Setup(redis => redis.GetAsync<Pagination<FoodAndDrinkResponseDto>>(It.IsAny<string>()))
                 .ReturnsAsync((Pagination<FoodAndDrinkResponseDto>)null!);
 
-            _mockFoodAndDrinkRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<FoodAndDrink, bool>>>()))
-                .ReturnsAsync(foodItems.Where(f => f.Type == type).ToList());
+            // Create a mock IQueryable that supports async operations with all items
+            var mockQueryable = foodItems.AsQueryable().BuildMock();
+
+            _mockFoodAndDrinkRepository.Setup(repo => repo.GetQueryable())
+                .Returns(mockQueryable);
 
             // Act
             var result = await _foodAndDrinkService.GetAllFoodAndDrinkAsync(search, sortBy, isDescending, 1, 10, type);
 
             // Assert
             Assert.NotNull(result);
-            Assert.Contains(result.Items, item => item.Type == type);
+            Assert.True(result.Items.Count > 0);
+            Assert.All(result.Items, item => Assert.Equal(type, item.Type));
         }
 
         [Fact]
@@ -164,8 +167,12 @@ namespace MovieTheater.UnitTest.Services
             _mockRedisService.Setup(redis => redis.GetAsync<Pagination<FoodAndDrinkResponseDto>>(It.IsAny<string>()))
                 .ReturnsAsync((Pagination<FoodAndDrinkResponseDto>)null!);
 
-            _mockFoodAndDrinkRepository.Setup(repo => repo.GetAllAsync(It.IsAny<Expression<Func<FoodAndDrink, bool>>>()))
-                .ReturnsAsync(new List<FoodAndDrink>());
+            // Create an empty list and mock queryable
+            var emptyFoodItems = new List<FoodAndDrink>();
+            var mockQueryable = emptyFoodItems.AsQueryable().BuildMock();
+
+            _mockFoodAndDrinkRepository.Setup(repo => repo.GetQueryable())
+                .Returns(mockQueryable);
 
             // Act
             var result = await _foodAndDrinkService.GetAllFoodAndDrinkAsync(null, null, false, 1, 10, null);
