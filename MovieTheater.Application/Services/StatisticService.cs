@@ -325,7 +325,7 @@ namespace MovieTheater.Application.Services
                 return new MonthlyTicketTypeStatisticDto
                 {
                     OnlineTicketCount = onlineCount,
-                    OfflineTicketCount = offlineCount,
+                    OfflineTicketCount = offlineCount - guestCount,
                     GuestTicketCount = guestCount,
                     TicketCount = totalTickets
                 };
